@@ -952,7 +952,7 @@ void GetIterativeRefinementData(std::vector<KMeansParamType<T>> &params) {
     param.lp_max_iter = 1;
 
     param.expected_rinfo[3] = std::is_same<T, double>::value ? (T)0.0 : (T)1.0;
-    param.expected_rinfo[5] = std::is_same<T, double>::value ? (T)1.0 : (T)0.0;
+    param.expected_rinfo[5] = (T)1.0;
     param.algorithm = "lloyd";
     params.push_back(param);
     KMeansParamType<T> param2;
@@ -961,8 +961,8 @@ void GetIterativeRefinementData(std::vector<KMeansParamType<T>> &params) {
                        "precision iterative refinement";
     param2.mixed_precision = "yes";
     param2.lp_max_iter = 3;
-    param2.expected_rinfo[3] = std::is_same<T, double>::value ? (T)1.0 : (T)4.0;
-    param2.expected_rinfo[5] = std::is_same<T, double>::value ? (T)3.0 : (T)0.0;
+    param2.expected_rinfo[3] = (T)1.0;
+    param2.expected_rinfo[5] = (T)3.0;
     param2.lp_tol = (T)1.0e-3;
     param2.algorithm = "lloyd";
     params.push_back(param2);

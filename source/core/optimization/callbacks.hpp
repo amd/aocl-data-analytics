@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2023-2025 Advanced Micro Devices, Inc. All rights reserved.
+ * Copyright (C) 2023-2026 Advanced Micro Devices, Inc. All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without modification,
  * are permitted provided that the following conditions are met:
@@ -25,6 +25,7 @@
  *
  */
 
+#include "da_std.hpp"
 #include "macros.h"
 #include <functional>
 
@@ -42,7 +43,7 @@ namespace ARCH {
  * not be evaluated, some solvers don't have recovery capability.
  */
 template <typename T> struct meta_objcb {
-    static_assert(std::is_floating_point<T>::value,
+    static_assert(da_std::is_floating_point_v<T>,
                   "Objective function arguments must be floating point");
     using type = std::function<da_int(da_int n, T *x, T *val, void *usrdata)>;
 };
@@ -66,7 +67,7 @@ template <typename T> using objfun_t = typename meta_objcb<T>::type;
  * a finite-difference method (forwards, backwards, center, cheap, etc).
  */
 template <typename T> struct meta_grdcb {
-    static_assert(std::is_floating_point<T>::value,
+    static_assert(da_std::is_floating_point_v<T>,
                   "Objective gradient function arguments must be floating point");
     using type =
         std::function<da_int(da_int n, T *x, T *val, void *usrdata, da_int xnew)>;
@@ -83,7 +84,7 @@ template <typename T> using objgrd_t = typename meta_grdcb<T>::type;
  * not be evaluated, some solvers don't have recovery capability.
  */
 template <typename T> struct meta_stepcb {
-    static_assert(std::is_floating_point<T>::value,
+    static_assert(da_std::is_floating_point_v<T>,
                   "Step function arguments must be floating point");
     using type = std::function<da_int(da_int n, T *x, T *s, da_int k, T *f, void *usrdata,
                                       da_int action, T kdiff)>;
@@ -99,7 +100,7 @@ template <typename T> using stepfun_t = typename meta_stepcb<T>::type;
  * not be evaluated, some solvers don't have recovery capability.
  */
 template <typename T> struct meta_stepchkcb {
-    static_assert(std::is_floating_point<T>::value,
+    static_assert(da_std::is_floating_point_v<T>,
                   "Step function arguments must be floating point");
     using type = std::function<da_int(da_int n, T *x, void *usrdata, T *optim)>;
 };
@@ -114,7 +115,7 @@ template <typename T> using stepchk_t = typename meta_stepchkcb<T>::type;
  * requests to interrupt the process and exit.
  */
 template <typename T> struct meta_moncb {
-    static_assert(std::is_floating_point<T>::value,
+    static_assert(da_std::is_floating_point_v<T>,
                   "Monitor function arguments must be floating point");
     using type = std::function<da_int(da_int n, T *x, T *val, T *info, void *usrdata)>;
 };
@@ -125,7 +126,7 @@ template <typename T> using monit_t = typename meta_moncb<T>::type;
  */
 /* nonlinear residual function */
 template <typename T> struct meta_resfuncb {
-    static_assert(std::is_floating_point<T>::value,
+    static_assert(da_std::is_floating_point_v<T>,
                   "Residual function arguments must be floating point");
     using type = std::function<da_int(da_int, da_int, void *, T const *, T *)>;
 };
@@ -133,7 +134,7 @@ template <typename T> using resfun_t = typename meta_resfuncb<T>::type;
 
 /* nonlinear residual gradient (Jacobian) function */
 template <typename T> struct meta_resgrdcb {
-    static_assert(std::is_floating_point<T>::value,
+    static_assert(da_std::is_floating_point_v<T>,
                   "Residual gradient function arguments must be floating point");
     using type = std::function<da_int(da_int, da_int, void *, T const *, T *)>;
 };
@@ -141,7 +142,7 @@ template <typename T> using resgrd_t = typename meta_resgrdcb<T>::type;
 
 /* nonlinear residual Hessian function */
 template <typename T> struct meta_reshescb {
-    static_assert(std::is_floating_point<T>::value,
+    static_assert(da_std::is_floating_point_v<T>,
                   "Residual Hessian function arguments must be floating point");
     using type = std::function<da_int(da_int, da_int, void *, T const *, T const *, T *)>;
 };
@@ -149,7 +150,7 @@ template <typename T> using reshes_t = typename meta_reshescb<T>::type;
 
 /* nonlinear residual Hessian function */
 template <typename T> struct meta_reshpcb {
-    static_assert(std::is_floating_point<T>::value,
+    static_assert(da_std::is_floating_point_v<T>,
                   "Residual Hessian function arguments must be floating point");
     using type = std::function<da_int(da_int, da_int, const T *, const T *, T *, void *)>;
 };

@@ -54,7 +54,8 @@ namespace da_vector {
  */
 
 template <typename T> class da_vector {
-    static_assert(std::is_scalar_v<T>, "da_vector only supports scalar types");
+    static_assert(std::is_scalar_v<T> || std::is_same_v<T, _Float16>,
+                  "da_vector only supports scalar or FP16 types");
 
   public:
     using value_type = T;

@@ -35,7 +35,12 @@ inline da_status register_optimization_options(da_errors::da_error_t &err,
     using namespace da_options;
     using namespace da_optim_types;
 
-    const T rmax = std::numeric_limits<T>::max();
+    // _Float16 cannot back numeric option storage directly (limited dynamic
+    // range and no specialised options machinery), so we register the float
+    // options as `opt_T` (float) when T is _Float16; conversions happen via the
+    // _Float16 set/get overloads in da_options.
+    using opt_T = std::conditional_t<std::is_same_v<T, _Float16>, float, T>;
+    const opt_T rmax = std::numeric_limits<opt_T>::max();
 
     try {
         // ===========================================================================
@@ -109,10 +114,10 @@ inline da_status register_optimization_options(da_errors::da_error_t &err,
         // REAL OPTIONS
         // ===========================================================================
         // Tolerance based on sqrt(safe_epsilon)
-        da_options::safe_tol<T> tol;
-        std::shared_ptr<OptionNumeric<T>> oT;
+        da_options::safe_tol<opt_T> tol;
+        std::shared_ptr<OptionNumeric<opt_T>> oT;
         // ---
-        oT = std::make_shared<OptionNumeric<T>>(OptionNumeric<T>(
+        oT = std::make_shared<OptionNumeric<opt_T>>(OptionNumeric<opt_T>(
             "derivative test tol",
             "Tolerance used to check user-provided derivatives by finite-differences. "
             "If <print level> is 1, then only the entries with larger discrepancy are "
@@ -121,30 +126,30 @@ inline da_status register_optimization_options(da_errors::da_error_t &err,
             0.0, da_options::lbound_t::greaterthan, 10.0, da_options::ubound_t::lessequal,
             1.0e-4, "10^{-4}"));
         opts.register_opt(oT);
-        oT = std::make_shared<OptionNumeric<T>>(OptionNumeric<T>(
+        oT = std::make_shared<OptionNumeric<opt_T>>(OptionNumeric<opt_T>(
             "finite differences step",
             "Size of step to use for estimating derivatives using finite-differences.",
             0.0, da_options::lbound_t::greaterthan, 10.0, da_options::ubound_t::lessthan,
             tol.safe_eps(10), tol.safe_eps_latex(10)));
         opts.register_opt(oT);
-        oT = std::make_shared<OptionNumeric<T>>(
-            OptionNumeric<T>("time limit", "Maximum time allowed to run (in seconds).",
-                             0.0, da_options::lbound_t::greaterthan, 0,
-                             da_options::ubound_t::p_inf, static_cast<T>(1.0e6), "10^6"));
+        oT = std::make_shared<OptionNumeric<opt_T>>(OptionNumeric<opt_T>(
+            "time limit", "Maximum time allowed to run (in seconds).", 0.0,
+            da_options::lbound_t::greaterthan, 0, da_options::ubound_t::p_inf,
+            static_cast<opt_T>(1.0e6), "10^6"));
         opts.register_opt(oT);
-        oT = std::make_shared<OptionNumeric<T>>(OptionNumeric<T>(
+        oT = std::make_shared<OptionNumeric<opt_T>>(OptionNumeric<opt_T>(
             "infinite bound size", "Threshold value to take for +/- infinity.", 1000,
             da_options::lbound_t::greaterthan, 0, da_options::ubound_t::p_inf,
-            static_cast<T>(1.0e20), "10^{20}"));
+            static_cast<opt_T>(1.0e20), "10^{20}"));
         opts.register_opt(oT);
-        oT = std::make_shared<OptionNumeric<T>>(OptionNumeric<T>(
+        oT = std::make_shared<OptionNumeric<opt_T>>(OptionNumeric<opt_T>(
             "lbfgsb convergence tol",
             "Tolerance of the projected gradient infinity norm to "
             "declare convergence.",
             0.0, da_options::lbound_t::greaterthan, 1.0, da_options::ubound_t::lessthan,
             tol.safe_eps(), tol.safe_eps_latex()));
         opts.register_opt(oT);
-        oT = std::make_shared<OptionNumeric<T>>(OptionNumeric<T>(
+        oT = std::make_shared<OptionNumeric<opt_T>>(OptionNumeric<opt_T>(
             "lbfgsb progress factor",
             "The iteration stops when (f^k - f{k+1})/max{abs(fk);abs(f{k+1});1} <= "
             "factr*epsmch"
@@ -153,67 +158,71 @@ inline da_status register_optimization_options(da_errors::da_error_t &err,
             " low accuracy; 10e7 for moderate accuracy; 10 for extremely"
             " high accuracy.",
             0.0, da_options::lbound_t::greaterequal, 0, da_options::ubound_t::p_inf,
-            tol.safe_inveps((T)10, (T)1), tol.safe_inveps_latex((T)10, (T)1)));
+            tol.safe_inveps((opt_T)10, (opt_T)1),
+            tol.safe_inveps_latex((opt_T)10, (opt_T)1)));
         opts.register_opt(oT);
-        oT = std::make_shared<OptionNumeric<T>>(OptionNumeric<T>(
+        oT = std::make_shared<OptionNumeric<opt_T>>(OptionNumeric<opt_T>(
             "coord convergence tol",
             "Tolerance of the projected gradient infinity norm to declare convergence.",
             0.0, da_options::lbound_t::greaterthan, 1.0, da_options::ubound_t::lessthan,
-            tol.safe_eps((T)50, (T)1), tol.safe_eps_latex((T)50, (T)1)));
+            tol.safe_eps((opt_T)50, (opt_T)1), tol.safe_eps_latex((opt_T)50, (opt_T)1)));
         opts.register_opt(oT);
-        oT = std::make_shared<OptionNumeric<T>>(OptionNumeric<T>(
+        oT = std::make_shared<OptionNumeric<opt_T>>(OptionNumeric<opt_T>(
             "coord skip tol",
             "Coordinate skip tolerance, a given coordinate could be skipped if the "
             "change between two consecutive iterates is less than tolerance. Any "
             "negative value disables the skipping scheme.",
             -1.0, da_options::lbound_t::greaterequal, 0, da_options::ubound_t::p_inf,
-            tol.safe_eps((T)50, (T)1), tol.safe_eps_latex((T)50, (T)1)));
+            tol.safe_eps((opt_T)50, (opt_T)1), tol.safe_eps_latex((opt_T)50, (opt_T)1)));
         opts.register_opt(oT);
-        oT = std::make_shared<OptionNumeric<T>>(OptionNumeric<T>(
+        oT = std::make_shared<OptionNumeric<opt_T>>(OptionNumeric<opt_T>(
             "coord optimality tol",
             "Tolerance to declare optimality, e.g. dual-gap, KKT conditions, etc.", 0.0,
             da_options::lbound_t::greaterequal, 0, da_options::ubound_t::p_inf,
-            tol.safe_eps((T)50, (T)1), tol.safe_eps_latex((T)50, (T)1)));
+            tol.safe_eps((opt_T)50, (opt_T)1), tol.safe_eps_latex((opt_T)50, (opt_T)1)));
         opts.register_opt(oT);
 
-        oT = std::make_shared<OptionNumeric<T>>(OptionNumeric<T>(
+        oT = std::make_shared<OptionNumeric<opt_T>>(OptionNumeric<opt_T>(
             "ralfit convergence abs tol fun",
             "Absolute tolerance to declare convergence for the "
             "iterative optimization step. See "
             "details in optimization solver documentation.",
             0.0, da_options::lbound_t::greaterthan, 1.0, da_options::ubound_t::lessthan,
-            tol.safe_eps((T)10, (T)21), tol.safe_eps_latex((T)10, (T)21)));
+            tol.safe_eps((opt_T)10, (opt_T)21),
+            tol.safe_eps_latex((opt_T)10, (opt_T)21)));
 
         opts.register_opt(oT);
 
-        oT = std::make_shared<OptionNumeric<T>>(OptionNumeric<T>(
+        oT = std::make_shared<OptionNumeric<opt_T>>(OptionNumeric<opt_T>(
             "ralfit convergence rel tol fun",
             "Relative tolerance to declare convergence for the "
             "iterative optimization step. See "
             "details in optimization solver documentation.",
             0.0, da_options::lbound_t::greaterthan, 1.0, da_options::ubound_t::lessthan,
-            tol.safe_eps((T)10, (T)21), tol.safe_eps_latex((T)10, (T)21)));
+            tol.safe_eps((opt_T)10, (opt_T)21),
+            tol.safe_eps_latex((opt_T)10, (opt_T)21)));
         opts.register_opt(oT);
 
-        oT = std::make_shared<OptionNumeric<T>>(OptionNumeric<T>(
+        oT = std::make_shared<OptionNumeric<opt_T>>(OptionNumeric<opt_T>(
             "ralfit convergence abs tol grd",
             "Absolute tolerance on the gradient norm to declare "
             "convergence for the iterative optimization step. See "
             "details in optimization solver documentation.",
             0.0, da_options::lbound_t::greaterthan, 1.0, da_options::ubound_t::lessthan,
-            tol.safe_eps((T)500), tol.safe_eps_latex((T)500)));
+            tol.safe_eps((opt_T)500), tol.safe_eps_latex((opt_T)500)));
         opts.register_opt(oT);
 
-        oT = std::make_shared<OptionNumeric<T>>(OptionNumeric<T>(
+        oT = std::make_shared<OptionNumeric<opt_T>>(OptionNumeric<opt_T>(
             "ralfit convergence rel tol grd",
             "Relative tolerance on the gradient norm to declare convergence for the "
             "iterative optimization step. See "
             "details in optimization solver documentation.",
             0.0, da_options::lbound_t::greaterthan, 1.0, da_options::ubound_t::lessthan,
-            tol.safe_eps((T)10, (T)21), tol.safe_eps_latex((T)10, (T)21)));
+            tol.safe_eps((opt_T)10, (opt_T)21),
+            tol.safe_eps_latex((opt_T)10, (opt_T)21)));
         opts.register_opt(oT);
 
-        oT = std::make_shared<OptionNumeric<T>>(OptionNumeric<T>(
+        oT = std::make_shared<OptionNumeric<opt_T>>(OptionNumeric<opt_T>(
             "ralfit convergence step size",
             "Absolute tolerance over the step size to declare "
             "convergence for the iterative optimization step. See "
@@ -222,7 +231,7 @@ inline da_status register_optimization_options(da_errors::da_error_t &err,
             tol.mcheps(1, 2), tol.mcheps_latex(1, 2)));
         opts.register_opt(oT);
 
-        oT = std::make_shared<OptionNumeric<T>>(OptionNumeric<T>(
+        oT = std::make_shared<OptionNumeric<opt_T>>(OptionNumeric<opt_T>(
             "regularization term",
             "Value of the regularization term. A value of 0 disables regularization.",
             0.0, da_options::lbound_t::greaterequal, rmax, da_options::ubound_t::p_inf,

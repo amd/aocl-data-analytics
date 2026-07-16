@@ -57,8 +57,10 @@ using kernel_templates::bsz;
 namespace {
 using US = std::function<void(da_int, float *, da_int, float *, float *, da_int *, da_int)>;
 using UD = std::function<void(da_int, double *, da_int, double *, double *, da_int *, da_int)>;
+using UH = std::function<void(da_int, _Float16 *, da_int, _Float16 *, _Float16 *, da_int *, da_int)>;
 }
-inline const kernel_implementations<US, UD> elkan_update_implementations = {
+inline const kernel_implementations<US, UD, UH> &elkan_update_implementations() {
+    static const kernel_implementations<US, UD, UH> impls = {
 {{ // float map
             /* scalar    */ elkan_iteration_kernel_scalar<float>,
             /* avx (sse) */ elkan_iteration_kt<bsz::b128, float>,
@@ -70,14 +72,24 @@ ORL_AVX512F(/* avx512    */ elkan_iteration_kt<bsz::b512, float>)
             /* avx (sse) */ elkan_iteration_kt<bsz::b128, double>,
             /* avx2      */ elkan_iteration_kt<bsz::b256, double>,
 ORL_AVX512F(/* avx512    */ elkan_iteration_kt<bsz::b512, double>)
+}},
+{{ // _Float16 map - KT kernels using native AVX512_FP16 specializations
+ORL_AVXFP16(/* scalar    */ elkan_iteration_kernel_scalar<_Float16>),
+ORL_AVXFP16(/* avx (sse) */ elkan_iteration_kt<bsz::b128, _Float16>),
+ORL_AVXFP16(/* avx2      */ elkan_iteration_kt<bsz::b256, _Float16>),
+ORL_AVXFP16(/* avx512    */ elkan_iteration_kt<bsz::b512, _Float16>)
 }}
-};
+    };
+    return impls;
+}
 // ELKAN REDUCE KERNEL IMPLEMENTATIONS =========================================
 namespace {
 using RS = std::function<float(da_int, const float *, float *)>;
 using RD = std::function<double(da_int, const double *, double *)>;
+using RH = std::function<_Float16(da_int, const _Float16 *, _Float16 *)>;
 }
-inline const kernel_implementations<RS, RD> elkan_reduction_implementations = {
+inline const kernel_implementations<RS, RD, RH> &elkan_reduction_implementations() {
+    static const kernel_implementations<RS, RD, RH> impls = {
 {{ // float map
             /* scalar    */ elkan_reduction_kernel_scalar<float>,
             /* avx (sse) */ elkan_reduction_kt<bsz::b128, float>,
@@ -89,8 +101,16 @@ ORL_AVX512F(/* avx512    */ elkan_reduction_kt<bsz::b512, float>)
             /* avx (sse) */ elkan_reduction_kt<bsz::b128, double>,
             /* avx2      */ elkan_reduction_kt<bsz::b256, double>,
 ORL_AVX512F(/* avx512    */ elkan_reduction_kt<bsz::b512, double>)
+}},
+{{ // _Float16 map - KT kernels using native AVX512_FP16 specializations
+ORL_AVXFP16(/* scalar    */ elkan_reduction_kernel_scalar<_Float16>),
+ORL_AVXFP16(/* avx (sse) */ elkan_reduction_kt<bsz::b128, _Float16>),
+ORL_AVXFP16(/* avx2      */ elkan_reduction_kt<bsz::b256, _Float16>),
+ORL_AVXFP16(/* avx512    */ elkan_reduction_kt<bsz::b512, _Float16>)
 }}
-};
+    };
+    return impls;
+}
 // clang-format on
 
 using namespace da_kmeans_types;
@@ -108,8 +128,8 @@ void kmeans<T>::assign_elkan_kernels(
     u_isa = Oracle<KernelSelection>(elkan_update, tid<T>(), n_clusters, "kmeans.isa");
     r_isa = Oracle<KernelSelection>(elkan_reduce, tid<T>(), n_features, "kmeans.isa");
 
-    update_kernel = elkan_update_implementations.get<T>(u_isa);
-    reduce_kernel = elkan_reduction_implementations.get<T>(r_isa);
+    update_kernel = elkan_update_implementations().get<T>(u_isa);
+    reduce_kernel = elkan_reduction_implementations().get<T>(r_isa);
     padding = get_padding<T>(u_isa);
 
     // Add telemetry
@@ -153,7 +173,9 @@ template <typename T> void kmeans<T>::init_elkan() {
         if (do_spherical) {
             // Angular distance: arccos(dot(a,c) / ||a||)  (centres are unit-norm)
             T dot = (T)0.0, cos_val = (T)0.0;
+#ifndef _WIN32
 #pragma omp simd reduction(+ : dot)
+#endif
             for (da_int k = 0; k < n_features; k++) {
                 dot += A[i * lda + k] * (*current_cluster_centres)[k];
             }
@@ -163,15 +185,17 @@ template <typename T> void kmeans<T>::init_elkan() {
                 cos_val = dot;
             }
             cos_val = std::max((T)-1.0, std::min((T)1.0, cos_val));
-            smallest_dist = std::acos(cos_val);
+            smallest_dist = da_std::acos(cos_val);
         } else {
             smallest_dist = (T)0.0;
+#ifndef _WIN32
 #pragma omp simd reduction(+ : smallest_dist)
+#endif
             for (da_int k = 0; k < n_features; k++) {
                 tmp = A[i * lda + k] - (*current_cluster_centres)[k];
                 smallest_dist += tmp * tmp;
             }
-            smallest_dist = std::sqrt(smallest_dist);
+            smallest_dist = da_std::sqrt(smallest_dist);
         }
         workcs1[index] = smallest_dist;
 
@@ -183,7 +207,9 @@ template <typename T> void kmeans<T>::init_elkan() {
 
                 if (do_spherical) {
                     T dot = (T)0.0, cos_val = (T)0.0;
+#ifndef _WIN32
 #pragma omp simd reduction(+ : dot)
+#endif
                     for (da_int k = 0; k < n_features; k++) {
                         dot += A[i * lda + k] *
                                (*current_cluster_centres)[j * n_features + k];
@@ -194,16 +220,18 @@ template <typename T> void kmeans<T>::init_elkan() {
                         cos_val = dot;
                     }
                     cos_val = std::max((T)-1.0, std::min((T)1.0, cos_val));
-                    dist = std::acos(cos_val);
+                    dist = da_std::acos(cos_val);
                 } else {
                     dist = (T)0.0;
+#ifndef _WIN32
 #pragma omp simd reduction(+ : dist)
+#endif
                     for (da_int k = 0; k < n_features; k++) {
                         tmp = A[i * lda + k] -
                               (*current_cluster_centres)[j * n_features + k];
                         dist += tmp * tmp;
                     }
-                    dist = std::sqrt(dist);
+                    dist = da_std::sqrt(dist);
                 }
                 workcs1[index + j] = dist;
 
@@ -339,20 +367,22 @@ void kmeans<T>::elkan_iteration(bool update_centres, da_int n_threads) {
                            (*current_cluster_centres)[i * n_features + j];
                 }
                 T cos_val = std::max((T)-1.0, std::min((T)1.0, dot));
-                workc1[i] = std::acos(cos_val);
+                workc1[i] = da_std::acos(cos_val);
             }
             // We still need to call compute_centre_shift for the convergence test
             compute_centre_shift();
         } else {
             compute_centre_shift();
             for (da_int i = 0; i < n_clusters; i++) {
-                T tmp2 = 0.0;
+                T tmp2 = (T)0.0;
+#ifndef _WIN32
 #pragma omp simd reduction(+ : tmp2)
+#endif
                 for (da_int j = 0; j < n_features; j++) {
                     tmp = (*previous_cluster_centres)[i * n_features + j];
                     tmp2 += tmp * tmp;
                 }
-                workc1[i] = std::sqrt(tmp2);
+                workc1[i] = da_std::sqrt(tmp2);
             }
         }
 
@@ -421,9 +451,9 @@ void kmeans<T>::elkan_iteration_assign_block(
                     cos_val = dot;
                 }
                 cos_val = std::max((T)-1.0, std::min((T)1.0, cos_val));
-                return std::acos(cos_val);
+                return da_std::acos(cos_val);
             } else {
-                return std::sqrt(
+                return da_std::sqrt(
                     elkan_reduce_kernel(n_features, &data[i * lddata],
                                         &old_cluster_centres[c_idx * n_features]));
             }
@@ -505,7 +535,7 @@ template <typename T> void kmeans<T>::compute_centre_half_distances() {
                 if (i != j) {
                     T cos_val =
                         std::max((T)-1.0, std::min((T)1.0, workcc1[j * n_clusters + i]));
-                    workcc1[j * n_clusters + i] = std::acos(cos_val);
+                    workcc1[j * n_clusters + i] = da_std::acos(cos_val);
                 } else {
                     workcc1[j * n_clusters + i] = (T)0.0;
                 }
@@ -519,7 +549,7 @@ template <typename T> void kmeans<T>::compute_centre_half_distances() {
     }
     // For each centre, compute the half distance to next closest centre and store in workc1
     da_std::fill(workc1.begin(), workc1.begin() + n_clusters,
-                 std::numeric_limits<T>::infinity());
+                 da_std::numeric_limits<T>::infinity());
 
     for (da_int j = 0; j < n_clusters; j++) {
         for (da_int i = 0; i < j; i++) {

@@ -70,7 +70,7 @@ template <typename T> void kmeans<T>::init_macqueen() {
             for (da_int i = 0; i < n_clusters; i++) {
                 tmp = (*current_cluster_centres)[i + j * n_clusters];
                 (*previous_cluster_centres)[i + j * n_clusters] = tmp;
-                (*current_cluster_centres)[i + j * n_clusters] = 0.0;
+                (*current_cluster_centres)[i + j * n_clusters] = (T)0.0;
                 workc1[i] += tmp * tmp;
             }
         }
@@ -79,7 +79,7 @@ template <typename T> void kmeans<T>::init_macqueen() {
             for (da_int i = 0; i < n_clusters; i++) {
                 tmp = (*current_cluster_centres)[i + j * n_clusters];
                 (*previous_cluster_centres)[i + j * n_clusters] = tmp;
-                (*current_cluster_centres)[i + j * n_clusters] = 0.0;
+                (*current_cluster_centres)[i + j * n_clusters] = (T)0.0;
             }
         }
     }
@@ -131,7 +131,7 @@ void kmeans<T>::init_macqueen_block(da_int block_size, da_int block_index) {
 
     da_blas::cblas_gemm(CblasColMajor, CblasNoTrans, A_blas_trans, n_clusters, block_size,
                         n_features, gemm_scalar, (*previous_cluster_centres).data(),
-                        n_clusters, &A[A_index], lda, 0.0, workcs1.data(), ldworkcs1);
+                        n_clusters, &A[A_index], lda, (T)0.0, workcs1.data(), ldworkcs1);
 
     for (da_int i = block_index; i < block_index + block_size; i++) {
         T smallest_dist = workcs1[i - block_index] + workc1[0];
@@ -208,10 +208,12 @@ void kmeans<T>::macqueen_iteration(bool update_centres,
                 workc1.data(), 1, true, false);
         }
 
-        T smallest_dist = workc2[0];
+        T smallest_dist = da_std::isfinite(workc2[0])
+                              ? workc2[0]
+                              : da_std::numeric_limits<T>::infinity();
         da_int closest_centre = 0;
         for (da_int j = 1; j < n_clusters; j++) {
-            if (workc2[j] < smallest_dist) {
+            if (da_std::isfinite(workc2[j]) && workc2[j] < smallest_dist) {
                 smallest_dist = workc2[j];
                 closest_centre = j;
             }
@@ -282,7 +284,7 @@ void kmeans<T>::macqueen_iteration(bool update_centres,
                         norm_sq += tmp * tmp;
                     }
                     if (norm_sq > (T)0.0) {
-                        T inv_norm = (T)1.0 / std::sqrt(norm_sq);
+                        T inv_norm = (T)1.0 / da_std::sqrt(norm_sq);
                         for (da_int j = 0; j < n_features; j++)
                             (*current_cluster_centres)[old_centre + j * n_clusters] *=
                                 inv_norm;
@@ -294,7 +296,7 @@ void kmeans<T>::macqueen_iteration(bool update_centres,
                         norm_sq += tmp * tmp;
                     }
                     if (norm_sq > (T)0.0) {
-                        T inv_norm = (T)1.0 / std::sqrt(norm_sq);
+                        T inv_norm = (T)1.0 / da_std::sqrt(norm_sq);
                         for (da_int j = 0; j < n_features; j++)
                             (*current_cluster_centres)[closest_centre + j * n_clusters] *=
                                 inv_norm;

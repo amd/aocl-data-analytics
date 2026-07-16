@@ -51,13 +51,15 @@ using bool_save_t = uint8_t;
 template <typename T>
 using save_type_t = std::conditional_t<
     std::is_same_v<T, bool>, bool_save_t,
-    std::conditional_t<std::is_same_v<T, da_int> || std::is_enum_v<T>, int_save_t, T>>;
+    std::conditional_t<std::is_same_v<T, da_int> || std::is_enum_v<T>, int_save_t,
+                       std::conditional_t<std::is_same_v<T, _Float16>, float, T>>>;
 
 // Allowed scalar types for saving.
 template <typename T>
 constexpr bool is_valid_scalar =
     std::is_same_v<T, bool> || std::is_same_v<T, float> || std::is_same_v<T, double> ||
-    std::is_same_v<T, da_int> || std::is_enum_v<T> || std::is_same_v<T, char>;
+    std::is_same_v<T, da_int> || std::is_enum_v<T> || std::is_same_v<T, char> ||
+    std::is_same_v<T, _Float16>;
 
 // Type trait indicating whether a container type is supported for serialization.
 template <typename T> struct is_valid_container_type : std::false_type {};

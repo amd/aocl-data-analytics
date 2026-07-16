@@ -558,6 +558,26 @@ class linmod : public pyda_handle {
         return n_iter;
     }
 
+    auto get_lp_n_iter() {
+        da_status status;
+        da_int dim = 100;
+        da_int lp_n_iter;
+        if (precision == da_single) {
+            float rinfo[100];
+            status = da_handle_get_result(handle, da_rinfo, &dim, rinfo);
+            exception_check(status);
+            lp_n_iter =
+                static_cast<da_int>(rinfo[da_linmod_info_t_::linmod_info_lp_n_iter]);
+        } else {
+            double rinfo[100];
+            status = da_handle_get_result(handle, da_rinfo, &dim, rinfo);
+            exception_check(status);
+            lp_n_iter =
+                static_cast<da_int>(rinfo[da_linmod_info_t_::linmod_info_lp_n_iter]);
+        }
+        return lp_n_iter;
+    }
+
     void save_data(py::dict &state) override {
         state["n_samples"] = int64_t(this->n_samples);
         state["n_feat"] = int64_t(this->n_feat);

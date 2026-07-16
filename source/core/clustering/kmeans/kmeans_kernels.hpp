@@ -37,10 +37,16 @@ void elkan_iteration_kernel_scalar(da_int, T *, da_int, T *, T *, da_int *, da_i
 template <kernel_templates::bsz SZ, typename T>
 void elkan_iteration_kt(da_int, T *, da_int, T *, T *, da_int *, da_int);
 
+template <typename T, vectorization_type U>
+void elkan_iteration_kernel(da_int, T *, da_int, T *, T *, da_int *, da_int);
+
 template <class T> T elkan_reduction_kernel_scalar(da_int, const T *, T *);
 
 template <kernel_templates::bsz SZ, typename T>
 T elkan_reduction_kt(da_int, const T *, T *);
+
+template <typename T, vectorization_type U>
+T elkan_reduction_kernel(da_int, const T *, T *);
 
 template <class T>
 void lloyd_iteration_kernel_scalar(bool, da_int, T *, da_int *, da_int *, T *, da_int,

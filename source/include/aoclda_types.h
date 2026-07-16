@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2024 - 2025 Advanced Micro Devices, Inc. All rights reserved.
+ * Copyright (C) 2024-2026 Advanced Micro Devices, Inc. All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without modification,
  * are permitted provided that the following conditions are met:
@@ -94,5 +94,49 @@ typedef int32_t da_int;
 #define DA_INT_MIN INT32_MIN
 #define DA_INT_FMT PRId32
 #endif
+
+/* -----------------------------------------------------------------------------
+ * _Float16 portability struct
+ *
+ * Older toolchains do not provide the native `_Float16` scalar type. We provide a minimal
+ * stand-in to enable compilation.
+ * --------------------------------------------------------------------------- */
+#if defined(__cplusplus) && !defined(__FLT16_MAX__)
+
+// Explicit C++ linkage.
+extern "C++" {
+
+struct da_float16 {
+    float v_;
+
+    constexpr da_float16() noexcept : v_(0.0f) {}
+    template <typename U>
+    constexpr da_float16(U v) noexcept : v_(static_cast<float>(v)) {}
+
+    constexpr operator float() const noexcept { return v_; }
+
+    da_float16 &operator+=(float r) noexcept {
+        v_ += r;
+        return *this;
+    }
+    da_float16 &operator-=(float r) noexcept {
+        v_ -= r;
+        return *this;
+    }
+    da_float16 &operator*=(float r) noexcept {
+        v_ *= r;
+        return *this;
+    }
+    da_float16 &operator/=(float r) noexcept {
+        v_ /= r;
+        return *this;
+    }
+};
+
+using _Float16 = da_float16;
+
+} // extern "C++"
+
+#endif /* __cplusplus && !__FLT16_MAX__ */
 
 #endif // AOCLDA_TYPES

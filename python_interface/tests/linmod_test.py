@@ -69,12 +69,18 @@ def test_linear_regression(numpy_precision, numpy_order):
 
     if numpy_precision == np.float64:
         # check using mixed precision works
-        lmodm = linmod("mse", intercept=True, mixed_precision=True, solver="coord")
+        lmodm = linmod("mse", intercept=True,
+                       mixed_precision=True, solver="coord")
         lmodm.fit(X[:, 0:2], y)
-        lmod = linmod("mse", intercept=True, mixed_precision=False, solver="coord")
+        lmod = linmod("mse", intercept=True,
+                      mixed_precision=False, solver="coord")
         lmod.fit(X[:, 0:2], y)
         norm = np.linalg.norm(np.abs(lmodm.coef - lmod.coef))
         assert norm < np.sqrt(tol)
+        # mixed precision actually performed some low precision iterations
+        assert lmodm.lp_n_iter > 0
+        # non-mixed precision performed no low precision iterations
+        assert lmod.lp_n_iter == 0
 
 
 @pytest.mark.parametrize("numpy_precision", [np.float64, np.float32])

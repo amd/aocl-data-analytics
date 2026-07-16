@@ -23,11 +23,13 @@
 
 #include "aoclda_types.h"
 #include "da_kernel_utils.hpp"
+#include "fp16_helpers.hpp"
 #include "immintrin.h"
 #include "kernel_functions.hpp"
 #include "kt.hpp"
 #include "macros.h"
 #include <cmath>
+#include <type_traits>
 
 namespace ARCH {
 
@@ -49,9 +51,21 @@ void exp_kernel_scalar(da_int first_dim, da_int second_dim, T *data, da_int ldd,
     for (da_int i = 0; i < second_dim; i++) {
         T *data_ptr = &data[i * ldd];
         T second_dim_norm = second_dim_norms[i];
-        for (da_int j = 0; j < first_dim; j++) {
-            data_ptr[j] =
-                exp(multiplier * (data_ptr[j] + first_dim_norms[j] + second_dim_norm));
+        if constexpr (std::is_same_v<T, _Float16>) {
+            // Promote to float for the transcendental and cast back; libm has no
+            // native _Float16 overload of exp().
+            for (da_int j = 0; j < first_dim; j++) {
+                float x = static_cast<float>(multiplier) *
+                          (static_cast<float>(data_ptr[j]) +
+                           static_cast<float>(first_dim_norms[j]) +
+                           static_cast<float>(second_dim_norm));
+                data_ptr[j] = static_cast<T>(exp(x));
+            }
+        } else {
+            for (da_int j = 0; j < first_dim; j++) {
+                data_ptr[j] = exp(multiplier *
+                                  (data_ptr[j] + first_dim_norms[j] + second_dim_norm));
+            }
         }
     }
 }
@@ -81,8 +95,17 @@ void tanh_kernel_scalar(da_int first_dim, da_int second_dim, T *data, da_int ldd
                         T coef0) {
     for (da_int i = 0; i < second_dim; i++) {
         T *data_ptr = &data[i * ldd];
-        for (da_int j = 0; j < first_dim; j++) {
-            data_ptr[j] = tanh(data_ptr[j] + coef0);
+        if constexpr (std::is_same_v<T, _Float16>) {
+            // Promote to float for the transcendental and cast back; libm has no
+            // native _Float16 overload of tanh().
+            for (da_int j = 0; j < first_dim; j++) {
+                float x = static_cast<float>(data_ptr[j]) + static_cast<float>(coef0);
+                data_ptr[j] = static_cast<T>(tanh(x));
+            }
+        } else {
+            for (da_int j = 0; j < first_dim; j++) {
+                data_ptr[j] = tanh(data_ptr[j] + coef0);
+            }
         }
     }
 }
@@ -114,8 +137,16 @@ exp_kt(da_int first_dim, da_int second_dim, SUF *data, da_int ldd, SUF multiplie
         SUF second_dim_norm = second_dim_norms[i];
         da_int idx = offset + size;
         for (da_int j = 0; j < remainder; j++) {
-            data[idx] = exp(multiplier *
-                            (data[idx] + first_dim_norms[j + size] + second_dim_norm));
+            if constexpr (std::is_same_v<SUF, _Float16>) {
+                float x = static_cast<float>(multiplier) *
+                          (static_cast<float>(data[idx]) +
+                           static_cast<float>(first_dim_norms[j + size]) +
+                           static_cast<float>(second_dim_norm));
+                data[idx] = static_cast<SUF>(exp(x));
+            } else {
+                data[idx] = exp(multiplier * (data[idx] + first_dim_norms[j + size] +
+                                              second_dim_norm));
+            }
             idx++;
         }
         offset += ldd;
@@ -192,12 +223,24 @@ tanh_kt(da_int first_dim, da_int second_dim, SUF *data, da_int ldd, SUF coef0) {
         // Handle the remaining elements
         da_int idx = offset + size;
         for (da_int j = 0; j < remainder; j++) {
-            data[idx] = tanh((data[idx]) + coef0);
+            if constexpr (std::is_same_v<SUF, _Float16>) {
+                float x = static_cast<float>(data[idx]) + static_cast<float>(coef0);
+                data[idx] = static_cast<SUF>(tanh(x));
+            } else {
+                data[idx] = tanh((data[idx]) + coef0);
+            }
             idx++;
         }
         offset += ldd;
     }
 }
+
+// _Float16 instantiations of exp_kt, pow_kt and tanh_kt (below, guarded by
+// __AVX512FP16__) go through the primary templates: the kt FP16 extension
+// layer (kt_fp16.hpp) provides _Float16 specializations of every kt_*
+// primitive used here, including kt_exp_p<bsz::*, _Float16> which promotes
+// to FP32, calls the existing kt_exp_p<bsz::*, float> kernel, and rounds
+// back to FP16.
 
 #ifndef USE_SCALAR_MATH // Compiler macro defined in the CMake
 // Single set of instantiations for the detected compiler
@@ -251,6 +294,35 @@ template void tanh_kt<bsz::b512, float>(da_int first_dim, da_int second_dim, flo
 template void tanh_kt<bsz::b512, double>(da_int first_dim, da_int second_dim,
                                          double *data, da_int ldd, double coef0);
 #endif // __AVX512F__
+#ifdef __AVX512FP16__
+template void exp_kt<bsz::b128, _Float16>(da_int first_dim, da_int second_dim,
+                                          _Float16 *data, da_int ldd, _Float16 multiplier,
+                                          const _Float16 *first_dim_norms,
+                                          const _Float16 *second_dim_norms);
+template void exp_kt<bsz::b256, _Float16>(da_int first_dim, da_int second_dim,
+                                          _Float16 *data, da_int ldd, _Float16 multiplier,
+                                          const _Float16 *first_dim_norms,
+                                          const _Float16 *second_dim_norms);
+template void exp_kt<bsz::b512, _Float16>(da_int first_dim, da_int second_dim,
+                                          _Float16 *data, da_int ldd, _Float16 multiplier,
+                                          const _Float16 *first_dim_norms,
+                                          const _Float16 *second_dim_norms);
+template void pow_kt<bsz::b128, _Float16>(da_int first_dim, da_int second_dim,
+                                          _Float16 *data, da_int ldd, _Float16 coef0,
+                                          da_int degree);
+template void pow_kt<bsz::b256, _Float16>(da_int first_dim, da_int second_dim,
+                                          _Float16 *data, da_int ldd, _Float16 coef0,
+                                          da_int degree);
+template void pow_kt<bsz::b512, _Float16>(da_int first_dim, da_int second_dim,
+                                          _Float16 *data, da_int ldd, _Float16 coef0,
+                                          da_int degree);
+template void tanh_kt<bsz::b128, _Float16>(da_int first_dim, da_int second_dim,
+                                           _Float16 *data, da_int ldd, _Float16 coef0);
+template void tanh_kt<bsz::b256, _Float16>(da_int first_dim, da_int second_dim,
+                                           _Float16 *data, da_int ldd, _Float16 coef0);
+template void tanh_kt<bsz::b512, _Float16>(da_int first_dim, da_int second_dim,
+                                           _Float16 *data, da_int ldd, _Float16 coef0);
+#endif // __AVX512FP16__
 #endif // USE_SCALAR_MATH
 
 // Explicit instantiations for the scalar kernel functions so their symbols
@@ -263,6 +335,13 @@ template void pow_kernel_scalar<float>(da_int, da_int, float *, da_int, float, d
 template void pow_kernel_scalar<double>(da_int, da_int, double *, da_int, double, da_int);
 template void tanh_kernel_scalar<float>(da_int, da_int, float *, da_int, float);
 template void tanh_kernel_scalar<double>(da_int, da_int, double *, da_int, double);
+#ifdef __AVX512FP16__
+template void exp_kernel_scalar<_Float16>(da_int, da_int, _Float16 *, da_int, _Float16,
+                                          const _Float16 *, const _Float16 *);
+template void pow_kernel_scalar<_Float16>(da_int, da_int, _Float16 *, da_int, _Float16,
+                                          da_int);
+template void tanh_kernel_scalar<_Float16>(da_int, da_int, _Float16 *, da_int, _Float16);
+#endif
 
 } // namespace da_kernel_functions
 

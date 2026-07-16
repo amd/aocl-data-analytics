@@ -21,7 +21,26 @@
  *
  * ************************************************************************ */
 
+// Suppress "loop not vectorized" diagnostics from `#pragma omp simd` on
+// _Float16 template instantiations when the target architecture lacks
+// FP16 SIMD support. On hardware that does have FP16 vectorization the
+// loops vectorize as expected; the warning is purely informational.
+//
+// clang reports this under -Wpass-failed (-Wpass-failed=transform-warning);
+// GCC, when configured to surface vectorization remarks as warnings, uses
+// the -Wopenmp-simd category. We also silence -Wunknown-pragmas/-Wpragmas
+// so the suppression itself is harmless on compiler versions that don't
+// recognise the inner warning name.
+#if defined(__clang__)
+#pragma clang diagnostic ignored "-Wunknown-warning-option"
+#pragma clang diagnostic ignored "-Wpass-failed"
+#elif defined(__GNUC__)
+#pragma GCC diagnostic ignored "-Wpragmas"
+#pragma GCC diagnostic ignored "-Wopenmp-simd"
+#endif
+
 #include "kmeans.hpp"
+#include "fp16_helpers.hpp"
 #include "kmeans_elkan.hpp"
 #include "kmeans_hartigan_wong.hpp"
 #include "kmeans_lloyd.hpp"
@@ -49,7 +68,7 @@ using namespace da_kmeans_types;
 using namespace std::literals::string_literals;
 
 template <typename T> inline T safe_inv_sqrt(T x) {
-    return (x > (T)0.0) ? (T)1.0 / std::sqrt(x) : (T)0.0;
+    return (x > (T)0.0) ? (T)1.0 / da_std::sqrt(x) : (T)0.0;
 }
 
 template <typename T> inline T clamp_cosine(T x) {
@@ -211,13 +230,14 @@ template <typename T> void kmeans<T>::refresh() {
     current_n_iter = 0;
     warn_maxit_reached = false;
     converged = 0;
-    normc = 0.0;
+    normc = (T)0.0;
+    normc_f = 0.0f;
     max_block_size = 0;
     n_blocks = 0;
     block_rem = 0;
     ldworkcs1 = 0;
-    best_inertia = 0.0;
-    current_inertia = 0.0;
+    best_inertia = (T)0.0;
+    current_inertia = (T)0.0;
     padding = 0;
     lp_n_iter = 0;
     best_lp_n_iter = 0;
@@ -547,29 +567,31 @@ template <typename T> da_status kmeans<T>::compute() {
 
     // Initialize some arrays
     try {
-        current_cluster_centres->resize((size_t)n_clusters * (size_t)n_features, 0.0);
-        previous_cluster_centres->resize((size_t)n_clusters * (size_t)n_features, 0.0);
+        current_cluster_centres->resize((size_t)n_clusters * (size_t)n_features, (T)0.0);
+        previous_cluster_centres->resize((size_t)n_clusters * (size_t)n_features, (T)0.0);
         thd_cluster_centres.resize(n_threads);
         thd_work1.resize(n_threads);
         thd_work2.resize(n_threads);
         thd_work3.resize(n_threads);
         thd_work4.resize(n_threads);
         thd_work_int.resize(n_threads);
-        if (use_mixed_precision) {
-            // We will need to store a lower precision copy of A and C
-            A_lp.resize((size_t)n_samples * (size_t)n_features);
-            C_lp.resize((size_t)n_clusters * (size_t)n_features);
+        if constexpr (da_fp16::fp16_codegen_ok<lp_type>) {
+            if (use_mixed_precision) {
+                // We will need to store a lower precision copy of A and C
+                A_lp.resize((size_t)n_samples * (size_t)n_features);
+                C_lp.resize((size_t)n_clusters * (size_t)n_features);
+            }
         }
         // Allocate per-thread storage with padding to avoid false sharing
         da_int pad_T = 128 / sizeof(T);
         da_int pad_int = 128 / sizeof(da_int);
         for (da_int t = 0; t < n_threads; t++) {
             thd_cluster_centres[t].resize((size_t)n_clusters * (size_t)n_features + pad_T,
-                                          0.0);
-            thd_work1[t].resize(n_clusters + pad_T, 0.0);
-            thd_work2[t].resize(n_clusters + pad_T, 0.0);
-            thd_work3[t].resize(n_clusters + pad_T, 0.0);
-            thd_work4[t].resize(n_clusters + pad_T, 0.0);
+                                          (T)0.0);
+            thd_work1[t].resize(n_clusters + pad_T, (T)0.0);
+            thd_work2[t].resize(n_clusters + pad_T, (T)0.0);
+            thd_work3[t].resize(n_clusters + pad_T, (T)0.0);
+            thd_work4[t].resize(n_clusters + pad_T, (T)0.0);
             thd_work_int[t].resize(n_clusters + pad_int, 0);
         }
 
@@ -577,11 +599,11 @@ template <typename T> da_status kmeans<T>::compute() {
         work_int1.resize(n_clusters, 0);
         work_int2.resize(n_samples, 0);
         // Extra bit on workc1 just to enable some padding to be done for vectorization
-        workc1.resize(n_clusters + padding, 0.0);
+        workc1.resize(n_clusters + padding, (T)0.0);
         current_labels->resize(n_samples, 0);
         previous_labels->resize(n_samples, 0);
         if (n_init > 1) {
-            best_cluster_centres->resize((size_t)n_clusters * (size_t)n_features, 0.0);
+            best_cluster_centres->resize((size_t)n_clusters * (size_t)n_features, (T)0.0);
             best_labels->resize(n_samples, 0);
         }
     } catch (std::bad_alloc const &) {
@@ -591,49 +613,49 @@ template <typename T> da_status kmeans<T>::compute() {
 
     // Ensure the extra padding in workc1 (for vectorization) won't interfere with any computation
     da_std::fill(workc1.end() - padding, workc1.end(),
-                 std::numeric_limits<T>::infinity());
+                 da_std::numeric_limits<T>::infinity());
 
     // Based on what algorithms we are using, allocate the remaining memory
     try {
 
         switch (algorithm) {
         case elkan:
-            workcc1.resize((size_t)n_clusters * (size_t)n_clusters, 0.0);
-            workcs1.resize((size_t)n_samples * (size_t)(n_clusters + padding), 0.0);
-            works1.resize(n_samples, 0.0);
+            workcc1.resize((size_t)n_clusters * (size_t)n_clusters, (T)0.0);
+            workcs1.resize((size_t)n_samples * (size_t)(n_clusters + padding), (T)0.0);
+            works1.resize(n_samples, (T)0.0);
             break;
         case macqueen:
-            workcs1.resize((size_t)max_block_size * (size_t)n_clusters, 0.0);
-            workc2.resize(n_clusters, 0.0);
-            works1.resize(n_samples, 0.0);
+            workcs1.resize((size_t)max_block_size * (size_t)n_clusters, (T)0.0);
+            workc2.resize(n_clusters, (T)0.0);
+            works1.resize(n_samples, (T)0.0);
             break;
         case lloyd:
             workcs1.resize((size_t)max_block_size * (size_t)(n_clusters + padding) *
                                (size_t)n_threads,
-                           0.0);
-            works1.resize(n_samples, 0.0);
+                           (T)0.0);
+            works1.resize(n_samples, (T)0.0);
             break;
         case hartigan_wong:
-            works1.resize(n_samples, 0.0);
-            workc2.resize(n_clusters, 0.0);
-            workc3.resize(n_clusters, 0.0);
+            works1.resize(n_samples, (T)0.0);
+            workc2.resize(n_clusters, (T)0.0);
+            workc3.resize(n_clusters, (T)0.0);
             work_int3.resize(n_clusters, 0);
             work_int4.resize(n_clusters, 0);
             break;
         }
 
         if (init_method == kmeanspp) {
-            works1.resize(n_samples, 0.0);
-            works2.resize(n_samples, 0.0);
-            works3.resize(n_samples, 0.0);
-            works4.resize(n_samples, 0.0);
-            works5.resize(n_samples, 0.0);
+            works1.resize(n_samples, (T)0.0);
+            works2.resize(n_samples, (T)0.0);
+            works3.resize(n_samples, (T)0.0);
+            works4.resize(n_samples, (T)0.0);
+            works5.resize(n_samples, (T)0.0);
         }
 
         if (init_method == afk_mcmc) {
-            works1.resize(n_samples, 0.0);
-            works2.resize(n_samples, 0.0);
-            works3.resize(n_samples, 0.0);
+            works1.resize(n_samples, (T)0.0);
+            works2.resize(n_samples, (T)0.0);
+            works3.resize(n_samples, (T)0.0);
         }
 
     } catch (std::bad_alloc const &) {
@@ -654,7 +676,7 @@ template <typename T> da_status kmeans<T>::compute() {
     kmeans<T>::initialize_rng();
 
     // Set the initial best_inertia over all the runs to something large
-    best_inertia = std::numeric_limits<T>::infinity();
+    best_inertia = da_std::numeric_limits<T>::infinity();
 
     // Precompute data point norms for spherical k-means
     if (do_spherical && normalize_data) {
@@ -669,7 +691,7 @@ template <typename T> da_status kmeans<T>::compute() {
             da_utils::compute_squared_row_norms(column_major, n_samples, n_features, A,
                                                 lda, data_norms.data());
             for (da_int i = 0; i < n_samples; i++) {
-                data_norms[i] = std::sqrt(data_norms[i]);
+                data_norms[i] = da_std::sqrt(data_norms[i]);
             }
         } else {
             for (da_int i = 0; i < n_samples; i++) {
@@ -681,11 +703,13 @@ template <typename T> da_status kmeans<T>::compute() {
         }
     }
 
-    if (use_mixed_precision) {
-        // Store a lower precision copy of A
-        da_utils::copy_array_convert_precision(
-            A_order, n_samples, n_features, A, lda, A_lp.data(),
-            (A_order == column_major) ? n_samples : n_features);
+    if constexpr (da_fp16::fp16_codegen_ok<lp_type>) {
+        if (use_mixed_precision) {
+            // Store a lower precision copy of A
+            da_utils::copy_array_convert_precision(
+                A_order, n_samples, n_features, A, lda, A_lp.data(),
+                (A_order == column_major) ? n_samples : n_features);
+        }
     }
 
     // Run k-means algorithm n_init times and select the run with the lowest inertia
@@ -713,10 +737,9 @@ template <typename T> da_status kmeans<T>::compute() {
 
         valid_run_found = true;
 
-        // Check if it's the best run yet. Also accept the first valid run
-        // unconditionally so best_cluster_centres is populated even when
-        // current_inertia is non-finite (e.g. NaN/Inf input poisons the
-        // comparison and would otherwise leave best_cluster_centres empty).
+        // Check if it's the best run yet
+        // Also swap if best_cluster_centres is empty (first valid run), to handle
+        // the case where NaN inertia (e.g. _Float16 overflow) prevents the < comparison
         if (current_inertia < best_inertia || best_cluster_centres->empty()) {
             best_inertia = current_inertia;
             best_n_iter = current_n_iter;
@@ -920,7 +943,7 @@ da_status kmeans<T>::predict(da_int k_samples, da_int k_features, const T *Y, da
                         "Memory allocation failed.");
     }
     da_std::fill(workc1.end() - padding, workc1.end(),
-                 std::numeric_limits<T>::infinity());
+                 da_std::numeric_limits<T>::infinity());
 
     ldy_work = n_clusters + padding;
 
@@ -957,7 +980,7 @@ da_status kmeans<T>::predict(da_int k_samples, da_int k_features, const T *Y, da
             da_blas::cblas_gemm(CblasColMajor, CblasNoTrans, Y_blas_trans, n_clusters,
                                 block_size, n_features, gemm_scalar_predict,
                                 (*best_cluster_centres).data(), n_clusters, &Y[Y_index],
-                                ldy, 0.0, &y_work[y_work_index], ldy_work);
+                                ldy, (T)0.0, &y_work[y_work_index], ldy_work);
 
             // Loop through the samples and find the closest cluster centre and its label
             predict_kernel(false, block_size, workc1.data(), dummy_int,
@@ -1184,7 +1207,8 @@ template <typename T> da_status kmeans<T>::handle_empty_clusters(bool &clusters_
         da_int best_idx = -1;
         T best_dist = (T)-1.0;
         for (da_int i = 0; i < n_samples; i++) {
-            if (work_int1[(*current_labels)[i]] > 1 && works1[i] > best_dist) {
+            if (work_int1[(*current_labels)[i]] > 1 && da_std::isfinite(works1[i]) &&
+                works1[i] > best_dist) {
                 best_dist = works1[i];
                 best_idx = i;
             }
@@ -1225,7 +1249,7 @@ template <typename T> da_status kmeans<T>::handle_empty_clusters(bool &clusters_
                 norm_sq += val * val;
             }
             if (norm_sq > (T)0.0) {
-                T inv_norm = (T)1.0 / std::sqrt(norm_sq);
+                T inv_norm = (T)1.0 / da_std::sqrt(norm_sq);
                 for (da_int j = 0; j < n_features; j++) {
                     (*current_cluster_centres)[old_label * C_rstride + j * C_cstride] *=
                         inv_norm;
@@ -1238,7 +1262,7 @@ template <typename T> da_status kmeans<T>::handle_empty_clusters(bool &clusters_
                 norm_sq += val * val;
             }
             if (norm_sq > (T)0.0) {
-                T inv_norm = (T)1.0 / std::sqrt(norm_sq);
+                T inv_norm = (T)1.0 / da_std::sqrt(norm_sq);
                 for (da_int j = 0; j < n_features; j++) {
                     (*current_cluster_centres)[c * C_rstride + j * C_cstride] *= inv_norm;
                 }
@@ -1292,7 +1316,7 @@ template <typename T> da_status kmeans<T>::handle_empty_clusters(bool &clusters_
     // Algorithm-specific cleanup
     if (algorithm == elkan) {
         // Invalidate bounds to force full distance recomputation next iteration
-        da_std::fill(works1.begin(), works1.end(), std::numeric_limits<T>::max());
+        da_std::fill(works1.begin(), works1.end(), da_std::numeric_limits<T>::max());
         for (da_int i = 0; i < n_samples * ldworkcs1; i++)
             workcs1[i] = (T)0.0;
     } else if (algorithm == macqueen) {
@@ -1311,14 +1335,23 @@ template <typename T> void kmeans<T>::compute_centre_shift() {
 
     // Before overwriting previous_cluster_centres, compute and store its norm, for use in convergence test
 
-    normc = (T)0.0;
-
-    for (da_int i = 0; i < n_clusters * n_features; i++) {
-        normc += (*previous_cluster_centres)[i] * (*previous_cluster_centres)[i];
-        (*previous_cluster_centres)[i] -= (*current_cluster_centres)[i];
+    if constexpr (std::is_same_v<T, _Float16>) {
+        // _Float16 doesn't have enough range to compute the norm of the shift matrix without overflow, so compute in float
+        normc_f = 0.0f;
+        for (da_int i = 0; i < n_clusters * n_features; i++) {
+            float val = static_cast<float>((*previous_cluster_centres)[i]);
+            normc_f += val * val;
+            (*previous_cluster_centres)[i] -= (*current_cluster_centres)[i];
+        }
+        normc_f = std::sqrt(normc_f);
+    } else {
+        normc = (T)0.0;
+        for (da_int i = 0; i < n_clusters * n_features; i++) {
+            normc += (*previous_cluster_centres)[i] * (*previous_cluster_centres)[i];
+            (*previous_cluster_centres)[i] -= (*current_cluster_centres)[i];
+        }
+        normc = da_std::sqrt(normc);
     }
-
-    normc = std::sqrt(normc);
 }
 
 /* Check if the k-means iteration has converged */
@@ -1342,18 +1375,31 @@ template <typename T> da_int kmeans<T>::convergence_test() {
         return convergence_test;
 
     // Recall that that the end of each iteration previous_cluster_centres contains the shift made in that particular iteration
-    // dlange is expecting column major here, but it actually doesn't matter since we're just computing the Frobenius norm
-    char norm = 'F';
-    if (da::lange(&norm, &n_clusters, &n_features, (*previous_cluster_centres).data(),
-                  &n_clusters, nullptr) < tol * normc)
-        convergence_test = 1;
+    if constexpr (std::is_same_v<T, _Float16>) {
+        // Compute Frobenius norm of shift matrix in float to avoid _Float16 overflow
+        float shift_norm_f = 0.0f;
+        for (da_int i = 0; i < n_clusters * n_features; i++) {
+            float val = static_cast<float>((*previous_cluster_centres)[i]);
+            shift_norm_f += val * val;
+        }
+        shift_norm_f = std::sqrt(shift_norm_f);
+        if (shift_norm_f < static_cast<float>(tol) * normc_f)
+            convergence_test = 1;
+    } else {
+        // dlange is expecting column major here, but it actually doesn't matter since we're just computing the Frobenius norm
+        char norm = 'F';
+        if (da::lange(&norm, &n_clusters, &n_features, (*previous_cluster_centres).data(),
+                      &n_clusters, nullptr) < tol * normc)
+            convergence_test = 1;
+    }
 
     return convergence_test;
 }
 
 /* Initialize the centres, if needed, for the start of k-means computation*/
 template <typename T> void kmeans<T>::initialize_centres() {
-    da_std::fill(previous_cluster_centres->begin(), previous_cluster_centres->end(), 0.0);
+    da_std::fill(previous_cluster_centres->begin(), previous_cluster_centres->end(),
+                 (T)0.0);
     switch (init_method) {
     case random_samples: {
         // Select randomly (without replacement) from the data points
@@ -1515,7 +1561,7 @@ template <typename T> void kmeans<T>::kmeans_plusplus() {
     // as a weight vector.
     works3[random_int] = (T)0.0;
     for (da_int i = 0; i < n_samples; i++) {
-        if (!std::isfinite(works3[i]) || works3[i] < (T)0.0)
+        if (!da_std::isfinite(works3[i]) || works3[i] < (T)0.0)
             works3[i] = (T)0.0;
     }
 
@@ -1553,7 +1599,7 @@ template <typename T> void kmeans<T>::kmeans_plusplus() {
             // Don't need to worry about replacement because probability of zero of picking previously chosen point
 
             da_int best_candidate = 0;
-            T best_candidate_cost = std::numeric_limits<T>::infinity();
+            T best_candidate_cost = da_std::numeric_limits<T>::infinity();
 
             std::discrete_distribution<> weighted_dis(works3.begin(), works3.end());
             for (da_int trials = 0; trials < n_trials; trials++) {
@@ -1587,7 +1633,8 @@ template <typename T> void kmeans<T>::kmeans_plusplus() {
                     current_cost += works5[j];
                 }
 
-                if (current_cost < best_candidate_cost) {
+                if (da_std::isfinite(current_cost) &&
+                    current_cost < best_candidate_cost) {
                     best_candidate_cost = current_cost;
                     best_candidate = work_int2[trials];
                     std::swap(works2, works5);
@@ -1663,12 +1710,12 @@ template <typename T> void kmeans<T>::afk_mcmc_init() {
 
     // Build q(x) in works2: q(x) = 0.5 * d(x,c1)^2 / sum_dist + 1/(2n)
     T inv_2n = (T)1.0 / (2 * n_samples);
-    if (sum_dist > (T)0.0) {
+    if (da_std::isfinite(sum_dist) && sum_dist > (T)0.0) {
         for (da_int i = 0; i < n_samples; i++) {
             works2[i] = (T)0.5 * works3[i] / sum_dist + inv_2n;
         }
     } else {
-        // All points coincident: uniform proposal
+        // All points coincident or distances overflowed: uniform proposal
         for (da_int i = 0; i < n_samples; i++) {
             works2[i] = (T)1.0 / n_samples;
         }
@@ -1682,7 +1729,7 @@ template <typename T> void kmeans<T>::afk_mcmc_init() {
     // (first n_centres entries stored column-major in current_cluster_centres)
     // Returns squared Euclidean distance (or cosine distance for spherical)
     auto dist_to_nearest_centre = [&](da_int idx, da_int n_centres) -> T {
-        T min_dist = std::numeric_limits<T>::infinity();
+        T min_dist = da_std::numeric_limits<T>::infinity();
         if (do_spherical) {
             for (da_int c = 0; c < n_centres; c++) {
                 T dot = (T)0.0, cos_sim = (T)0.0;
@@ -1717,7 +1764,8 @@ template <typename T> void kmeans<T>::afk_mcmc_init() {
 
     // Steps 4-12: Main MCMC loop to select centres 2..k
     std::discrete_distribution<> q_dist(works2.begin(), works2.end());
-    std::uniform_real_distribution<T> unif((T)0.0, (T)1.0);
+    using unif_type = std::conditional_t<std::is_same_v<T, _Float16>, float, T>;
+    std::uniform_real_distribution<unif_type> unif(unif_type(0), unif_type(1));
 
     for (da_int i = 1; i < n_clusters; i++) {
 
@@ -1774,53 +1822,61 @@ template <typename T> void kmeans<T>::initialize_rng() {
 }
 
 /* Iterative refinement */
-template <> da_status kmeans<double>::lower_precision_init() {
+template <typename T> da_status kmeans<T>::lower_precision_init() {
 
-    da_status status;
+    if constexpr (da_fp16::fp16_codegen_ok<lp_type>) {
 
-    this->opts.get("low precision convergence tolerance", lp_tol);
+        da_status status;
 
-    this->opts.get("low precision max_iter", lp_max_iter);
+        this->opts.get("low precision convergence tolerance", lp_tol);
 
-    if (lp_tol <= tol) {
-        return da_error(
-            this->err, da_status_incompatible_options,
-            "Low precision convergence tolerance must be greater than "
-            "convergence tolerance. Current values: low precision convergence "
-            "tolerance = " +
-                std::to_string(lp_tol) +
-                ", convergence tolerance = " + std::to_string(tol) + ".");
+        this->opts.get("low precision max_iter", lp_max_iter);
+
+        if (lp_tol <= tol) {
+            return da_error(
+                this->err, da_status_incompatible_options,
+                "Low precision convergence tolerance must be greater than "
+                "convergence tolerance. Current values: low precision convergence "
+                "tolerance = " +
+                    std::to_string(lp_tol) +
+                    ", convergence tolerance = " + std::to_string(tol) + ".");
+        }
+
+        // Store lower precision version of the initial cluster centres
+        da_utils::copy_array_convert_precision(column_major, n_clusters, n_features,
+                                               (*current_cluster_centres).data(),
+                                               n_clusters, C_lp.data(), n_clusters);
+
+        // Create a lower-precision kmeans object and populate it with relevant data from this object
+        da_int lda_lp =
+            (this->A_order == column_major) ? this->n_samples : this->n_features;
+        kmeans<lp_type> km_float(
+            *this->err, this->A_order, this->order, this->algorithm, supplied, this->seed,
+            (lp_type)this->lp_tol, this->lp_max_iter, this->n_samples, this->n_features,
+            this->n_clusters, 1, A_lp.data(), lda_lp, A_lp.data(), lda_lp, C_lp.data(),
+            this->n_clusters, true, true, false, this->empty_cluster_handling,
+            this->afk_mcmc_samples, this->do_spherical, this->normalize_data);
+
+        // Now compute the k-means in lower precision
+        status = km_float.compute();
+        if (status != da_status_success && status != da_status_maxit)
+            return status;
+        lp_n_iter = km_float.best_n_iter;
+
+        // Copy the centres back to this double-precision object
+        da_utils::copy_array_convert_precision(
+            column_major, n_clusters, n_features, (*km_float.best_cluster_centres).data(),
+            n_clusters, (*current_cluster_centres).data(), n_clusters);
+
+        return da_status_success;
+    } else {
+        // lp_type == _Float16 on a target without AVX-512 FP16
+        return da_status_invalid_option; // LCOV-EXCL_LINE
     }
-
-    // Store lower precision version of the initial cluster centres
-    da_utils::copy_array_convert_precision(column_major, n_clusters, n_features,
-                                           (*current_cluster_centres).data(), n_clusters,
-                                           C_lp.data(), n_clusters);
-
-    // Create a single-precision kmeans object and populate it with relevant data from this double-precision object
-    da_int lda_lp = (this->A_order == column_major) ? this->n_samples : this->n_features;
-    kmeans<float> km_float(
-        *this->err, this->A_order, this->order, this->algorithm, supplied, this->seed,
-        (float)this->lp_tol, this->lp_max_iter, this->n_samples, this->n_features,
-        this->n_clusters, 1, A_lp.data(), lda_lp, A_lp.data(), lda_lp, C_lp.data(),
-        this->n_clusters, true, true, false, this->empty_cluster_handling,
-        this->afk_mcmc_samples, this->do_spherical, this->normalize_data);
-
-    // Now compute the k-means in lower precision
-    status = km_float.compute();
-    if (status != da_status_success && status != da_status_maxit)
-        return status;
-    lp_n_iter = km_float.best_n_iter;
-
-    // Copy the centres back to this double-precision object
-    da_utils::copy_array_convert_precision(
-        column_major, n_clusters, n_features, (*km_float.best_cluster_centres).data(),
-        n_clusters, (*current_cluster_centres).data(), n_clusters);
-
-    return da_status_success;
 }
-template <> da_status kmeans<float>::lower_precision_init() {
-    return da_status_invalid_option;
+
+template <> da_status kmeans<_Float16>::lower_precision_init() {
+    return da_status_invalid_option; // LCOV-EXCL_LINE
 }
 
 template <typename T> da_status kmeans<T>::serialize(serialization_buffer &buffer) {
@@ -1879,8 +1935,21 @@ template <typename T> da_status kmeans<T>::load_model(serialization_buffer &buff
     return status;
 }
 
+template <> da_status kmeans<_Float16>::serialize(serialization_buffer &) {
+    return da_status_not_implemented; //LCOV-EXCL_LINE
+}
+template <> da_status kmeans<_Float16>::save_model(serialization_buffer &) {
+    return da_status_not_implemented; //LCOV-EXCL_LINE
+}
+template <> da_status kmeans<_Float16>::load_model(serialization_buffer &) {
+    return da_status_not_implemented; //LCOV-EXCL_LINE
+}
+
 template class kmeans<double>;
 template class kmeans<float>;
+#ifdef __AVX512FP16__
+template class kmeans<_Float16>;
+#endif
 
 } // namespace da_kmeans
 

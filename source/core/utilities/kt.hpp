@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2025, Advanced Micro Devices, Inc. All rights reserved.
+ * Copyright (C) 2025-2026, Advanced Micro Devices, Inc. All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without modification,
  * are permitted provided that the following conditions are met:
@@ -30,6 +30,18 @@
 // This header includes the kernel templates and additionally L2 micro-kernel
 // that are specific to AOCL-DA project.
 // ------------------------------------------------------------------------------
+
+#include "aoclda.h"
+using kt_int_t = da_int;
+#include "kernel-templates/kernel_templates.hpp"
+// L2 micro kernels for different compilers
+#if defined(__aocc__) && __has_include("amdlibm_vec.h")
+#include "kt_l2_clang.hpp"
+#elif defined(__GNUC__)
+// When using GCC, we use the GCC vectorized functions
+#include "kt_l2_gcc.hpp"
+#endif
+
 #include "kt_exp.hpp"
 // ------------------------------------------------------------------------------
 
@@ -45,5 +57,14 @@
 #define DA_KT_INSTANTIATE_EXT(FUNC, BSZ, EXT)                                            \
     FUNC(BSZ, float, EXT);                                                               \
     FUNC(BSZ, double, EXT);
+
+// Instantiates a kernel template function defined by "FUNC" for _Float16
+#ifdef __AVX512FP16__
+#define DA_KT_INSTANTIATE_FP16(FUNC, BSZ) FUNC(BSZ, _Float16);
+#define DA_KT_INSTANTIATE_FP16_EXT(FUNC, BSZ, EXT) FUNC(BSZ, _Float16, EXT);
+#else
+#define DA_KT_INSTANTIATE_FP16(FUNC, BSZ)
+#define DA_KT_INSTANTIATE_FP16_EXT(FUNC, BSZ, EXT)
+#endif
 
 #endif // DA_KT_HPP

@@ -88,7 +88,8 @@ To compile and link to static AOCL libraries using ``g++``:
         /<path to amd-sparse>/lib_<INT_LIB>/libaoclsparse.a
         /<path to amd-libflame>/lib_<INT_LIB>/libflame.a
         /<path to amd-blis>/lib_<INT_LIB>/libblis-mt.a
-        /<path to libaoclutils>/lib_<INT_LIB>/libaoclutils.a -lgfortran -lgomp
+        /<path to libaoclutils>/lib_<INT_LIB>/libaoclutils.a
+        /<path to aocl-dlp>/lib_<INT_LIB>/libaocl-dlp.a -lgfortran -lgomp
 
 To compile and link to static AOCL libraries using ``clang++``:
 
@@ -99,7 +100,8 @@ To compile and link to static AOCL libraries using ``clang++``:
             /<path to amd-sparse>/lib_<INT_LIB>/libaoclsparse.a
             /<path to amd-libflame>/lib_<INT_LIB>/libflame.a
             /<path to amd-blis>/lib_<INT_LIB>/libblis-mt.a
-            /<path to libaoclutils>/lib_<INT_LIB>/libaoclutils.a -lflang -lomp -lpgmath
+            /<path to libaoclutils>/lib_<INT_LIB>/libaoclutils.a
+            /<path to aocl-dlp>/lib_<INT_LIB>/libaocl-dlp.a -lflang -lomp -lpgmath
 
 To compile and link to dynamic AOCL libraries using ``g++``:
 
@@ -108,7 +110,8 @@ To compile and link to dynamic AOCL libraries using ``g++``:
     g++ <your_source_code>.cpp -I /<path to aocl-da headers>/include_<INT_LIB>
         -L /<path to aocl-da>/lib_<INT_LIB> -L /<path to amd-sparse>/lib_<INT_LIB>
         -L /<path to amd-libflame>/lib_<INT_LIB> -L /<path to amd-blis>/lib_<INT_LIB>
-        -L /<path to amd-utils>/lib -laocl-da -laoclsparse -lflame -lblis-mt -laoclutils
+        -L /<path to amd-utils>/lib -L /<path to aocl-dlp>/lib_<INT_LIB>
+        -laocl-da -laoclsparse -lflame -lblis-mt -laoclutils -laocl-dlp
         -lgfortran -lgomp
 
 To compile and link to dynamic AOCL libraries using ``clang++``:
@@ -118,7 +121,8 @@ To compile and link to dynamic AOCL libraries using ``clang++``:
     clang++ <your_source_code>.cpp -I /<path to aocl-da headers>/include_<INT_LIB>
             -L /<path to aocl-da>/lib_<INT_LIB> -L /<path to amd-sparse>/lib_<INT_LIB>
             -L /<path to amd-libflame>/lib_<INT_LIB> -L /<path to amd-blis>/lib_<INT_LIB>
-            -L /<path to amd-utils>/lib -laocl-da -laoclsparse -lflame -lblis-mt -laoclutils
+            -L /<path to amd-utils>/lib -L /<path to aocl-dlp>/lib_<INT_LIB>
+            -laocl-da -laoclsparse -lflame -lblis-mt -laoclutils -laocl-dlp
             -lflang -lomp -lpgmath
 
 Note that for dynamic linking you will need to update your ``LD_LIBRARY_PATH`` environment

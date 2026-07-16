@@ -433,6 +433,11 @@ template struct BarnesHutTree<float, 3>;
 template struct BarnesHutTree<double, 1>;
 template struct BarnesHutTree<double, 2>;
 template struct BarnesHutTree<double, 3>;
+#ifdef __AVX512FP16__
+template struct BarnesHutTree<_Float16, 1>;
+template struct BarnesHutTree<_Float16, 2>;
+template struct BarnesHutTree<_Float16, 3>;
+#endif
 
 } // namespace da_tsne
 

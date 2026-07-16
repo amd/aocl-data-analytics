@@ -142,6 +142,7 @@ if(BUILD_FORTRAN)
 endif()
 
 foreach(target ${EXAMPLE_EXES})
+  target_compile_options(${target} PRIVATE -march=native)
   target_link_libraries(${target} PRIVATE aocl-da)
   if(BUILD_SMP)
     target_link_libraries(${target} PRIVATE OpenMP::OpenMP_CXX)

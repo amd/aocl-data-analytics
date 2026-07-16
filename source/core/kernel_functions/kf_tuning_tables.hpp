@@ -32,20 +32,27 @@ namespace da_kernel_functions {
 
 // ------ KERNEL FUNCTIONS TUNING TABLE ----------------------------------------
 constexpr TBL<KernelSelection>::type kf_tuning = {{
-  {generic,       tid<float>(), {{{4, scalar}, {8, avx}, {avx2}}}              },
-  {generic,       tid<double>(),{{{2, scalar}, {4, avx}, {avx2}}}              },
-  {zen2,          tid<float>(), {{{4, scalar}, {8, avx}, {avx2}}}              },
-  {zen2,          tid<double>(),{{{2, scalar}, {4, avx}, {avx2}}}              },
-  {zen3,          tid<float>(), {{{4, scalar}, {8, avx}, {avx2}}}              },
-  {zen3,          tid<double>(),{{{2, scalar}, {4, avx}, {avx2}}}              },
-  {zen4,          tid<float>(), {{{4, scalar}, {8, avx}, {16, avx2}, {avx512}}}},
-  {zen4,          tid<double>(),{{{2, scalar}, {4, avx}, { 8, avx2}, {avx512}}}},
-  {zen5,          tid<float>(), {{{4, scalar}, {8, avx}, {16, avx2}, {avx512}}}},
-  {zen5,          tid<double>(),{{{2, scalar}, {4, avx}, { 8, avx2}, {avx512}}}},
-  {zen6,          tid<float>(), {{{4, scalar}, {8, avx}, {16, avx2}, {avx512}}}},
-  {zen6,          tid<double>(),{{{2, scalar}, {4, avx}, { 8, avx2}, {avx512}}}},
-  {generic_avx512,tid<float>(), {{{4, scalar}, {8, avx}, {16, avx2}, {avx512}}}},
-  {generic_avx512,tid<double>(),{{{2, scalar}, {4, avx}, { 8, avx2}, {avx512}}}}
+  {generic,       tid<float>(),   {{{4, scalar}, {8,  avx}, {avx2}              }}},
+  {generic,       tid<double>(),  {{{2, scalar}, {4,  avx}, {avx2}              }}},
+  {generic,       tid<_Float16>(),{{{   scalar}                                 }}},
+  {zen2,          tid<float>(),   {{{4, scalar}, {8,  avx}, {avx2}              }}},
+  {zen2,          tid<double>(),  {{{2, scalar}, {4,  avx}, {avx2}              }}},
+  {zen2,          tid<_Float16>(),{{{   scalar}                                 }}},
+  {zen3,          tid<float>(),   {{{4, scalar}, {8,  avx}, {avx2}              }}},
+  {zen3,          tid<double>(),  {{{2, scalar}, {4,  avx}, {avx2}              }}},
+  {zen3,          tid<_Float16>(),{{{   scalar}                                 }}},
+  {zen4,          tid<float>(),   {{{4, scalar}, {8,  avx}, {16, avx2}, {avx512}}}},
+  {zen4,          tid<double>(),  {{{2, scalar}, {4,  avx}, { 8, avx2}, {avx512}}}},
+  {zen4,          tid<_Float16>(),{{{   scalar}                                 }}},
+  {zen5,          tid<float>(),   {{{4, scalar}, {8,  avx}, {16, avx2}, {avx512}}}},
+  {zen5,          tid<double>(),  {{{2, scalar}, {4,  avx}, { 8, avx2}, {avx512}}}},
+  {zen5,          tid<_Float16>(),{{{   scalar}                                 }}},
+  {zen6,          tid<float>(),   {{{4, scalar}, {8,  avx}, {16, avx2}, {avx512}}}},
+  {zen6,          tid<double>(),  {{{2, scalar}, {4,  avx}, { 8, avx2}, {avx512}}}},
+  {zen6,          tid<_Float16>(),{{{8, scalar}, {16, avx}, {32, avx2}, {avx512}}}},
+  {generic_avx512,tid<float>(),   {{{4, scalar}, {8,  avx}, {16, avx2}, {avx512}}}},
+  {generic_avx512,tid<double>(),  {{{2, scalar}, {4,  avx}, { 8, avx2}, {avx512}}}},
+  {generic_avx512,tid<_Float16>(),{{{8, scalar}, {16, avx}, {32, avx2}, {avx512}}}}
 }};
 
 // clang-format on

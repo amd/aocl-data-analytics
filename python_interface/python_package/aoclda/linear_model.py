@@ -368,6 +368,11 @@ class linmod():
         return self.linmod.get_n_iter()
 
     @property
+    def lp_n_iter(self):
+        """int: The number of low precision iterations performed if mixed precision was enabled."""
+        return self.linmod.get_lp_n_iter()
+
+    @property
     def time(self):
         """numpy.ndarray of shape (1, ): Compute time (wall clock time in seconds).
         """

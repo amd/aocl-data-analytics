@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2025 Advanced Micro Devices, Inc. All rights reserved.
+ * Copyright (C) 2025-2026 Advanced Micro Devices, Inc. All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without modification,
  * are permitted provided that the following conditions are met:
@@ -28,6 +28,7 @@
 #include "aoclda.h"
 #include "basic_statistics.hpp"
 #include "da_std.hpp"
+#include "fp16_helpers.hpp"
 #include "macros.h"
 #include <algorithm>
 #include <cmath>
@@ -129,7 +130,7 @@ da_status standardize(da_order order, da_axis axis_in, da_int n_in, da_int p_in,
         }
 
         for (da_int i = 0; i < length; i++) {
-            var[i] = std::sqrt(var[i]);
+            var[i] = da_std::sqrt(var[i]);
         }
 
         internal_scale = &var;
@@ -150,7 +151,7 @@ da_status standardize(da_order order, da_axis axis_in, da_int n_in, da_int p_in,
                 return status;
             }
             for (da_int i = 0; i < length; i++) {
-                scale[i] = std::sqrt(scale[i]);
+                scale[i] = da_std::sqrt(scale[i]);
             }
         }
         da_std::fill(amean, amean + length, 0.0);
@@ -184,7 +185,7 @@ da_status standardize(da_order order, da_axis axis_in, da_int n_in, da_int p_in,
                 return status;
             }
             for (da_int i = 0; i < length; i++) {
-                scale[i] = std::sqrt(scale[i]);
+                scale[i] = da_std::sqrt(scale[i]);
             }
         } else if (shift_is_zero) {
             status = mean(column_major, axis, n, p, x, ldx, shift);
@@ -202,7 +203,11 @@ da_status standardize(da_order order, da_axis axis_in, da_int n_in, da_int p_in,
                 return status;
             }
             for (da_int i = 0; i < length; i++) {
-                scale[i] = std::sqrt(length * scale[i] / scale_factor);
+                // Use wider_t so that in _Float16 we can safely compute the input to sqrt without overflowing
+                scale[i] = static_cast<T>(
+                    da_std::sqrt(static_cast<da_fp16::wider_t<T>>(length) *
+                                 static_cast<da_fp16::wider_t<T>>(scale[i]) /
+                                 static_cast<da_fp16::wider_t<T>>(scale_factor)));
             }
         }
     }
@@ -278,6 +283,11 @@ template da_status standardize<double>(da_order order, da_axis axis_in, da_int n
 template da_status standardize<float>(da_order order, da_axis axis_in, da_int n_in,
                                       da_int p_in, float *x, da_int ldx, da_int dof,
                                       da_int mode, float *shift, float *scale);
+#ifdef __AVX512FP16__
+template da_status standardize<_Float16>(da_order order, da_axis axis_in, da_int n_in,
+                                         da_int p_in, _Float16 *x, da_int ldx, da_int dof,
+                                         da_int mode, _Float16 *shift, _Float16 *scale);
+#endif
 
 } // namespace da_basic_statistics
 

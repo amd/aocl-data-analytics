@@ -1,4 +1,4 @@
-# Copyright (C) 2024-2025 Advanced Micro Devices, Inc. All rights reserved.
+# Copyright (C) 2024-2026 Advanced Micro Devices, Inc. All rights reserved.
 #
 # Redistribution and use in source and binary forms, with or without
 # modification, are permitted provided that the following conditions are met: 1.
@@ -41,9 +41,10 @@ foreach(file ${wheel_files})
     get_filename_component(BLAS_DIR ${BLAS} DIRECTORY)
     get_filename_component(LAPACK_DIR ${LAPACK} DIRECTORY)
     get_filename_component(UTILS_DIR ${UTILS} DIRECTORY)
+    get_filename_component(DLP_DIR ${DLP} DIRECTORY)
 
     set(ENV{LD_LIBRARY_PATH}
-        "${SPARSE_DIR}:${LAPACK_DIR}:${BLAS_DIR}:${UTILS_DIR}:${CMAKE_INSTALL_PREFIX}/tmp:$ENV{LD_LIBRARY_PATH}"
+        "${SPARSE_DIR}:${LAPACK_DIR}:${BLAS_DIR}:${UTILS_DIR}:${DLP_DIR}:${CMAKE_INSTALL_PREFIX}/tmp:$ENV{LD_LIBRARY_PATH}"
     )
     message(NOTICE "LD_LIBRARY_PATH             $ENV{LD_LIBRARY_PATH}")
 

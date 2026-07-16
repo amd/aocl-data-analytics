@@ -23,8 +23,10 @@
 
 #ifndef context_HPP
 #define context_HPP
-
+#pragma GCC diagnostic push
+#pragma GCC diagnostic ignored "-Wignored-qualifiers"
 #include "Au/Cpuid/X86Cpu.hh"
+#pragma GCC diagnostic pop
 #include "aoclda_types.h"
 #include "macros.h"
 #include <algorithm>

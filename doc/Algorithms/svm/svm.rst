@@ -160,6 +160,8 @@ The standard way of computing SVM using AOCL-DA is as follows.
 
          * Number of iterations (:cpp:enumerator:`da_svm_n_iterations`). In this context it counts the number of SMO subproblems solved, for each classifier. Vector of size :math:`(n_{\mathrm{classifiers}},\,)`.
 
+         * Number of low precision iterations (:cpp:enumerator:`da_svm_lp_n_iterations`). When mixed precision iterative refinement is used, this counts the number of SMO subproblems solved during the low precision phase, for each classifier. Contains zeros when mixed precision is not used. Vector of size :math:`(n_{\mathrm{classifiers}},\,)`.
+
          * Some solvers provide extra information. :cpp:enumerator:`da_result_::da_rinfo`, when available, contains the
            info[100] array with the following values:
 

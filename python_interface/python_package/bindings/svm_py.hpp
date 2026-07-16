@@ -405,6 +405,21 @@ class py_svm : public pyda_handle {
         return ret;
     }
 
+    auto get_lp_n_iterations() {
+        da_status status = da_status_success;
+        da_int n_samples, n_features, n_classes;
+        get_rinfo(&n_samples, &n_features, &n_classes);
+        da_int n_classifiers = n_classes * (n_classes - 1) / 2;
+        size_t shape[1]{(size_t)n_classifiers};
+        size_t strides[1]{sizeof(da_int)};
+        auto lp_n_iteration = py::array_t<da_int>(shape, strides);
+        status = da_handle_get_result(handle, da_svm_lp_n_iterations, &n_classifiers,
+                                      lp_n_iteration.mutable_data());
+        exception_check(status);
+        py::array ret = py::reinterpret_borrow<py::array>(lp_n_iteration);
+        return ret;
+    }
+
     auto get_dual_coef() {
         da_status status = da_status_success;
         da_int one = 1;

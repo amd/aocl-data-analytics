@@ -36,3 +36,4 @@ AOCL-DA for Python
 
    python_intro
    sklearn
+   faiss

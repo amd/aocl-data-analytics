@@ -151,10 +151,10 @@ da_status da_linmod_fit_start_s(da_handle handle, da_int n_coefs, const float *c
  *
  * After a model has been fitted using \ref da_linmod_fit_s "da_linmod_fit_?", it can be evaluated on
  * a new set of data and observations.
- * 
+ *
  * For regression problems, this function returns the model predictions in @p predictions.
  * If additionally the observations are provided, then the function also returns the loss function value in @p loss.
- * 
+ *
  * @rst
  * In the case where the model chosen solves a classification problem (e.g., logistic regression), the predictions computed will be categorical.
  * For each data point ``i``, ``prediction[i]`` will contain the index of the most likely class according to the model.
@@ -225,7 +225,9 @@ typedef enum da_linmod_info_t_ {
     linmod_info_nrow_coef = 13, ///< number of rows of the coefficient array
     linmod_info_ncol_coef = 14, ///< number of columns of the coefficient array
     linmod_info_well_determined =
-        15, ///< flag indicating if the problem is well determined
+        15,                     ///< flag indicating if the problem is well determined
+    linmod_info_lp_n_iter = 16, ///< number of low precision iterations performed
+                                ///< when mixed precision iterative refinement is used
 
     linmod_info_number ///< for internal use
 } da_linmod_info_t;

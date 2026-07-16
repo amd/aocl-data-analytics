@@ -52,8 +52,10 @@ namespace da_kmeans {
 namespace {
 using ES = std::function<void(bool, da_int, float *, da_int *, da_int *, float *, da_int, da_int)>;
 using ED = std::function<void(bool, da_int, double *, da_int *, da_int *, double *, da_int, da_int)>;
+using EH = std::function<void(bool, da_int, _Float16 *, da_int *, da_int *, _Float16 *, da_int, da_int)>;
 }
-inline const kernel_implementations<ES, ED> lloyd_implementations = {
+inline const kernel_implementations<ES, ED, EH> &lloyd_implementations() {
+    static const kernel_implementations<ES, ED, EH> impls = {
 {{ // float map
             /* scalar    */ lloyd_iteration_kernel_scalar<float>,
             /* avx (sse) */ lloyd_iteration_kernel<float, avx>,
@@ -65,8 +67,16 @@ ORL_AVX512F(/* avx512    */ lloyd_iteration_kernel<float, avx512>)
             /* avx (sse) */ lloyd_iteration_kernel<double, avx>,
             /* avx2      */ lloyd_iteration_kernel<double, avx2>,
 ORL_AVX512F(/* avx512    */ lloyd_iteration_kernel<double, avx512>)
+}},
+{{ // _Float16 map - native AVX512_FP16 vectorized kernels - we use avx/avx2/avx512 labels to distinguish between different vector widths, but all these kernels require AVX512_FP16 support
+ORL_AVXFP16(/* scalar    */ lloyd_iteration_kernel_scalar<_Float16>),
+ORL_AVXFP16(/* avx (sse) */ lloyd_iteration_kernel<_Float16, avx>),
+ORL_AVXFP16(/* avx2      */ lloyd_iteration_kernel<_Float16, avx2>),
+ORL_AVXFP16(/* avx512    */ lloyd_iteration_kernel<_Float16, avx512>)
 }}
-};
+    };
+    return impls;
+}
 // clang-format on
 
 using namespace da_kmeans_types;
@@ -82,7 +92,7 @@ void kmeans<T>::assign_lloyd_kernel(
 
     isa = Oracle<KernelSelection>(lloyd_tuning, tid<T>(), n_clusters, "kmeans.isa");
 
-    kernel = lloyd_implementations.get<T>(isa);
+    kernel = lloyd_implementations().get<T>(isa);
     padding = get_padding<T>(isa);
 
     // Add telemetry
@@ -133,7 +143,7 @@ void kmeans<T>::lloyd_iteration(bool update_centres, da_int n_threads) {
     auto A_blas_trans = (this->A_order == column_major) ? CblasTrans : CblasNoTrans;
     // if we are doing spherical k-means, the "distance computation" is just gemm, w/ a minus
     // sign so comparisons are done appropriately
-    T gemm_scalar = (this->do_spherical) ? -1.0 : -2.0;
+    T gemm_scalar = (this->do_spherical) ? (T)-1.0 : (T)-2.0;
 
     // Precompute pointer to inverse data norms for normalized spherical k-means centre updates
     const T *inv_norm_ptr =
@@ -179,7 +189,7 @@ void kmeans<T>::lloyd_iteration(bool update_centres, da_int n_threads) {
                 da_blas::cblas_gemm(CblasColMajor, CblasNoTrans, A_blas_trans, n_clusters,
                                     block_size, n_features, gemm_scalar,
                                     (*previous_cluster_centres).data(), n_clusters,
-                                    &A[A_index], lda, 0.0, &workcs1[workcs1_index],
+                                    &A[A_index], lda, (T)0.0, &workcs1[workcs1_index],
                                     ldworkcs1);
 
                 // Loop through the samples and find the closest cluster centre and its label
@@ -237,7 +247,7 @@ void kmeans<T>::lloyd_iteration(bool update_centres, da_int n_threads) {
             da_blas::cblas_gemm(CblasColMajor, CblasNoTrans, A_blas_trans, n_clusters,
                                 block_size, n_features, gemm_scalar,
                                 (*previous_cluster_centres).data(), n_clusters,
-                                &A[A_index], lda, 0.0, workcs1.data(), ldworkcs1);
+                                &A[A_index], lda, (T)0.0, workcs1.data(), ldworkcs1);
 
             // Loop through the samples and find the closest cluster centre and its label
             lloyd_kernel(update_centres, block_size, workc1.data(), cluster_count.data(),

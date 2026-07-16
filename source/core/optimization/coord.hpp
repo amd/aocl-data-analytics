@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2023-2025 Advanced Micro Devices, Inc. All rights reserved.
+ * Copyright (C) 2023-2026 Advanced Micro Devices, Inc. All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without modification,
  * are permitted provided that the following conditions are met:
@@ -28,7 +28,9 @@
 #include "aoclda_result.h"
 #include "callbacks.hpp"
 #include "da_error.hpp"
+#include "da_std.hpp"
 #include "da_utils.hpp"
+#include "fp16_helpers.hpp"
 #include "macros.h"
 #include "options.hpp"
 #include <chrono>
@@ -75,13 +77,13 @@ template <typename T> class bound_constr {
         case none:
             return da_status_success;
         case both:
-            x = std::max(std::min(x, (*uptr)[i]), (*lptr)[i]);
+            x = da_std::max(da_std::min(x, (*uptr)[i]), (*lptr)[i]);
             break;
         case lower:
-            x = std::max((*lptr)[i], x);
+            x = da_std::max((*lptr)[i], x);
             break;
         case upper:
-            x = std::min(x, (*uptr)[i]);
+            x = da_std::min(x, (*uptr)[i]);
             break;
         }
         return da_status_success;
@@ -97,13 +99,13 @@ template <typename T> class bound_constr {
             case none:
                 continue;
             case both:
-                x[i] = std::max(std::min(x[i], (*uptr)[i]), (*lptr)[i]);
+                x[i] = da_std::max(da_std::min(x[i], (*uptr)[i]), (*lptr)[i]);
                 break;
             case lower:
-                x[i] = std::max((*lptr)[i], x[i]);
+                x[i] = da_std::max((*lptr)[i], x[i]);
                 break;
             case upper:
-                x[i] = std::min(x[i], (*uptr)[i]);
+                x[i] = da_std::min(x[i], (*uptr)[i]);
                 break;
             }
         }
@@ -244,7 +246,7 @@ template <typename T> class coord_slv {
     T tol{T(0)};
     // tolerance to declare optimality
     T optim{T(0)}; // this is only checked if step < tol
-    T macheps_safe{T(2) * std::numeric_limits<T>::epsilon()};
+    T macheps_safe{T(2) * da_std::numeric_limits<T>::epsilon()};
 
     // Tuning parameters (can be overridden using hidden context registry)
     // ===================================================================
@@ -452,7 +454,7 @@ da_status coord(da_options::OptionRegistry &opts, da_int n, std::vector<T> &x,
 
     // Slow progress detection
     // previous optimality value, used to check progress
-    T optim_old{std::numeric_limits<T>::infinity()};
+    T optim_old{da_std::numeric_limits<T>::infinity()};
     // number of slow iterations
     size_t slow_cnt{0};
 
@@ -462,8 +464,11 @@ da_status coord(da_options::OptionRegistry &opts, da_int n, std::vector<T> &x,
     // slow progress factor (dualgap(k)/dualgap(k-1)) < slow_progress_factor
     // implies a slow progress counter increment, if this reaches slow_cnt_max
     // the slow progress is declared
-    const T slow_progress_factor =
-        da_utils::hidden_settings_query("coord.slow progress factor", 0.9999); // default
+    const T slow_progress_factor = static_cast<
+        T>(da_utils::hidden_settings_query<da_fp16::wider_t<T>>(
+        "coord.slow progress factor",
+        static_cast<da_fp16::wider_t<T>>(
+            0.9999))); // default, use wider type for _Float16 (no-op for float/double)
     const size_t slow_cnt_max =
         da_utils::hidden_settings_query("coord.slow count max", 10U); // default
 
@@ -492,8 +497,8 @@ da_status coord(da_options::OptionRegistry &opts, da_int n, std::vector<T> &x,
     T *f = &info[da_linmod_info_t::linmod_info_objective];
     T *time = &info[da_linmod_info_t::linmod_info_time];
     T newxk{T(0)};
-    T inorm{std::numeric_limits<T>::infinity()};
-    *f = std::numeric_limits<T>::infinity();
+    T inorm{da_std::numeric_limits<T>::infinity()};
+    *f = da_std::numeric_limits<T>::infinity();
     bool cbstop{false};
     bool callmon{false};
     bool timeout{false};
@@ -521,9 +526,9 @@ da_status coord(da_options::OptionRegistry &opts, da_int n, std::vector<T> &x,
         case EVAL: // Compute new iterate for x[k]
             if (iter == 0) {
                 // reset the optimality measure
-                optim = std::numeric_limits<T>::infinity();
-                info[da_linmod_info_t::linmod_info_inorm_init] = std::max(
-                    info[da_linmod_info_t::linmod_info_inorm_init], std::abs(x[k]));
+                optim = da_std::numeric_limits<T>::infinity();
+                info[da_linmod_info_t::linmod_info_inorm_init] = da_std::max(
+                    info[da_linmod_info_t::linmod_info_inorm_init], da_std::abs(x[k]));
             }
             if (action > 0)
                 fcnt++;
@@ -538,7 +543,7 @@ da_status coord(da_options::OptionRegistry &opts, da_int n, std::vector<T> &x,
                 newxk = x[k];
             }
             if (prnlvl >= 4) {
-                bool skipmax = skipmax_reset < std::numeric_limits<T>::max();
+                bool skipmax = skipmax_reset < da_std::numeric_limits<T>::max();
                 std::string flagss;
                 da_int restartk = w.flags & 1U;   // Requested restart
                 da_int reset = w.flags & 2U;      // Tolerance check requested restart
@@ -611,7 +616,7 @@ da_status coord(da_options::OptionRegistry &opts, da_int n, std::vector<T> &x,
                 if (skipmax)
                     std::cout << "/" << std::setw(9) << "skipmax";
                 std::cout << std::endl;
-                T xkdiff = std::abs(x[k] - newxk);
+                T xkdiff = da_std::abs(x[k] - newxk);
                 std::cout << std::setw(10) << iter << std::setw(1) << "" << std::setw(10)
                           << k << std::setw(1) << "" << std::scientific << std::showpos
                           << std::setw(9) << x[k] << std::setw(1) << "" << std::setw(9)
@@ -651,8 +656,9 @@ da_status coord(da_options::OptionRegistry &opts, da_int n, std::vector<T> &x,
             if (mon != 0) {
                 callmon = (iter % mon == 0);
             }
-            *time = std::chrono::duration<T>(std::chrono::system_clock::now() - clock)
-                        .count();
+            *time = static_cast<T>(
+                std::chrono::duration<double>(std::chrono::system_clock::now() - clock)
+                    .count());
             if (maxtime > 0) {
                 timeout = (*time > maxtime);
             }
@@ -714,7 +720,7 @@ da_status coord(da_options::OptionRegistry &opts, da_int n, std::vector<T> &x,
                           << std::scientific << std::setw(9) << *f << std::setw(1) << ""
                           << std::setw(9) << inorm << std::setw(12) << fcnt + lowrk
                           << std::setw(12) << chkcnt;
-                if (optim < std::numeric_limits<T>::infinity()) {
+                if (optim < da_std::numeric_limits<T>::infinity()) {
                     std::cout << std::setw(1) << "" << std::setw(9) << optim;
                 }
                 std::cout << std::endl;
@@ -800,7 +806,7 @@ da_status coord(da_options::OptionRegistry &opts, da_int n, std::vector<T> &x,
         // Exit summary message
         std::cout << std::endl << "Solver summary" << std::endl;
         std::cout << " Objective value (scaled problem): " << *f << std::endl;
-        if (optim < std::numeric_limits<T>::infinity()) {
+        if (optim < da_std::numeric_limits<T>::infinity()) {
             std::cout << " Optimality measure:               " << optim << std::endl;
         } else {
             std::cout << " Optimality measure:               Infinity" << std::endl;
@@ -820,7 +826,7 @@ da_status coord(da_options::OptionRegistry &opts, da_int n, std::vector<T> &x,
         }
         if (status == da_status_success) {
             std::cout << " Convergence status: ";
-            if (optim_usr < std::numeric_limits<T>::infinity()) {
+            if (optim_usr < da_std::numeric_limits<T>::infinity()) {
                 std::cout << "dual gap is less than tolerance.";
             } else {
                 std::cout << "distance between two consecutive iterates is "
@@ -908,8 +914,8 @@ da_status coord_rcomm(const da_int n, std::vector<T> &x, constraints::bound_cons
         // Infinity-norm of the coefficient vector
         w.inormbeta = T(0);
         // Save the tolerances for convergence and optimality
-        w.tol = std::max(w.macheps_safe, tol);     // check step length
-        w.optim = std::max(w.macheps_safe, optim); // check optimality tolerance
+        w.tol = da_std::max(w.macheps_safe, tol);     // check step length
+        w.optim = da_std::max(w.macheps_safe, optim); // check optimality tolerance
 
         // AQUI: ADD hidden registry hidden settings for convergence type and slow progress detection
         // check averything....
@@ -921,7 +927,7 @@ da_status coord_rcomm(const da_int n, std::vector<T> &x, constraints::bound_cons
         w.flags = 0;
         bc.proj(k, newxk);
         w.kdiff = newxk - x[k];
-        kchange = std::abs(w.kdiff);
+        kchange = da_std::abs(w.kdiff);
         if (kchange <= w.macheps_safe) {
             // If the change is smaller than safe machine epsilon,
             // it is considered numerical noise
@@ -930,8 +936,8 @@ da_status coord_rcomm(const da_int n, std::vector<T> &x, constraints::bound_cons
             w.kdiff = T(0);
             w.flags |= 64U; // "@" Step too small, zeroed out
         }
-        inorm = std::max(inorm, kchange);
-        w.inormbeta = std::max(w.inormbeta, std::abs(newxk));
+        inorm = da_std::max(inorm, kchange);
+        w.inormbeta = da_std::max(w.inormbeta, da_std::abs(newxk));
         x[k] = newxk;
 
         kold = k;
@@ -994,10 +1000,10 @@ da_status coord_rcomm(const da_int n, std::vector<T> &x, constraints::bound_cons
             if (w.scale_convergence_type >= 1) {
                 tol *= w.inormbeta;
                 // safe-guard
-                tol = std::max(tol, w.macheps_safe);
+                tol = da_std::max(tol, w.macheps_safe);
             }
             if (w.scale_convergence_type >= 2)
-                tol = std::max(tol, w.tol);
+                tol = da_std::max(tol, w.tol);
 
             // Check for convergence or search-space exhaustion
             if (w.inormbeta == T(0) || inorm <= tol || k == kold) {

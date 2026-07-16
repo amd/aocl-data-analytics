@@ -184,7 +184,7 @@ class kmeans : public pyda_handle {
 
     template <typename T>
     void get_rinfo(da_int *n_samples, da_int *n_features, da_int *n_clusters,
-                   da_int *n_iter, T *inertia) {
+                   da_int *n_iter, T *inertia, da_int *lp_n_iter = nullptr) {
         da_status status;
 
         da_int dim = 6;
@@ -196,6 +196,8 @@ class kmeans : public pyda_handle {
         *n_clusters = (da_int)rinfo[2];
         *n_iter = (da_int)rinfo[3];
         *inertia = rinfo[4];
+        if (lp_n_iter)
+            *lp_n_iter = (da_int)rinfo[5];
 
         exception_check(status);
     }
@@ -336,6 +338,23 @@ class kmeans : public pyda_handle {
         }
 
         return n_iter;
+    }
+
+    auto get_lp_n_iter() {
+
+        da_int n_samples, n_features, n_clusters, n_iter, lp_n_iter;
+
+        if (precision == da_single) {
+            float inertia;
+            get_rinfo(&n_samples, &n_features, &n_clusters, &n_iter, &inertia,
+                      &lp_n_iter);
+        } else {
+            double inertia;
+            get_rinfo(&n_samples, &n_features, &n_clusters, &n_iter, &inertia,
+                      &lp_n_iter);
+        }
+
+        return lp_n_iter;
     }
 
     auto get_n_samples() {

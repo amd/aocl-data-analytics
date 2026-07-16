@@ -44,7 +44,7 @@ enum vectorization_type : da_int {
     avx = 2,
     avx2 = 3,
     avx512 = 4,
-    count = 5
+    count = 4
 };
 
 // Test kernel overrides
@@ -179,17 +179,12 @@ template <typename T> void test_functionality(const KMeansParamType<T> &param) {
         EXPECT_EQ(
             da_options_set(handle, "low precision convergence tolerance", param.lp_tol),
             da_status_success);
-        // If typename is double, set mixed precision option
-        if (std::is_same<T, double>::value) {
-            EXPECT_EQ(da_options_set_string(handle, "mixed precision",
-                                            param.mixed_precision.c_str()),
-                      da_status_success);
-        }
-
+        EXPECT_EQ(da_options_set_string(handle, "mixed precision",
+                                        param.mixed_precision.c_str()),
+                  da_status_success);
         EXPECT_EQ(da_kmeans_set_data(handle, param.n_samples, param.n_features,
                                      param.A.data(), param.lda),
                   da_status_success);
-
         if (param.initialization_method == "supplied") {
             EXPECT_EQ(da_kmeans_set_init_centres(handle, param.C.data(), param.ldc),
                       da_status_success);
@@ -201,7 +196,17 @@ template <typename T> void test_functionality(const KMeansParamType<T> &param) {
                   da_status_success);
         EXPECT_EQ(tr_val, 0);
 
-        EXPECT_EQ(da_kmeans_compute<T>(handle), param.expected_status);
+        da_status compute_status = da_kmeans_compute<T>(handle);
+
+        // Catch special case of half precision use when it is not available, in which case compute will fail
+        if (!std::is_same<T, double>::value && param.mixed_precision == "yes" &&
+            compute_status == da_status_invalid_option) {
+            // AVX512_FP16 not available on this machine — skip result validation
+            da_handle_destroy(&handle);
+            continue;
+        }
+
+        EXPECT_EQ(compute_status, param.expected_status);
 
         // If an error was expected, skip result validation and clean up
         if (param.expected_status != da_status_success &&

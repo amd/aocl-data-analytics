@@ -29,22 +29,31 @@
 set(CMAKE_Fortran_PREPROCESS ON)
 
 if(NOT WIN32)
-  set(CMAKE_Fortran_FLAGS -mavx2)
-  if(CMAKE_Fortran_COMPILER_ID MATCHES "Flang")
-    # Ask compiler to ignore unknon warning options
-    list(APPEND CMAKE_Fortran_FLAGS -Qunused-arguments -Wno-unused-command-line-argument -Wno-unknown-warning-option)
-  endif()
+  AppendFortranFlags(_Fortran_FLAGS REQUIRED -march=x86-64-v3)
+  AppendFortranFlags(_Fortran_FLAGS 
+    -Qunused-arguments
+    -Wno-character-truncation
+    -Wno-compare-reals
+    -Wno-maybe-uninitialized
+    -Wno-unknown-warning-option
+    -Wno-unused-command-line-argument
+    -Wno-unused-dummy-argument
+    -Wno-unused-function
+    -Wno-unused-label
+    -Wno-unused-parameter
+    -Wno-unused-variable
+  )
 elseif(CMAKE_Fortran_COMPILER_ID MATCHES "Intel")
-  set(CMAKE_Fortran_FLAGS /QxCORE-AVX2)
+  set(_Fortran_FLAGS /QxCORE-AVX2)
 endif()
 
 if(BUILD_ILP64)
   if(CMAKE_Fortran_COMPILER_ID MATCHES "GNU")
-    list(APPEND CMAKE_Fortran_FLAGS -finteger-4-integer-8)
+    list(APPEND _Fortran_FLAGS -finteger-4-integer-8)
   elseif(CMAKE_Fortran_COMPILER_ID MATCHES "Flang")
-    list(APPEND CMAKE_Fortran_FLAGS -fdefault-integer-8)
+    list(APPEND _Fortran_FLAGS -fdefault-integer-8)
   elseif(CMAKE_Fortran_COMPILER_ID MATCHES "Intel")
-    list(APPEND CMAKE_Fortran_FLAGS -i8)
+    list(APPEND _Fortran_FLAGS -i8)
   else()
     message(FATAL_ERROR "Unknown Fortran compiler!")
   endif()
@@ -53,7 +62,8 @@ if(BUILD_ILP64)
   message(NOTICE "RALFit: Requesting ILP64")
 endif()
 
-list(JOIN CMAKE_Fortran_FLAGS " " CMAKE_Fortran_FLAGS)
+list(JOIN _Fortran_FLAGS " " _Fortran_FLAGS)
+separate_arguments(_compiler_flags UNIX_COMMAND "${_Fortran_FLAGS}")
 
 # Sets -fPIC flag
 if(BUILD_SHARED_LIBS)
@@ -61,12 +71,14 @@ if(BUILD_SHARED_LIBS)
 endif()
 
 add_subdirectory(libRALFit/src EXCLUDE_FROM_ALL)
+foreach(_obj ${nlls_obj_list})
+  string(REGEX REPLACE "\\$<TARGET_OBJECTS:(.+)>" "\\1" _tgt "${_obj}")
+  target_compile_options(${_tgt} PRIVATE ${_compiler_flags})
+endforeach()
 
 message(NOTICE
         "RALFit: Fortran Compiler ID       : ${CMAKE_Fortran_COMPILER_ID}")
 
-message(NOTICE "RALFit: Fortran Compiler flags    : ${CMAKE_Fortran_FLAGS}")
+message(NOTICE "RALFit: Fortran Compiler flags    : ${_Fortran_FLAGS}")
 
-set(nlls_obj_list
-    ${nlls_obj_list}
-    PARENT_SCOPE)
+set(nlls_obj_list ${nlls_obj_list} PARENT_SCOPE)

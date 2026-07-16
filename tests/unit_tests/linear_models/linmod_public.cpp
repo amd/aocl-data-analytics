@@ -29,32 +29,55 @@
 #include "aoclda.h"
 #include "gmock/gmock.h"
 #include "gtest/gtest.h"
+#include <cstring>
 
 namespace {
 
+template <typename T> class linmod_public_test : public testing::Test {};
+using FloatTypes = ::testing::Types<float, double>;
+TYPED_TEST_SUITE(linmod_public_test, FloatTypes);
+
 const da_int print_level{2};
 
-/* test the use of mixed precision iterative refinement for double precision computations */
-TEST(linmod, mixedPrecisionIterativeRefinement) {
+/* test the use of mixed precision iterative refinement for double and single
+ * precision computations. For double precision, the low-precision type is
+ * float and is always available. For single precision, the low-precision type
+ * is _Float16 which only has hardware support on Zen6 and above; on other
+ * architectures the option is rejected with da_status_invalid_option. */
+TYPED_TEST(linmod_public_test, MixedPrecisionIterativeRefinement) {
+    using T = TypeParam;
     // problem data
     da_int n = 4;
     da_int m_vals[2] = {3, 5}; // Enable overdetermined and underdetermined tests
-    double Ad[20] = {1, 2, 3, 4, 5, 1, 3, 5, 1, 1, 2, 1, 6, 3, 2, 5, 7, 0, 1, 0};
-    double bd[5] = {1, 1, 1, 1, 1};
-    double bd_logistic[5] = {0, 1, 0, 1, 0};
+    T Ad[20] = {1, 2, 3, 4, 5, 1, 3, 5, 1, 1, 2, 1, 6, 3, 2, 5, 7, 0, 1, 0};
+    T bd[5] = {1, 1, 1, 1, 1};
+    T bd_logistic[5] = {0, 1, 0, 1, 0};
     da_int nx = 0;
-    double x_double[5], x_mixed[5];
-    const double tol = 1e-4;
+    T x_base[5], x_mixed[5];
+    const T tol = std::is_same_v<T, double> ? T(1e-4) : T(1e-2);
     da_int intercepts[2] = {0, 1};
-    double alpha = 0.0, lambda = 5.0;
+    T alpha = T(0.0), lambda = T(5.0);
 
-    da_handle handle_double = nullptr, handle_mixed = nullptr;
+    da_handle handle_base = nullptr, handle_mixed = nullptr;
 
+    // For T=float the low-precision type is _Float16, which is only supported
+    // on Zen6. For T=float the only legal mixed-precision solver is "coord".
+    da_int len{100};
+    char arch[100], ns[100];
+    ASSERT_EQ(da_get_arch_info(&len, arch, ns), da_status_success);
+    const bool is_zen6 = (std::strcmp(arch, "zen6") == 0);
+
+    std::vector<std::string> solvers;
+    if constexpr (std::is_same_v<T, double>) {
 #ifdef NO_FORTRAN
-    std::vector<std::string> solvers = {"coord", "cg"};
+        solvers = {"coord", "cg"};
 #else
-    std::vector<std::string> solvers = {"coord", "cg", "lbfgs"};
+        solvers = {"coord", "cg", "lbfgs"};
 #endif
+    } else {
+        // For float+_Float16 only the coordinate descent solver is supported
+        solvers = {"coord"};
+    }
 
     for (auto &solver : solvers) {
         for (auto &intercept : intercepts) {
@@ -66,66 +89,65 @@ TEST(linmod, mixedPrecisionIterativeRefinement) {
                 if (intercept == 1 && m < n) {
                     continue;
                 }
-                // Solve in double precision first
-                EXPECT_EQ(da_handle_init<double>(&handle_double, da_handle_linmod),
+                // Solve in working precision first (baseline)
+                EXPECT_EQ(da_handle_init<T>(&handle_base, da_handle_linmod),
                           da_status_success);
                 if (solver == "lbfgs") {
                     EXPECT_EQ(
-                        da_linmod_select_model_d(handle_double, linmod_model_logistic),
+                        da_linmod_select_model<T>(handle_base, linmod_model_logistic),
                         da_status_success);
-                    EXPECT_EQ(da_linmod_define_features_d(handle_double, m, n, Ad, m,
-                                                          bd_logistic),
-                              da_status_success);
+                    EXPECT_EQ(
+                        da_linmod_define_features(handle_base, m, n, Ad, m, bd_logistic),
+                        da_status_success);
                 } else {
-                    EXPECT_EQ(da_linmod_select_model_d(handle_double, linmod_model_mse),
+                    EXPECT_EQ(da_linmod_select_model<T>(handle_base, linmod_model_mse),
                               da_status_success);
-                    EXPECT_EQ(da_linmod_define_features_d(handle_double, m, n, Ad, m, bd),
+                    EXPECT_EQ(da_linmod_define_features(handle_base, m, n, Ad, m, bd),
                               da_status_success);
                 }
 
-                EXPECT_EQ(da_options_set_int(handle_double, "intercept", intercept),
+                EXPECT_EQ(da_options_set_int(handle_base, "intercept", intercept),
                           da_status_success);
-                EXPECT_EQ(da_options_set_real_d(handle_double, "alpha", alpha),
+                EXPECT_EQ(da_options_set(handle_base, "alpha", alpha), da_status_success);
+                EXPECT_EQ(da_options_set(handle_base, "lambda", lambda),
                           da_status_success);
-                EXPECT_EQ(da_options_set_real_d(handle_double, "lambda", lambda),
-                          da_status_success);
-                EXPECT_EQ(da_options_set_string(handle_double, "scaling", "none"),
+                EXPECT_EQ(da_options_set_string(handle_base, "scaling", "none"),
                           da_status_success);
                 EXPECT_EQ(
-                    da_options_set_string(handle_double, "optim method", solver.c_str()),
+                    da_options_set_string(handle_base, "optim method", solver.c_str()),
                     da_status_success);
-                EXPECT_EQ(da_linmod_fit_d(handle_double), da_status_success);
+                EXPECT_EQ(da_linmod_fit<T>(handle_base), da_status_success);
                 nx = 0;
-                EXPECT_EQ(da_handle_get_result_d(handle_double, da_result::da_linmod_coef,
-                                                 &nx, x_double),
+                EXPECT_EQ(da_handle_get_result(handle_base, da_result::da_linmod_coef,
+                                               &nx, x_base),
                           da_status_invalid_array_dimension);
-                EXPECT_EQ(da_handle_get_result_d(handle_double, da_result::da_linmod_coef,
-                                                 &nx, x_double),
+                EXPECT_EQ(da_handle_get_result(handle_base, da_result::da_linmod_coef,
+                                               &nx, x_base),
                           da_status_success);
-                da_handle_destroy(&handle_double);
+                da_handle_destroy(&handle_base);
 
                 // Now solve with mixed precision iterative refinement
-                EXPECT_EQ(da_handle_init<double>(&handle_mixed, da_handle_linmod),
+                EXPECT_EQ(da_handle_init<T>(&handle_mixed, da_handle_linmod),
                           da_status_success);
                 if (solver == "lbfgs") {
                     EXPECT_EQ(
-                        da_linmod_select_model_d(handle_mixed, linmod_model_logistic),
+                        da_linmod_select_model<T>(handle_mixed, linmod_model_logistic),
                         da_status_success);
-                    EXPECT_EQ(da_linmod_define_features_d(handle_mixed, m, n, Ad, m,
-                                                          bd_logistic),
-                              da_status_success);
+                    EXPECT_EQ(
+                        da_linmod_define_features(handle_mixed, m, n, Ad, m, bd_logistic),
+                        da_status_success);
                 } else {
-                    EXPECT_EQ(da_linmod_select_model_d(handle_mixed, linmod_model_mse),
+                    EXPECT_EQ(da_linmod_select_model<T>(handle_mixed, linmod_model_mse),
                               da_status_success);
-                    EXPECT_EQ(da_linmod_define_features_d(handle_mixed, m, n, Ad, m, bd),
+                    EXPECT_EQ(da_linmod_define_features(handle_mixed, m, n, Ad, m, bd),
                               da_status_success);
                 }
 
                 EXPECT_EQ(da_options_set_int(handle_mixed, "intercept", intercept),
                           da_status_success);
-                EXPECT_EQ(da_options_set_real_d(handle_mixed, "alpha", alpha),
+                EXPECT_EQ(da_options_set(handle_mixed, "alpha", alpha),
                           da_status_success);
-                EXPECT_EQ(da_options_set_real_d(handle_mixed, "lambda", lambda),
+                EXPECT_EQ(da_options_set(handle_mixed, "lambda", lambda),
                           da_status_success);
                 EXPECT_EQ(da_options_set_string(handle_mixed, "scaling", "none"),
                           da_status_success);
@@ -134,17 +156,26 @@ TEST(linmod, mixedPrecisionIterativeRefinement) {
                     da_status_success);
                 EXPECT_EQ(da_options_set_string(handle_mixed, "mixed precision", "yes"),
                           da_status_success);
-                EXPECT_EQ(da_linmod_fit_d(handle_mixed), da_status_success);
+                da_status mixed_status = da_linmod_fit<T>(handle_mixed);
+                if constexpr (std::is_same_v<T, float>) {
+                    if (!is_zen6) {
+                        // _Float16 LP path not available on this hardware
+                        EXPECT_EQ(mixed_status, da_status_incompatible_options);
+                        da_handle_destroy(&handle_mixed);
+                        continue;
+                    }
+                }
+                EXPECT_EQ(mixed_status, da_status_success);
                 nx = 0;
-                EXPECT_EQ(da_handle_get_result_d(handle_mixed, da_result::da_linmod_coef,
-                                                 &nx, x_mixed),
+                EXPECT_EQ(da_handle_get_result(handle_mixed, da_result::da_linmod_coef,
+                                               &nx, x_mixed),
                           da_status_invalid_array_dimension);
-                EXPECT_EQ(da_handle_get_result_d(handle_mixed, da_result::da_linmod_coef,
-                                                 &nx, x_mixed),
+                EXPECT_EQ(da_handle_get_result(handle_mixed, da_result::da_linmod_coef,
+                                               &nx, x_mixed),
                           da_status_success);
                 da_handle_destroy(&handle_mixed);
 
-                EXPECT_ARR_NEAR(nx, x_double, x_mixed, tol);
+                EXPECT_ARR_NEAR(nx, x_base, x_mixed, tol);
             }
         }
     }
@@ -159,7 +190,13 @@ TEST(linmod, mixedPrecisionErrors) {
     float As[20] = {1, 2, 3, 4, 5, 1, 3, 5, 1, 1, 2, 1, 6, 3, 2, 5, 7, 0, 1, 0};
     float bs[5] = {1, 1, 1, 1, 1};
 
-    // Check that setting mixed precision without a compatible solver returns an error
+    da_int len{100};
+    char arch[100], ns[100];
+    ASSERT_EQ(da_get_arch_info(&len, arch, ns), da_status_success);
+    const bool is_zen6 = (std::strcmp(arch, "zen6") == 0);
+
+    // Check that setting mixed precision for a double-precision handle with a
+    // solver other than coord/cg/lbfgs returns incompatible_options.
     da_handle handle = nullptr;
     EXPECT_EQ(da_handle_init<double>(&handle, da_handle_linmod), da_status_success);
     EXPECT_EQ(da_linmod_select_model_d(handle, linmod_model_mse), da_status_success);
@@ -170,13 +207,33 @@ TEST(linmod, mixedPrecisionErrors) {
     EXPECT_EQ(da_linmod_fit_d(handle), da_status_incompatible_options);
     da_handle_destroy(&handle);
 
-    // Check that setting mixed precision for single precision data returns an error
+    // Check that single precision with mixed precision and a non-coord solver
+    // is rejected (independent of hardware: validate_options gates this before
+    // dispatching to the _Float16 path).
+    const std::vector<std::string> illegal_float_solvers = {"cholesky", "qr", "svd", "cg",
+                                                            "lbfgs"};
+    for (const auto &solver : illegal_float_solvers) {
+        EXPECT_EQ(da_handle_init<float>(&handle, da_handle_linmod), da_status_success);
+        EXPECT_EQ(da_linmod_select_model_s(handle, linmod_model_mse), da_status_success);
+        EXPECT_EQ(da_linmod_define_features_s(handle, m, n, As, m, bs),
+                  da_status_success);
+        EXPECT_EQ(da_options_set_string(handle, "mixed precision", "yes"),
+                  da_status_success);
+        EXPECT_EQ(da_options_set_string(handle, "optim method", solver.c_str()),
+                  da_status_success);
+        EXPECT_EQ(da_linmod_fit_s(handle), da_status_incompatible_options);
+        da_handle_destroy(&handle);
+    }
+
+    // Single precision + coord + mixed precision: succeeds on Zen6 (which has
+    // _Float16 arithmetic), is rejected with incompatible_options elsewhere.
     EXPECT_EQ(da_handle_init<float>(&handle, da_handle_linmod), da_status_success);
     EXPECT_EQ(da_linmod_select_model_s(handle, linmod_model_mse), da_status_success);
     EXPECT_EQ(da_linmod_define_features_s(handle, m, n, As, m, bs), da_status_success);
     EXPECT_EQ(da_options_set_string(handle, "mixed precision", "yes"), da_status_success);
-    EXPECT_EQ(da_options_set_string(handle, "optim method", "cg"), da_status_success);
-    EXPECT_EQ(da_linmod_fit_s(handle), da_status_incompatible_options);
+    EXPECT_EQ(da_options_set_string(handle, "optim method", "coord"), da_status_success);
+    EXPECT_EQ(da_linmod_fit_s(handle),
+              is_zen6 ? da_status_success : da_status_incompatible_options);
     da_handle_destroy(&handle);
 }
 
@@ -641,9 +698,9 @@ TEST(linmod, CheckGetInfo) {
     EXPECT_EQ(da_handle_get_result(handle_d, da_result::da_trained, &dim, &trained),
               da_status_success);
     EXPECT_EQ(trained, 1);
-    // so check that all (except index 0, 3 and 10-15) are -1.
+    // so check that all (except index 0, 3, 10-15 and 16) are -1.
     for (da_int i = 1; i < 100; ++i) {
-        if (i == 3 || (i >= 10 && i <= 15))
+        if (i == 3 || (i >= 10 && i <= 15) || i == 16)
             continue;
         EXPECT_EQ(info[i], -1.0);
     }

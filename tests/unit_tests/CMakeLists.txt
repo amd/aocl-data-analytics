@@ -194,6 +194,12 @@ target_link_libraries(da_cache_internal PRIVATE aocl-da)
 add_executable(da_syrk_internal da_utilities/da_syrk_internal.cpp)
 target_link_libraries(da_syrk_internal PRIVATE aocl-da ${BLAS})
 
+# ##############################################################################
+# ############ FP16 ##################
+# ##############################################################################
+add_executable(fp16_syrk_internal fp16/fp16_syrk_internal.cpp)
+target_link_libraries(fp16_syrk_internal PRIVATE aocl-da ${BLAS} ${DLP})
+
 # C compatibility test - compile with C compiler and link with C++ compiler
 set_source_files_properties(da_utilities/c_compatibility_nog_public.c
   PROPERTIES LANGUAGE C)
@@ -461,6 +467,7 @@ set(GTEST_INTERNAL
   trees_internal
   utilities_internal
   da_syrk_internal
+  fp16_syrk_internal
   serialization_kernel_internal
   serialization_kernel_errors_internal)
 set(INDEP_INTERNAL printf_debug_internal lbfgsb_rc_internal
@@ -539,7 +546,6 @@ set(UTESTS ${INTERNAL_UTESTS} ${PUBLIC_UTESTS})
 
 # Include source/core directories for internal tests
 foreach(internal_test ${INTERNAL_UTESTS})
-  target_compile_options(${internal_test} PRIVATE -mavx2)
   target_include_directories(${internal_test} PRIVATE ${INTERNAL_INC_DIRS})
   if(ARCH STREQUAL "dynamic" OR ARCH STREQUAL "generic")
     # Internal tests will just use the generic codepath
@@ -572,7 +578,12 @@ foreach(internal_test ${INTERNAL_UTESTS})
   endif()
 endforeach()
 
+# Some compilers complain about gtest variadic macros, try to suppress
+AppendCXXFlags(SUPPRESSIONS "-Wno-gnu-zero-variadic-macro-arguments")
+
 foreach(target ${UTESTS})
+  target_compile_options(${target} PRIVATE -march=native)
+  target_compile_options(${target} PRIVATE ${SUPPRESSIONS})
   target_link_libraries(${target} PRIVATE aocl-da gtest_main gmock_main)
   if(BUILD_SMP)
     target_link_libraries(${target} PRIVATE OpenMP::OpenMP_CXX)
@@ -614,8 +625,16 @@ endif()
 
 # Defer gtest enumeration to ctest time on Windows shared builds (otherwise the
 # build-time exe launch hits STATUS_DLL_NOT_FOUND before copy_utest_runtime_dlls
-# has run). Everywhere else, keep the default POST_BUILD enumeration.
+# has run). Also defer when cross-targeting a specific ISA that may be newer
+# than the build host (e.g. building znver6 on a Zen 3 box): POST_BUILD would
+# launch the freshly-built exe at build time and SIGILL ("Illegal instruction")
+# on the unsupported opcodes. PRE_TEST lets the build finish; the tests are
+# still only runnable on matching hardware at ctest time. Everywhere else, keep
+# the default POST_BUILD enumeration.
 if(WIN32 AND BUILD_SHARED_LIBS)
+  set(GTEST_DISCOVERY_MODE PRE_TEST)
+elseif(NOT (ARCH STREQUAL "native" OR ARCH STREQUAL "dynamic" OR ARCH STREQUAL
+            "generic"))
   set(GTEST_DISCOVERY_MODE PRE_TEST)
 else()
   set(GTEST_DISCOVERY_MODE POST_BUILD)

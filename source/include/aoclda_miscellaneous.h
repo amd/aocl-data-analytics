@@ -41,8 +41,8 @@
            __LINE__ __VA_OPT__(, ) __VA_ARGS__)
 #endif
 
-da_status da_parallel_check();
-const char *da_get_version();
-const char *da_get_git_commit();
+da_status da_parallel_check(void);
+const char *da_get_version(void);
+const char *da_get_git_commit(void);
 
 #endif

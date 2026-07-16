@@ -26,15 +26,15 @@
 
 template <typename T>
 inline constexpr da_int KMEANS_LLOYD_BLOCK_SIZE =
-    std::is_same<T, double>::value ? 256 : 512;
+    std::is_same<T, double>::value ? 256 : (std::is_same<T, _Float16>::value ? 768 : 512);
 
 template <typename T>
 inline constexpr da_int KMEANS_ELKAN_BLOCK_SIZE =
-    std::is_same<T, double>::value ? 256 : 512;
+    std::is_same<T, double>::value ? 256 : (std::is_same<T, _Float16>::value ? 768 : 512);
 
 template <typename T>
 inline constexpr da_int KMEANS_MACQUEEN_BLOCK_SIZE =
-    std::is_same<T, double>::value ? 128 : 256;
+    std::is_same<T, double>::value ? 128 : (std::is_same<T, _Float16>::value ? 768 : 256);
 
 namespace da_kmeans_types {
 

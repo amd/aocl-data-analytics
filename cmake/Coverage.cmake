@@ -55,10 +55,6 @@ endif()
 set(COV_PARALLEL_LEVEL "${HALF_NPROC}" CACHE STRING
     "Number of tests to run concurrently during coverage (default: min(16, NPROC/2))")
 
-set(COMPILER_FLAGS_DEBUG
-    "${COMPILER_FLAGS_DEBUG};-fprofile-arcs;-ftest-coverage")
-link_libraries(gcov)
-
 # Create a coverage_reports directory in the main build directory
 set(COV_DIR ${CMAKE_BINARY_DIR}/coverage_reports)
 add_custom_target(create-cov-dir COMMAND ${CMAKE_COMMAND} -E make_directory

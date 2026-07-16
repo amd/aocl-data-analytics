@@ -31,6 +31,7 @@
 #include "da_error.hpp"
 #include "da_omp.hpp"
 #include "da_std.hpp"
+#include "fp16_helpers.hpp"
 #include "macros.h"
 #include "options.hpp"
 #include "svm_options.hpp"
@@ -241,6 +242,19 @@ da_status svm<T>::get_result(da_result query, da_int *dim, da_int *result) {
             result[i] = n_iteration[i];
 
         break;
+    case da_result::da_svm_lp_n_iterations:
+        size = n_classifiers;
+        if (*dim < size) {
+            *dim = size;
+            return da_warn(this->err, da_status_invalid_array_dimension,
+                           "The array is too small. Please provide an array of at "
+                           "least size: " +
+                               std::to_string(size) + ".");
+        }
+        for (da_int i = 0; i < size; i++)
+            result[i] = lp_n_iteration[i];
+
+        break;
     case da_result::da_svm_idx_support_vectors:
         size = n_sv;
         if (*dim < size) {
@@ -320,6 +334,7 @@ da_status svm<T>::set_data(da_int n_samples, da_int n_features, const T *X_in,
         probaA.resize(n_classifiers);
         probaB.resize(n_classifiers);
         n_iteration.resize(n_classifiers);
+        lp_n_iteration.resize(n_classifiers);
     } catch (std::bad_alloc &) {                           // LCOV_EXCL_LINE
         return da_error(this->err, da_status_memory_error, // LCOV_EXCL_LINE
                         "Memory allocation error");
@@ -423,10 +438,25 @@ svm<double>::create_low_precision_classifier(const float *X_lp, const float *y_l
 }
 
 template <>
-std::unique_ptr<base_svm<int16_t>> svm<float>::create_low_precision_classifier(
-    [[maybe_unused]] const int16_t *X_lp, [[maybe_unused]] const int16_t *y_lp,
-    [[maybe_unused]] da_int n, [[maybe_unused]] da_int p, [[maybe_unused]] da_int ldx) {
-    return nullptr; // We don't support lower precision classifiers for single precision SVM
+std::unique_ptr<base_svm<_Float16>>
+svm<float>::create_low_precision_classifier(const _Float16 *X_lp, const _Float16 *y_lp,
+                                            da_int n, da_int p, da_int ldx) {
+#ifdef __AVX512FP16__
+    if (mod == da_svm_model::svc)
+        return std::make_unique<svc<_Float16>>(X_lp, y_lp, n, p, ldx);
+    if (mod == da_svm_model::nusvc)
+        return std::make_unique<nusvc<_Float16>>(X_lp, y_lp, n, p, ldx);
+    if (mod == da_svm_model::svr)
+        return std::make_unique<svr<_Float16>>(X_lp, y_lp, n, p, ldx);
+    return std::make_unique<nusvr<_Float16>>(X_lp, y_lp, n, p, ldx);
+#else
+    (void)X_lp;
+    (void)y_lp;
+    (void)n;
+    (void)p;
+    (void)ldx;
+    return nullptr;
+#endif
 }
 
 template <typename T>
@@ -501,22 +531,25 @@ template <typename T> da_status svm<T>::compute() {
     da_int int_mp;
     this->opts.get("mixed precision", opt_mp, int_mp);
     use_mixed_precision = (int_mp == 1);
-    // Lower precision data members (int16 is a proxy for bfloat16, though we don't use it yet)
+    // Lower precision copies of the data used for the mixed precision warm
+    // start. lp_type is float for T==double and _Float16 for T==float.
     std::vector<lp_type> X_lp, y_lp;
-    if (use_mixed_precision) {
-        this->opts.get("low precision convergence tolerance", lp_tol);
-        this->opts.get("low precision max_iter", lp_max_iter);
-        try {
-            X_lp.resize(nrow * ncol);
-            y_lp.resize(nrow);
-        } catch (std::bad_alloc &) {                           // LCOV_EXCL_LINE
-            return da_error(this->err, da_status_memory_error, // LCOV_EXCL_LINE
-                            "Memory allocation error");
+    if constexpr (da_fp16::fp16_codegen_ok<lp_type>) {
+        if (use_mixed_precision) {
+            this->opts.get("low precision convergence tolerance", lp_tol);
+            this->opts.get("low precision max_iter", lp_max_iter);
+            try {
+                X_lp.resize(nrow * ncol);
+                y_lp.resize(nrow);
+            } catch (std::bad_alloc &) {                           // LCOV_EXCL_LINE
+                return da_error(this->err, da_status_memory_error, // LCOV_EXCL_LINE
+                                "Memory allocation error");
+            }
+            da_utils::copy_array_convert_precision(column_major, nrow, ncol, X, ldx_train,
+                                                   X_lp.data(), nrow);
+            da_utils::copy_array_convert_precision(column_major, nrow, 1, y, nrow,
+                                                   y_lp.data(), nrow);
         }
-        da_utils::copy_array_convert_precision(column_major, nrow, ncol, X, ldx_train,
-                                               X_lp.data(), nrow);
-        da_utils::copy_array_convert_precision(column_major, nrow, 1, y, nrow,
-                                               y_lp.data(), nrow);
     }
 
     if (predict_proba_opt) {
@@ -546,9 +579,12 @@ template <typename T> da_status svm<T>::compute() {
             status = compute_probabilities(*classifiers[i], n_fold, probaA[i], probaB[i]);
         }
 
-        if constexpr (std::is_same_v<T, double>) {
-            // Currently only available for double precision SVM, as we don't support lower precision classifiers for single precision SVM
+        if constexpr (da_fp16::fp16_codegen_ok<lp_type>) {
             if (use_mixed_precision) {
+                // Train a low-precision (lp_type) classifier first and use its
+                // converged dual coefficients as a warm start for the full
+                // precision solve. lp_type is float for T==double and _Float16
+                // for T==float.
                 auto lp_classifier = create_low_precision_classifier(
                     X_lp.data(), y_lp.data(), nrow, ncol, nrow);
                 copy_classifier_metadata(*classifiers[i], *lp_classifier);
@@ -571,6 +607,9 @@ template <typename T> da_status svm<T>::compute() {
                 if (status != da_status_success)
                     return status;
 
+                // Record the number of low precision iterations for this classifier.
+                lp_n_iteration[i] = lp_classifier->iter;
+
                 // Use raw_alpha which is saved before set_bias/set_sv modify it.
                 std::vector<T> promoted_alpha(lp_classifier->raw_alpha.size());
                 da_utils::copy_array_convert_precision(
@@ -580,9 +619,19 @@ template <typename T> da_status svm<T>::compute() {
                     (da_int)promoted_alpha.size());
                 status = classifiers[i]->compute_warm_start(promoted_alpha);
             } else {
+                lp_n_iteration[i] = 0;
                 status = classifiers[i]->compute();
             }
         } else {
+            // lp_type == _Float16 on a target without AVX-512 FP16: the half-precision
+            // warm start is not code-generated here. Mixed precision iterative
+            // refinement is therefore unsupported on such hardware.
+            if (use_mixed_precision) {
+                return da_error(this->err, da_status_incompatible_options,
+                                "Mixed precision iterative refinement requires "
+                                "AVX512_FP16 (Zen6 or newer) hardware support.");
+            }
+            lp_n_iteration[i] = 0;
             status = classifiers[i]->compute();
         }
 

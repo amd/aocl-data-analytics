@@ -249,10 +249,27 @@ class tsne : public pyda_handle {
         return n_iter;
     }
 
+    auto get_lp_n_iter() {
+        da_status status;
+        da_int n_samples, n_features, n_components, n_iter, lp_n_iter;
+        if (precision == da_single) {
+            float kl_div;
+            status = get_rinfo<float>(&n_samples, &n_features, &n_components, &n_iter,
+                                      &kl_div, &lp_n_iter);
+            exception_check(status);
+        } else {
+            double kl_div;
+            status = get_rinfo<double>(&n_samples, &n_features, &n_components, &n_iter,
+                                       &kl_div, &lp_n_iter);
+            exception_check(status);
+        }
+        return lp_n_iter;
+    }
+
   private:
     template <typename T>
     da_status get_rinfo(da_int *n_samples, da_int *n_features, da_int *n_components,
-                        da_int *n_iter, T *kl_divergence) {
+                        da_int *n_iter, T *kl_divergence, da_int *lp_n_iter = nullptr) {
         da_int dim = 6;
         T rinfo[6];
         da_status status = da_handle_get_result(handle, da_rinfo, &dim, rinfo);
@@ -264,6 +281,8 @@ class tsne : public pyda_handle {
         *n_components = static_cast<da_int>(rinfo[2]);
         *n_iter = static_cast<da_int>(rinfo[3]);
         *kl_divergence = rinfo[4];
+        if (lp_n_iter)
+            *lp_n_iter = static_cast<da_int>(rinfo[5]);
         return da_status_success;
     }
 };

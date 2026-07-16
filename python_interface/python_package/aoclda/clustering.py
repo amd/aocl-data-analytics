@@ -190,6 +190,12 @@ class kmeans():
         return self.kmeans.get_n_iter()
 
     @property
+    def lp_n_iter(self):
+        """int: The number of low precision iterations performed if mixed precision was enabled.
+        """
+        return self.kmeans.get_lp_n_iter()
+
+    @property
     def n_samples(self):
         """int: The number of samples in the data matrix used. """
         return self.kmeans.get_n_samples()

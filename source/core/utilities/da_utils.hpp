@@ -38,7 +38,7 @@
 #define DA_DATATYPES
 
 // type id helper
-enum class da_type : char { undefined = 0, double_t = 29, float_t = 41 };
+enum class da_type : char { undefined = 0, double_t = 29, float_t = 41, _Float16_t = 42 };
 // map from a type to an enum used in code dispatching and oracle tables
 template <typename T> struct tid {
     constexpr operator da_type() const noexcept {
@@ -46,6 +46,8 @@ template <typename T> struct tid {
             return da_type::float_t;
         if constexpr (std::is_same_v<T, double>)
             return da_type::double_t;
+        if constexpr (std::is_same_v<T, _Float16>)
+            return da_type::_Float16_t;
         return da_type::undefined;
     }
 };
@@ -128,6 +130,12 @@ da_status check_categorical_data(da_int n_data, const T *data, da_int &n_categor
 
 template <typename T>
 void parallel_argsort(std::vector<T> &values, std::vector<da_int> &indices);
+
+// _Float16 uses a comparison-sort specialization (boost spreadsort is unavailable
+// for _Float16); declared here so users do not implicitly instantiate the primary.
+template <>
+void parallel_argsort<_Float16>(std::vector<_Float16> &values,
+                                std::vector<da_int> &indices);
 
 CBLAS_ORDER da_order_to_cblas_order(da_order order);
 

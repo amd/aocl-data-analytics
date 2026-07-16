@@ -120,18 +120,20 @@ inline da_status register_kmeans_options(da_options::OptionRegistry &opts,
                          "This option is only used if distance is set to cosine.",
                          {{"yes", 1}, {"no", 0}}, "yes"));
         opts.register_opt(os);
-        std::shared_ptr<OptionNumeric<T>> oT;
-        oT = std::make_shared<OptionNumeric<T>>(OptionNumeric<T>(
-            "convergence tolerance", "Convergence tolerance.", 0,
-            da_options::lbound_t::greaterequal, 0, da_options::ubound_t::p_inf,
-            static_cast<T>(1.0e-4), "10^{-4}"));
+        // Use float for _Float16 since OptionNumeric doesn't support _Float16
+        using opt_T = std::conditional_t<std::is_same_v<T, _Float16>, float, T>;
+        std::shared_ptr<OptionNumeric<opt_T>> oT;
+        oT = std::make_shared<OptionNumeric<opt_T>>(OptionNumeric<opt_T>(
+            "convergence tolerance", "Convergence tolerance.", opt_T(0),
+            da_options::lbound_t::greaterequal, opt_T(0), da_options::ubound_t::p_inf,
+            static_cast<opt_T>(1.0e-4), "10^{-4}"));
         opts.register_opt(oT);
-        oT = std::make_shared<OptionNumeric<T>>(OptionNumeric<T>(
+        oT = std::make_shared<OptionNumeric<opt_T>>(OptionNumeric<opt_T>(
             "low precision convergence tolerance",
             "If mixed precision iterative refinement is enabled, convergence tolerance "
             "for the low precision phase.",
-            0, da_options::lbound_t::greaterequal, 0, da_options::ubound_t::p_inf,
-            static_cast<T>(1.0e-2), "10^{-2}"));
+            opt_T(0), da_options::lbound_t::greaterequal, opt_T(0),
+            da_options::ubound_t::p_inf, static_cast<opt_T>(1.0e-2), "10^{-2}"));
         opts.register_opt(oT);
 
     } catch (std::bad_alloc &) {

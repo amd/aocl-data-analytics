@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2024-2025 Advanced Micro Devices, Inc. All rights reserved.
+ * Copyright (C) 2024-2026 Advanced Micro Devices, Inc. All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without modification,
  * are permitted provided that the following conditions are met:
@@ -24,8 +24,8 @@
  * POSSIBILITY OF SUCH DAMAGE.
  */
 
+#include "../utest_utils.hpp"
 #include "aoclda.h"
-#include "aoclda_cpp_overloads.hpp"
 #include "gmock/gmock.h"
 #include "gtest/gtest.h"
 #include <string>
@@ -94,35 +94,16 @@ void test_svm_positive(std::string csvname, da_svm_model model,
     ////////////////////////
     std::string input_data_fname =
         std::string(DATA_DIR) + "/svm_data/" + csvname + "_train.csv";
-    da_datastore csv_store = nullptr;
-    EXPECT_EQ(da_datastore_init(&csv_store), da_status_success);
-    EXPECT_EQ(
-        da_datastore_options_set_string(csv_store, "datastore precision", prec_name<T>()),
-        da_status_success);
-    EXPECT_EQ(da_data_load_from_csv(csv_store, input_data_fname.c_str()),
-              da_status_success);
-
-    da_int ncols, nrows;
-    EXPECT_EQ(da_data_get_n_cols(csv_store, &ncols), da_status_success);
-    EXPECT_EQ(da_data_get_n_rows(csv_store, &nrows), da_status_success);
+    std::vector<T> train_data;
+    da_int nrows, ncols;
+    ASSERT_TRUE(
+        da_test::read_csv_data(input_data_fname, train_data, nrows, ncols, column_major))
+        << "Failed to read training data: " << input_data_fname;
     // The first ncols-1 columns contain the feature matrix; the last one the response vector
-    // Create the selections in the data store
-    EXPECT_EQ(da_data_select_columns(csv_store, "features", 0, ncols - 2),
-              da_status_success);
-    EXPECT_EQ(da_data_select_columns(csv_store, "response", ncols - 1, ncols - 1),
-              da_status_success);
-
     da_int nfeat = ncols - 1;
     da_int nsamples = nrows;
-    // Extract the selections
-    std::vector<T> X(nfeat * nsamples);
-    std::vector<T> y(nsamples);
-    EXPECT_EQ(da_data_extract_selection(csv_store, "features", column_major, X.data(),
-                                        nsamples),
-              da_status_success);
-    EXPECT_EQ(da_data_extract_selection(csv_store, "response", column_major, y.data(),
-                                        nsamples),
-              da_status_success);
+    std::vector<T> X(train_data.begin(), train_data.begin() + nfeat * nsamples);
+    std::vector<T> y(train_data.begin() + nfeat * nsamples, train_data.end());
 
     ///////////////////
     // Create the model
@@ -143,7 +124,6 @@ void test_svm_positive(std::string csvname, da_svm_model model,
     EXPECT_EQ(da_handle_get_result(svm_handle, da_result::da_rinfo, &size, rinfo),
               da_status_success);
     da_int nclass = rinfo[2];
-    T *coef_exp{nullptr};
     EXPECT_EQ(da_handle_get_result(svm_handle, da_result::da_svm_n_support_vectors, &one,
                                    &n_SV),
               da_status_success);
@@ -155,63 +135,32 @@ void test_svm_positive(std::string csvname, da_svm_model model,
     std::string coef_fname = std::string(DATA_DIR) + "/svm_data/" +
                              get_model_name(model) + "/" + csvname + "_" + kernel_str +
                              "_dual.csv";
+    std::vector<T> coef_exp;
     da_int n_rows{0}, n_cols{0};
-    if (FILE *file = fopen(coef_fname.c_str(), "r")) {
-        // read the expected coefficients
-        fclose(file);
-        EXPECT_EQ(da_read_csv(csv_store, coef_fname.c_str(), &coef_exp, &n_rows, &n_cols,
-                              nullptr),
-                  da_status_success);
-        EXPECT_EQ(n_cols, dim) << "Number of coefficients to check does not match";
-        // Check coefficients
-        EXPECT_ARR_NEAR(dim, dual_coeffs, coef_exp,
-                        expected_precision<T>(check_tol_scale))
-            << "Checking coefficients (solution)";
-        free(coef_exp);
-    } else {
-        da_handle_destroy(&svm_handle);
-        da_datastore_destroy(&csv_store);
-        FAIL() << "Check of coefficients was requested but the solution file "
-               << coef_fname << " could not be opened.";
-    }
-    da_datastore_destroy(&csv_store);
+    ASSERT_TRUE(da_test::read_csv_data(coef_fname, coef_exp, n_rows, n_cols))
+        << "Failed to read dual coefficients: " << coef_fname;
+    da_int coef_total = n_rows * n_cols;
+    EXPECT_EQ(coef_total, dim) << "Number of coefficients to check does not match";
+    EXPECT_ARR_NEAR(dim, dual_coeffs, coef_exp, expected_precision<T>(check_tol_scale))
+        << "Checking coefficients (solution)";
 
     ////////////////////////
     // Get the test data
     ////////////////////////
     input_data_fname = std::string(DATA_DIR) + "/svm_data/" + csvname + "_test.csv";
-    csv_store = nullptr;
-    EXPECT_EQ(da_datastore_init(&csv_store), da_status_success);
-    EXPECT_EQ(
-        da_datastore_options_set_string(csv_store, "datastore precision", prec_name<T>()),
-        da_status_success);
-    EXPECT_EQ(da_data_load_from_csv(csv_store, input_data_fname.c_str()),
-              da_status_success);
-
-    EXPECT_EQ(da_data_get_n_cols(csv_store, &ncols), da_status_success);
-    EXPECT_EQ(da_data_get_n_rows(csv_store, &nrows), da_status_success);
-    EXPECT_EQ(da_data_select_columns(csv_store, "features", 0, ncols - 2),
-              da_status_success);
-    EXPECT_EQ(da_data_select_columns(csv_store, "response", ncols - 1, ncols - 1),
-              da_status_success);
-
+    std::vector<T> test_data;
+    ASSERT_TRUE(
+        da_test::read_csv_data(input_data_fname, test_data, nrows, ncols, column_major))
+        << "Failed to read test data: " << input_data_fname;
     nfeat = ncols - 1;
     nsamples = nrows;
-    // Extract the selections
-    std::vector<T> X_test(nfeat * nsamples);
-    std::vector<T> y_test(nsamples);
-    EXPECT_EQ(da_data_extract_selection(csv_store, "features", column_major,
-                                        X_test.data(), nsamples),
-              da_status_success);
-    EXPECT_EQ(da_data_extract_selection(csv_store, "response", column_major,
-                                        y_test.data(), nsamples),
-              da_status_success);
+    std::vector<T> X_test(test_data.begin(), test_data.begin() + nfeat * nsamples);
+    std::vector<T> y_test(test_data.begin() + nfeat * nsamples, test_data.end());
 
     ////////////////////////////////////////////////
     // Check decision function (only classification)
     ////////////////////////////////////////////////
     if (model == svc || model == nusvc) {
-        T *dec_exp{nullptr};
         if (nclass > 2)
             dim = nsamples * nclass;
         else
@@ -224,31 +173,19 @@ void test_svm_positive(std::string csvname, da_svm_model model,
         std::string dec_fname = std::string(DATA_DIR) + "/svm_data/" +
                                 get_model_name(model) + "/" + csvname + "_" + kernel_str +
                                 "_dec.csv";
+        std::vector<T> dec_exp;
         n_rows = 0, n_cols = 0;
-        if (FILE *file = fopen(dec_fname.c_str(), "r")) {
-            // read the expected decision function values
-            fclose(file);
-            EXPECT_EQ(da_read_csv(csv_store, dec_fname.c_str(), &dec_exp, &n_rows,
-                                  &n_cols, nullptr),
-                      da_status_success);
-            EXPECT_EQ(n_cols, dim) << "Number of coefficients to check does not match";
-            // Check decision function values
-            EXPECT_ARR_NEAR(dim, decision_values, dec_exp,
-                            expected_precision<T>(check_tol_scale))
-                << "Checking decision function values (solution)";
-            free(dec_exp);
-        } else {
-            da_handle_destroy(&svm_handle);
-            da_datastore_destroy(&csv_store);
-            FAIL() << "Check of decision function values was requested but the solution "
-                      "file "
-                   << dec_fname << " could not be opened.";
-        }
+        ASSERT_TRUE(da_test::read_csv_data(dec_fname, dec_exp, n_rows, n_cols))
+            << "Failed to read decision function values: " << dec_fname;
+        da_int dec_total = n_rows * n_cols;
+        EXPECT_EQ(dec_total, dim) << "Number of coefficients to check does not match";
+        EXPECT_ARR_NEAR(dim, decision_values, dec_exp,
+                        expected_precision<T>(check_tol_scale))
+            << "Checking decision function values (solution)";
     }
     //////////////////////////
     // Check prediction
     //////////////////////////
-    T *pred_exp{nullptr};
     std::vector<T> predictions(nsamples);
     EXPECT_EQ(da_svm_predict(svm_handle, nsamples, nfeat, X_test.data(), nsamples,
                              predictions.data()),
@@ -256,27 +193,15 @@ void test_svm_positive(std::string csvname, da_svm_model model,
     std::string pred_fname = std::string(DATA_DIR) + "/svm_data/" +
                              get_model_name(model) + "/" + csvname + "_" + kernel_str +
                              "_pred.csv";
+    std::vector<T> pred_exp;
     n_rows = 0, n_cols = 0;
-    if (FILE *file = fopen(pred_fname.c_str(), "r")) {
-        // read the expected test labels
-        fclose(file);
-        EXPECT_EQ(da_read_csv(csv_store, pred_fname.c_str(), &pred_exp, &n_rows, &n_cols,
-                              nullptr),
-                  da_status_success);
-        EXPECT_EQ(n_cols, nsamples) << "Number of coefficients to check does not match";
-        // Check test labels
-        EXPECT_ARR_NEAR(nsamples, predictions, pred_exp,
-                        expected_precision<T>(check_tol_scale))
-            << "Checking test labels (solution)";
-        free(pred_exp);
-    } else {
-        da_handle_destroy(&svm_handle);
-        da_datastore_destroy(&csv_store);
-        FAIL() << "Check of test labels was requested but the solution file "
-               << pred_fname << " could not be opened.";
-    }
-
-    da_datastore_destroy(&csv_store);
+    ASSERT_TRUE(da_test::read_csv_data(pred_fname, pred_exp, n_rows, n_cols))
+        << "Failed to read expected predictions: " << pred_fname;
+    da_int pred_total = n_rows * n_cols;
+    EXPECT_EQ(pred_total, nsamples) << "Number of coefficients to check does not match";
+    EXPECT_ARR_NEAR(nsamples, predictions, pred_exp,
+                    expected_precision<T>(check_tol_scale))
+        << "Checking test labels (solution)";
 
     //////////////////////////////////////
     // Check that the score is good enough

@@ -32,6 +32,7 @@
 #include "context.hpp"
 #include "da_omp.hpp"
 #include "da_std.hpp"
+#include "fp16_helpers.hpp"
 #include "macros.h"
 #include <algorithm>
 #include <boost/sort/spreadsort/float_sort.hpp>
@@ -704,6 +705,28 @@ void parallel_argsort(std::vector<T> &values, std::vector<da_int> &indices) {
     }
 };
 
+// _Float16 cannot use boost spreadsort here: its float_sort requires an integer
+// cast type of matching size and std::numeric_limits<_Float16>::is_iec559, neither
+// of which libstdc++ provides for _Float16. Mixed-precision warm-start methods only
+// need a correct (not maximally tuned) argsort, so use a comparison sort.
+template <>
+void parallel_argsort<_Float16>(std::vector<_Float16> &values,
+                                std::vector<da_int> &indices) {
+    auto comparator = [&](da_int i, da_int j) { return values[i] < values[j]; };
+    da_int num_threads = omp_get_max_threads();
+    if (num_threads == 1) {
+        std::sort(indices.begin(), indices.end(), comparator);
+    } else {
+#if defined(__GLIBCXX__) && defined(_OPENMP)
+        __gnu_parallel::sort(indices.begin(), indices.end(), comparator);
+#elif defined(_MSC_VER) && defined(__cpp_lib_execution) && __cpp_lib_execution >= 201603L
+        std::sort(std::execution::par, indices.begin(), indices.end(), comparator);
+#else
+        std::sort(indices.begin(), indices.end(), comparator);
+#endif
+    }
+}
+
 // Helper functions for converting between da_ and CBLAS_ enums
 CBLAS_ORDER da_order_to_cblas_order(da_order order) {
     return (order == row_major) ? CblasRowMajor : CblasColMajor;
@@ -815,7 +838,7 @@ da_status normalize_rows_inplace(da_order order, da_int n_rows, da_int n_cols, T
 
         // Convert to inverse norms
         for (da_int i = 0; i < n_rows; i++) {
-            T norm = std::sqrt(row_norms[i]);
+            T norm = da_std::sqrt(row_norms[i]);
             row_norms[i] = (norm == 0) ? T(1.0) : (T)1.0 / norm;
         }
 
@@ -870,7 +893,7 @@ da_status normalize_rows(da_order order, da_int n_rows, da_int n_cols, const T *
 
         // Convert to inverse norms
         for (da_int i = 0; i < n_rows; i++) {
-            T norm = std::sqrt(row_norms[i]);
+            T norm = da_std::sqrt(row_norms[i]);
             row_norms[i] = (norm == 0) ? T(1.0) : (T)1.0 / norm;
         }
 
@@ -890,16 +913,31 @@ da_status normalize_rows(da_order order, da_int n_rows, da_int n_cols, const T *
 template <typename T_in, typename T_out>
 void copy_array_convert_precision(da_order order, da_int n_rows, da_int n_cols,
                                   const T_in *A, da_int lda, T_out *B, da_int ldb) {
+    constexpr da_int COPY_BLOCK_SIZE = 512;
     if (order == column_major) {
-        for (da_int j = 0; j < n_cols; j++) {
-            for (da_int i = 0; i < n_rows; i++) {
-                B[i + j * ldb] = static_cast<T_out>(A[i + j * lda]);
+#pragma omp parallel for collapse(2) schedule(static)
+        for (da_int j_block = 0; j_block < n_cols; j_block += COPY_BLOCK_SIZE) {
+            for (da_int i_block = 0; i_block < n_rows; i_block += COPY_BLOCK_SIZE) {
+                const da_int j_end = std::min(j_block + COPY_BLOCK_SIZE, n_cols);
+                const da_int i_end = std::min(i_block + COPY_BLOCK_SIZE, n_rows);
+                for (da_int j = j_block; j < j_end; ++j) {
+                    for (da_int i = i_block; i < i_end; ++i) {
+                        B[i + j * ldb] = static_cast<T_out>(A[i + j * lda]);
+                    }
+                }
             }
         }
     } else {
-        for (da_int i = 0; i < n_rows; i++) {
-            for (da_int j = 0; j < n_cols; j++) {
-                B[i * ldb + j] = static_cast<T_out>(A[i * lda + j]);
+#pragma omp parallel for collapse(2) schedule(static)
+        for (da_int i_block = 0; i_block < n_rows; i_block += COPY_BLOCK_SIZE) {
+            for (da_int j_block = 0; j_block < n_cols; j_block += COPY_BLOCK_SIZE) {
+                const da_int i_end = std::min(i_block + COPY_BLOCK_SIZE, n_rows);
+                const da_int j_end = std::min(j_block + COPY_BLOCK_SIZE, n_cols);
+                for (da_int i = i_block; i < i_end; ++i) {
+                    for (da_int j = j_block; j < j_end; ++j) {
+                        B[i * ldb + j] = static_cast<T_out>(A[i * lda + j]);
+                    }
+                }
             }
         }
     }
@@ -1056,6 +1094,46 @@ template void copy_array_convert_precision<float, short>(da_order order, da_int 
                                                          da_int n_cols, const float *A,
                                                          da_int lda, short *B,
                                                          da_int ldb);
+template void copy_array_convert_precision<float, float>(da_order order, da_int n_rows,
+                                                         da_int n_cols, const float *A,
+                                                         da_int lda, float *B,
+                                                         da_int ldb);
+// _Float16 instantiations for kmeans<_Float16> and basic_handle<_Float16>
+#ifdef __AVX512FP16__
+template void copy_transpose_2D_array_row_to_column_major<_Float16>(
+    da_int n_rows, da_int n_cols, const _Float16 *A, da_int lda, _Float16 *B, da_int ldb);
+template void copy_transpose_2D_array_column_to_row_major<_Float16>(
+    da_int n_rows, da_int n_cols, const _Float16 *A, da_int lda, _Float16 *B, da_int ldb);
+template da_status check_data<_Float16>(da_order order, da_int n_rows, da_int n_cols,
+                                        const _Float16 *X, da_int ldx);
+template da_status check_1D_array<_Float16>(bool check_data, da_errors::da_error_t *err,
+                                            da_int n, const _Float16 *data,
+                                            const std::string &n_name,
+                                            const std::string &data_name, da_int n_min);
+template da_status check_2D_array<_Float16>(
+    bool check_data, da_order order, da_errors::da_error_t *err, da_int n_rows,
+    da_int n_cols, const _Float16 *data, da_int lddata, const std::string &n_rows_name,
+    const std::string &n_cols_name, const std::string &data_name,
+    const std::string &lddata_name, da_int n_rows_min, da_int n_cols_min);
+template void compute_squared_row_norms<_Float16>(da_order order, da_int n_rows,
+                                                  da_int n_cols, const _Float16 *data,
+                                                  da_int ld, _Float16 *norms);
+template da_status normalize_rows_inplace<_Float16>(da_order order, da_int n_rows,
+                                                    da_int n_cols, _Float16 *X,
+                                                    da_int ldx, _Float16 *row_norms_work);
+template void copy_array_convert_precision<float, _Float16>(da_order order, da_int n_rows,
+                                                            da_int n_cols, const float *A,
+                                                            da_int lda, _Float16 *B,
+                                                            da_int ldb);
+template void copy_array_convert_precision<_Float16, float>(da_order order, da_int n_rows,
+                                                            da_int n_cols,
+                                                            const _Float16 *A, da_int lda,
+                                                            float *B, da_int ldb);
+template void
+copy_array_convert_precision<_Float16, _Float16>(da_order order, da_int n_rows,
+                                                 da_int n_cols, const _Float16 *A,
+                                                 da_int lda, _Float16 *B, da_int ldb);
+#endif
 
 } // namespace da_utils
 

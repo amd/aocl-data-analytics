@@ -22,16 +22,6 @@
  * ************************************************************************
  */
 
-#include "aoclda.h"
-using kt_int_t = da_int;
-#include "kernel-templates/kernel_templates.hpp"
-// L2 micro kernels for different compilers
-#if defined(__aocc__) && __has_include("amdlibm_vec.h")
-#include "kt_l2_clang.hpp"
-#elif defined(__GNUC__)
-// When using GCC, we use the GCC vectorized functions
-#include "kt_l2_gcc.hpp"
-#endif
 // clang-format on
 
 namespace kernel_templates {

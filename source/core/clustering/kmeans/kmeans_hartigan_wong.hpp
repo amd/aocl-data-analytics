@@ -42,6 +42,7 @@
 #ifndef KMEANS_HARTIGAN_WONG_HPP
 #define KMEANS_HARTIGAN_WONG_HPP
 
+#include "da_std.hpp"
 #include "kmeans.hpp"
 #include <limits>
 #include <math.h>
@@ -167,7 +168,7 @@ void kmns(const T a[], da_int m, da_int n, da_int lda, T c[], da_int k, da_int i
         ic2[i - 1] = 2;
 
         for (il = 1; il <= 2; il++) {
-            dt[il - 1] = 0.0;
+            dt[il - 1] = (T)0.0;
             for (j = 1; j <= n; j++) {
                 da = a[i - 1 + (j - 1) * lda] - c[il - 1 + (j - 1) * k];
                 dt[il - 1] = dt[il - 1] + da * da;
@@ -183,7 +184,7 @@ void kmns(const T a[], da_int m, da_int n, da_int lda, T c[], da_int k, da_int i
         }
 
         for (l = 3; l <= k; l++) {
-            db = 0.0;
+            db = (T)0.0;
             for (j = 1; j <= n; j++) {
                 dc = a[i - 1 + (j - 1) * lda] - c[l - 1 + (j - 1) * k];
                 db = db + dc * dc;
@@ -208,7 +209,7 @@ void kmns(const T a[], da_int m, da_int n, da_int lda, T c[], da_int k, da_int i
     for (l = 1; l <= k; l++) {
         nc[l - 1] = 0;
         for (j = 1; j <= n; j++) {
-            c[l - 1 + (j - 1) * k] = 0.0;
+            c[l - 1 + (j - 1) * k] = (T)0.0;
         }
     }
 
@@ -255,7 +256,7 @@ void kmns(const T a[], da_int m, da_int n, da_int lda, T c[], da_int k, da_int i
 */
         an2[l - 1] = aa / (aa + (T)1.0);
 
-        if (1.0 < aa) {
+        if ((T)1.0 < aa) {
             an1[l - 1] = aa / (aa - (T)1.0);
         } else {
             an1[l - 1] = r8_huge<T>();
@@ -320,9 +321,9 @@ void kmns(const T a[], da_int m, da_int n, da_int lda, T c[], da_int k, da_int i
   Compute the within-cluster sum of squares for each cluster.
 */
     for (l = 1; l <= k; l++) {
-        wss[l - 1] = 0.0;
+        wss[l - 1] = (T)0.0;
         for (j = 1; j <= n; j++) {
-            c[l - 1 + (j - 1) * k] = 0.0;
+            c[l - 1 + (j - 1) * k] = (T)0.0;
         }
     }
 
@@ -476,7 +477,7 @@ void optra(const T a[], da_int m, da_int n, da_int lda, T c[], da_int k, da_int 
   re-compute D(I).
 */
             if (ncp[l1 - 1] != 0) {
-                de = 0.0;
+                de = (T)0.0;
                 for (j = 1; j <= n; j++) {
                     df = a[i - 1 + (j - 1) * lda] - c[l1 - 1 + (j - 1) * k];
                     de = de + df * df;
@@ -486,7 +487,7 @@ void optra(const T a[], da_int m, da_int n, da_int lda, T c[], da_int k, da_int 
             /*
   Find the cluster with minimum R2.
 */
-            da = 0.0;
+            da = (T)0.0;
             for (j = 1; j <= n; j++) {
                 db = a[i - 1 + (j - 1) * lda] - c[l2 - 1 + (j - 1) * k];
                 da = da + db * db;
@@ -503,7 +504,7 @@ void optra(const T a[], da_int m, da_int n, da_int lda, T c[], da_int k, da_int 
                 if ((i < live[l1 - 1] || i < live[l2 - 1]) && l != l1 && l != ll) {
                     rr = r2 / an2[l - 1];
 
-                    dc = 0.0;
+                    dc = (T)0.0;
                     for (j = 1; j <= n; j++) {
                         dd = a[i - 1 + (j - 1) * lda] - c[l - 1 + (j - 1) * k];
                         dc = dc + dd * dd;
@@ -691,7 +692,7 @@ void qtran(const T a[], da_int m, da_int n, da_int lda, T c[], da_int k, da_int 
   cluster L1.
 */
                 if (istep <= ncp[l1 - 1]) {
-                    da = 0.0;
+                    da = (T)0.0;
                     for (j = 1; j <= n; j++) {
                         db = a[i - 1 + (j - 1) * lda] - c[l1 - 1 + (j - 1) * k];
                         da = da + db * db;
@@ -705,7 +706,7 @@ void qtran(const T a[], da_int m, da_int n, da_int lda, T c[], da_int k, da_int 
                 if (istep < ncp[l1 - 1] || istep < ncp[l2 - 1]) {
                     r2 = d[i - 1] / an2[l2 - 1];
 
-                    dd = 0.0;
+                    dd = (T)0.0;
                     for (j = 1; j <= n; j++) {
                         de = a[i - 1 + (j - 1) * lda] - c[l2 - 1 + (j - 1) * k];
                         dd = dd + de * de;
@@ -737,7 +738,7 @@ void qtran(const T a[], da_int m, da_int n, da_int lda, T c[], da_int k, da_int 
                         nc[l1 - 1] = nc[l1 - 1] - 1;
                         nc[l2 - 1] = nc[l2 - 1] + 1;
                         an2[l1 - 1] = alw / al1;
-                        if (1.0 < alw) {
+                        if ((T)1.0 < alw) {
                             an1[l1 - 1] = alw / (alw - (T)1.0);
                         } else {
                             an1[l1 - 1] = r8_huge<T>();
@@ -818,7 +819,7 @@ template <typename T> void kmeans<T>::perform_hartigan_wong() {
         // Empty cluster detected after initial assignment
         converged = 0;
         empty_cluster_found = true;
-        current_inertia = std::numeric_limits<T>::max();
+        current_inertia = da_std::numeric_limits<T>::max();
         return;
     }
 

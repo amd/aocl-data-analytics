@@ -53,11 +53,9 @@ PRESET_OPTIONS: Dict[str, Tuple[List[str], str, str]] = {
               "Architecture options", ""),
     "build_type": (["release", "debug", "relwithdebinfo"], "Build type options", ""),
     "sanitizer": (["asan"], "Address Sanitizer", ""),
-    "mem_sanitizer": (["memsan"], "Memory Sanitizer", ""),
     "code_coverage": (["coverage"], "Code Coverage", ""),
     "valgrind": (["valgrind"], "Valgrind Support", ""),
-    "documentation": (["doc"], "Documentation", ""),
-    "libmem": (["libmem"], "Memory Library", "")
+    "documentation": (["doc"], "Documentation", "")
 }
 
 def print_available_options():

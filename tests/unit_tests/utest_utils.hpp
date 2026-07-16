@@ -40,6 +40,7 @@
 #include <unistd.h>
 #endif
 #include <iostream>
+#include <string>
 #include <vector>
 
 // Auxiliary macro for token concatenation

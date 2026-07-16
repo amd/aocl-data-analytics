@@ -18,12 +18,6 @@ set(source_files
     ral_nlls_ciface.F90
     CACHE INTERNAL "source_files" FORCE)
 
-# Suppress warnings ############
-if(NOT WIN32)
-  include(${CMAKE_SOURCE_DIR}/cmake/Suppressions_external.cmake)
-endif()
-# End Supress warnings #########
-
 # Generate target name based on filename (remove file extension and convert to
 # uppercase)
 function(gen_name filename precision result)

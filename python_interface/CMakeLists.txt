@@ -94,5 +94,8 @@ install(CODE "set(BLAS \"${BLAS}\")")
 install(CODE "set(LAPACK \"${LAPACK}\")")
 install(CODE "set(SPARSE \"${SPARSE}\")")
 install(CODE "set(UTILS \"${UTILS}\")")
+if(NOT WIN32)
+  install(CODE "set(DLP \"${DLP}\")")
+endif()
 
 install(CODE "include(\"${CMAKE_CURRENT_SOURCE_DIR}/repairwheel.cmake\")")

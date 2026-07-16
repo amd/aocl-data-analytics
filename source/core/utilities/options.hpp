@@ -854,6 +854,11 @@ class OptionRegistry {
         return status;
     }
 
+    // _Float16 overload: options are stored as float, so promote and delegate
+    da_status set(string name, _Float16 value, setby_t setby = setby_t::user) {
+        return set(name, static_cast<float>(value), setby);
+    }
+
     /* Registry Getter
      * name - option name
      * value - location to store option value
@@ -891,6 +896,15 @@ class OptionRegistry {
         // otherwise -> OptionString
         std::static_pointer_cast<OptionType>(search->second)->get(value);
         return da_status_success;
+    }
+
+    // _Float16 overload: options are stored as float, so promote/demote
+    da_status get(string name, _Float16 &value) {
+        float fval;
+        da_status status = get(name, fval);
+        if (status == da_status_success)
+            value = static_cast<_Float16>(fval);
+        return status;
     }
 
     // Auxiliary function to get value of a string option.

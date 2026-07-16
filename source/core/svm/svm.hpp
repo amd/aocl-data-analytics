@@ -152,15 +152,15 @@ template <typename T> class base_svm {
     da_int kernel_function = svm_kernel::rbf;
     kernel_f_type<T> kernel_f = nullptr;
     // Kernel specific parameters
-    T gamma = 1.0;
+    T gamma = (T)1.0;
     da_int degree = 3;
-    T coef0 = 0.0;
+    T coef0 = (T)0.0;
     // Regularisation parameters
-    T C = 1, eps = 0.1, nu = 0.5;
+    T C = (T)1, eps = (T)0.1, nu = (T)0.5;
     // Working set parameter tau, value of the denominator if kernel is not positive semi definite (safe eps)
     T tau = 2 * std::numeric_limits<T>::epsilon();
     // Convergence tolerance
-    T tol = 1.0e-3;
+    T tol = (T)1.0e-3;
     da_int iter = 0, max_iter = 0, max_ws_size = 0;
     bool cache_smaller_than_ws = false;
     da_int padding = 0;
@@ -287,9 +287,10 @@ template <typename T> class base_svm {
 
 template <typename T> class svm : public basic_handle<T> {
 
-    // Lower precision data members (int16 is a proxy for bfloat16, though we don't use it yet)
+    // Lower precision type used for mixed precision iterative refinement:
+    //   double -> float, float -> _Float16.
     using lp_type =
-        typename std::conditional<std::is_same_v<T, double>, float, int16_t>::type;
+        typename std::conditional<std::is_same_v<T, double>, float, _Float16>::type;
 
   private:
     std::unique_ptr<base_svm<lp_type>>
@@ -328,7 +329,7 @@ template <typename T> class svm : public basic_handle<T> {
     std::vector<da_int> is_sv; // only used for multiclass (boolean type)
     da_int n_sv = 0;
     std::vector<T> support_coefficients, support_vectors, bias, probaA, probaB;
-    std::vector<da_int> support_indexes, n_sv_per_class, n_iteration;
+    std::vector<da_int> support_indexes, n_sv_per_class, n_iteration, lp_n_iteration;
 
   public:
     svm(da_errors::da_error_t &err);

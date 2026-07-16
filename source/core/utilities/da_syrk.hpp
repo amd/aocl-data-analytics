@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2025 Advanced Micro Devices, Inc. All rights reserved.
+ * Copyright (C) 2025-2026 Advanced Micro Devices, Inc. All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without modification,
  * are permitted provided that the following conditions are met:
@@ -30,6 +30,7 @@
 #include "da_cblas.hh"
 #include "da_omp.hpp"
 #include "da_utils.hpp"
+#include "fp16_helpers.hpp"
 #include "macros.h"
 #include "miscellaneous.hpp"
 #include <algorithm>
@@ -86,7 +87,7 @@ da_status da_syrk(da_order order, da_uplo uplo, da_transpose transpose, da_int n
     // with a block that tall, we just call regular syrk.
 
     da_int max_blocks = std::max(
-        std::min((da_int)std::ceil((T)k / (2 * n)), SYRK_MAX_NUM_BLOCKS), (da_int)1);
+        std::min((da_int)std::ceil((double)k / (2 * n)), SYRK_MAX_NUM_BLOCKS), (da_int)1);
 
     bool block_override = false;
     const char block_size_override[]{"syrk.block_size_override"};

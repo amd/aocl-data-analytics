@@ -78,10 +78,10 @@ da_status approximate_neighbors<T>::get_result(da_result query, da_int *dim, T *
                            "least size: " +
                                std::to_string(rinfo_size) + ".");
         }
-        result[0] = (T)n_list;
-        result[1] = (T)n_index;
-        result[2] = (T)n_features;
-        result[3] = (T)kmeans_iter;
+        result[0] = static_cast<T>(n_list);
+        result[1] = static_cast<T>(n_index);
+        result[2] = static_cast<T>(n_features);
+        result[3] = static_cast<T>(kmeans_iter);
         break;
     case da_result::da_approx_nn_cluster_centroids:
         if (*dim < n_list * n_features) {
@@ -371,15 +371,16 @@ template <typename T> da_status approximate_neighbors<T>::train_ivfflat() {
     // Check if we need to subsample or normalize train data
     std::vector<T> X_train_work;
     da_int ldx_train_work;
-    bool need_copy = (this->train_fraction < (T)1.0) ||
+    bool need_copy = (this->train_fraction < static_cast<T>(1.0)) ||
                      (this->internal_metric == approx_nn_metric::cosine);
 
     if (need_copy) {
-        if (this->train_fraction < (T)1.0) {
+        if (this->train_fraction < static_cast<T>(1.0)) {
             // Calculate n_samples_train
             // Bound below by n_list. We have an earlier check that n_list < n_samples
             this->n_samples_train = std::max(
-                (da_int)(this->n_samples_train * this->train_fraction), this->n_list);
+                static_cast<da_int>(this->n_samples_train * this->train_fraction),
+                this->n_list);
 
             status = this->subsample_training_data(X_train_work, ldx_train_work);
             if (status != da_status_success)
@@ -419,7 +420,7 @@ template <typename T> da_status approximate_neighbors<T>::train_ivfflat() {
         if (this->internal_metric == approx_nn_metric::cosine) {
             status = da_utils::normalize_rows_inplace(
                 this->order, this->n_samples_train, this->n_features, X_train_work.data(),
-                ldx_train_work, (T *)nullptr);
+                ldx_train_work, static_cast<T *>(nullptr));
             if (status != da_status_success)
                 return status;
         }
@@ -504,7 +505,7 @@ template <typename T> da_status approximate_neighbors<T>::train() {
     this->internal_seed = this->seed;
     if (internal_seed == -1) {
         std::random_device r;
-        this->internal_seed = std::abs((da_int)r());
+        this->internal_seed = std::abs(static_cast<da_int>(r()));
     }
     this->mt_engine.seed(this->internal_seed);
 
@@ -589,28 +590,56 @@ da_status approximate_neighbors<T>::add_ivfflat(da_int n_samples_add, da_int n_f
         }
         da_status status = da_utils::normalize_rows(
             this->order, n_samples_add, n_features, X_add, ldx_add, X_add_work.data(),
-            ldx_add_work, (T *)nullptr);
+            ldx_add_work, static_cast<T *>(nullptr));
         if (status != da_status_success)
             return status;
         X_add_ptr = X_add_work.data();
         ldx_add_ptr = ldx_add_work;
     }
 
-    // distances will store distances from X_add to individual centroids
-    // work1 and work2 are for vector norms in euclidean_gemm_distance
-    std::vector<T> distances, work1, work2;
-    // local_indices - For each centroid this stores indices of rows of X_add
-    // that will be added to it
+    // local_indices - For each centroid this stores indices of rows of X_add to be added
+    // nearest_centroid - flat array: nearest centroid index for each point in X_add
     std::vector<da_vector::da_vector<da_int>> local_indices;
+    std::vector<da_int> nearest_centroid;
 
-    da_int ld_distances = n_list;
+    const da_int n_list = this->n_list;
+
+    // Compute blk_sz so that total distance memory across all threads stays ≤ 64 MB.
+    // Each thread allocates an n_list × blk_sz distance buffer independently.
+    const da_int add_budget = (64 << 20) / static_cast<da_int>(sizeof(T));
+    [[maybe_unused]] da_int n_threads = static_cast<da_int>(omp_get_max_threads());
+
+    const da_int block_sz_ub =
+        std::max(static_cast<da_int>(1), static_cast<da_int>(n_samples_add / n_threads));
+    da_int blk_sz = std::min(
+        block_sz_ub,
+        std::max(static_cast<da_int>(1),
+                 add_budget / (n_threads * std::max(static_cast<da_int>(1), n_list))));
+
+    // Debug override: allows tests to force specific add block size via da_debug_set
+    {
+        auto &hidden = context::get_context()->hidden_settings;
+        auto it = hidden.find("ivf.add_blk_sz");
+        if (it != hidden.end() && !it->second.empty())
+            blk_sz = std::min(std::max(static_cast<da_int>(std::stoi(it->second)),
+                                       static_cast<da_int>(1)),
+                              n_samples_add);
+    }
+
+    da_int n_blocks, block_rem;
+    da_utils::blocking_scheme(n_samples_add, blk_sz, n_blocks, block_rem);
+    n_threads = std::min(n_threads, n_blocks);
+
+    using namespace std::string_literals;
+    context_set_hidden_settings("ivf.add_blk_sz_used"s, std::to_string(blk_sz));
+    context_set_hidden_settings("ivf.add_n_blocks"s, std::to_string(n_blocks));
+
+    da_int threading_error = 0;
+    const da_int ld_distances = n_list;
 
     try {
-        distances.resize(static_cast<size_t>(n_list) * static_cast<size_t>(n_samples_add),
-                         0.0);
-        work1.resize(n_list, 0.0);
-        work2.resize(n_samples_add, 0.0);
         local_indices.resize(n_list);
+        nearest_centroid.resize(n_samples_add);
 
         // If we are adding data to an index which already has data in it, we need
         // to remember old list sizes
@@ -621,51 +650,6 @@ da_status approximate_neighbors<T>::add_ivfflat(da_int n_samples_add, da_int n_f
         return da_error(this->err, da_status_memory_error, // LCOV_EXCL_LINE
                         "Memory allocation failed.");
     }
-
-    // Store in distances the distance from each row of X_add to the individual centroids
-    // We formulate the gemms so that the centroid distances for each row of X_add
-    // are contiguous in distances, hence the differing order of gemm for row and column
-    // major
-    if (this->internal_metric == approx_nn_metric::sqeuclidean) {
-        // centroids = C
-        if (this->order == column_major) {
-            // in column major compute -2 * C * (X_add)^T + (appropriate matrix norms)
-            // as handled by euclidean_gemm_distance
-            ARCH::euclidean_gemm_distance(this->order, this->n_list, n_samples_add,
-                                          n_features, this->centroids.data(),
-                                          this->ld_centroids, X_add_ptr, ldx_add_ptr,
-                                          distances.data(), ld_distances, work1.data(), 2,
-                                          work2.data(), 2, true, false);
-        } else {
-            // in row major compute -2 * X_add * C^T + (appropriate matrix norms)
-            // as handled by euclidean_gemm_distance
-            ARCH::euclidean_gemm_distance(
-                this->order, n_samples_add, this->n_list, n_features, X_add_ptr,
-                ldx_add_ptr, this->centroids.data(), this->ld_centroids, distances.data(),
-                ld_distances, work2.data(), 2, work1.data(), 2, true, false);
-        }
-    } else {
-        // inner product or cosine - we do gemm with alpha=-1
-        if (this->order == column_major) {
-            // in column major compute  C * (X_add)^T
-            da_blas::cblas_gemm(CblasColMajor, CblasNoTrans, CblasTrans, this->n_list,
-                                n_samples_add, n_features, (T)-1.0,
-                                this->centroids.data(), this->ld_centroids, X_add_ptr,
-                                ldx_add_ptr, (T)0.0, distances.data(), ld_distances);
-
-        } else {
-            // in row major compute X_add * C^T
-            da_blas::cblas_gemm(CblasRowMajor, CblasNoTrans, CblasTrans, n_samples_add,
-                                this->n_list, n_features, (T)-1.0, X_add_ptr, ldx_add_ptr,
-                                this->centroids.data(), this->ld_centroids, (T)0.0,
-                                distances.data(), ld_distances);
-        }
-    }
-
-    // For each sample in distances, get the index of the centroid with the smallest distance
-    // Update local_indices, global_indices and list_sizes as appropriate
-    // We can traverse distances in exactly the same fashion for row and column major due
-    // to how we formulated the gemm above
 
     da_int avg_list_size = n_samples_add / n_list;
     try {
@@ -679,22 +663,99 @@ da_status approximate_neighbors<T>::add_ivfflat(da_int n_samples_add, da_int n_f
                         "Memory allocation failed.");
     }
 
-    da_int nearest_centroid_idx;
-    const T *sample_start, *sample_end;
+    // Phase 1: parallel block loop — GEMM + argmin, no sharing between threads.
+    // Each thread owns its distance buffer; argmin result stored in nearest_centroid[j]
+    // (one slot per point). We formulate the GEMMs so that the centroid distances for
+    // each row of X_add are contiguous in the distance buffer, hence the differing order
+    // for row-major vs column-major.
+#pragma omp parallel default(none) num_threads(n_threads)                                \
+    shared(X_add_ptr, n_samples_add, n_features, n_blocks, block_rem, blk_sz,            \
+               ldx_add_ptr, ld_distances, n_list, nearest_centroid, threading_error)
+    {
+        std::vector<T> thread_dists, thread_work1, thread_work2;
+        try {
+            thread_dists.resize(static_cast<size_t>(n_list) * static_cast<size_t>(blk_sz),
+                                0.0);
+            thread_work1.resize(n_list, 0.0);
+            thread_work2.resize(blk_sz, 0.0);
+        } catch (std::bad_alloc const &) {
+#pragma omp atomic write
+            threading_error = 1;
+        }
+#pragma omp barrier
 
-    for (da_int j = 0; j < n_samples_add; j++) {
-        sample_start = &distances[j * n_list];
-        sample_end = sample_start + n_list;
-        nearest_centroid_idx =
-            std::distance(sample_start, std::min_element(sample_start, sample_end));
-        local_indices[nearest_centroid_idx].push_back(j);
-        this->global_indices[nearest_centroid_idx].push_back(j + n_index);
-        this->list_sizes[nearest_centroid_idx]++;
+        if (!threading_error) {
+#pragma omp for schedule(dynamic)
+            for (da_int blk = 0; blk < n_blocks; blk++) {
+                const da_int blk_start = blk * blk_sz;
+                const da_int this_blk_sz =
+                    (blk == n_blocks - 1 && block_rem > 0) ? block_rem : blk_sz;
+
+                const T *X_blk = (this->order == column_major)
+                                     ? X_add_ptr + blk_start
+                                     : X_add_ptr + blk_start * ldx_add_ptr;
+
+                if (this->internal_metric == approx_nn_metric::sqeuclidean) {
+                    if (this->order == column_major) {
+                        // in column major compute -2 * C * (X_blk)^T + (matrix norms)
+                        ARCH::euclidean_gemm_distance(
+                            this->order, this->n_list, this_blk_sz, n_features,
+                            this->centroids.data(), this->ld_centroids, X_blk,
+                            ldx_add_ptr, thread_dists.data(), ld_distances,
+                            thread_work1.data(), 2, thread_work2.data(), 2, true, false);
+                    } else {
+                        // in row major compute -2 * X_blk * C^T + (matrix norms)
+                        ARCH::euclidean_gemm_distance(
+                            this->order, this_blk_sz, this->n_list, n_features, X_blk,
+                            ldx_add_ptr, this->centroids.data(), this->ld_centroids,
+                            thread_dists.data(), ld_distances, thread_work2.data(), 2,
+                            thread_work1.data(), 2, true, false);
+                    }
+                } else {
+                    // inner product or cosine - gemm with alpha=-1
+                    if (this->order == column_major) {
+                        // in column major compute C * (X_blk)^T
+                        da_blas::cblas_gemm(CblasColMajor, CblasNoTrans, CblasTrans,
+                                            this->n_list, this_blk_sz, n_features,
+                                            static_cast<T>(-1.0), this->centroids.data(),
+                                            this->ld_centroids, X_blk, ldx_add_ptr,
+                                            static_cast<T>(0.0), thread_dists.data(),
+                                            ld_distances);
+                    } else {
+                        // in row major compute X_blk * C^T
+                        da_blas::cblas_gemm(
+                            CblasRowMajor, CblasNoTrans, CblasTrans, this_blk_sz,
+                            this->n_list, n_features, static_cast<T>(-1.0), X_blk,
+                            ldx_add_ptr, this->centroids.data(), this->ld_centroids,
+                            static_cast<T>(0.0), thread_dists.data(), ld_distances);
+                    }
+                }
+
+                // Argmin: write to nearest_centroid[blk_start+i]
+                for (da_int i = 0; i < this_blk_sz; i++) {
+                    const T *row = &thread_dists[i * n_list];
+                    nearest_centroid[blk_start + i] = static_cast<da_int>(
+                        std::distance(row, std::min_element(row, row + n_list)));
+                }
+            }
+        }
+    } // end parallel region
+
+    if (threading_error)
+        return da_error(this->err, da_status_memory_error, // LCOV_EXCL_LINE
+                        "Memory allocation failed in parallel region.");
+
+    // Phase 2: serial accumulation — O(n_add), no sharing needed
+    for (da_int i = 0; i < n_samples_add; i++) {
+        const da_int c = nearest_centroid[i];
+        local_indices[c].push_back(i);
+        this->global_indices[c].push_back(i + n_index);
+        this->list_sizes[c]++;
     }
 
+    // Reset n_threads for the next parallel region
     // n_threads is at most n_list
-    [[maybe_unused]] da_int n_threads =
-        std::min((da_int)omp_get_max_threads(), this->n_list);
+    n_threads = std::min(static_cast<da_int>(omp_get_max_threads()), this->n_list);
     size_t row_bytes = static_cast<size_t>(this->n_features) * sizeof(T);
 
     bool is_euclidean = (this->internal_metric == approx_nn_metric::sqeuclidean);
@@ -1016,7 +1077,7 @@ da_status approximate_neighbors<T>::ivfflat_search_query_parallel(
                     }
                     da_utils::normalize_rows_inplace(row_major, this_query_blk_sz,
                                                      n_features, query_cos, n_features,
-                                                     (T *)nullptr);
+                                                     static_cast<T *>(nullptr));
                     query_blk_ptr = query_cos;
                 }
 
@@ -1031,11 +1092,11 @@ da_status approximate_neighbors<T>::ivfflat_search_query_parallel(
                         ld_centroids_local, coarse_dist, n_list, qnorms, 2,
                         this->centroid_norms.data(), 1, true, false);
                 } else {
-                    da_blas::cblas_gemm(CblasRowMajor, CblasNoTrans, CblasTrans,
-                                        this_query_blk_sz, n_list, n_features, (T)-1.0,
-                                        query_blk_ptr, is_cosine ? n_features : ldx_test,
-                                        centroids_ptr, ld_centroids_local, (T)0.0,
-                                        coarse_dist, n_list);
+                    da_blas::cblas_gemm(
+                        CblasRowMajor, CblasNoTrans, CblasTrans, this_query_blk_sz,
+                        n_list, n_features, static_cast<T>(-1.0), query_blk_ptr,
+                        is_cosine ? n_features : ldx_test, centroids_ptr,
+                        ld_centroids_local, static_cast<T>(0.0), coarse_dist, n_list);
                 }
 
                 // For each query, find the n_probe nearest centroids.
@@ -1096,9 +1157,10 @@ da_status approximate_neighbors<T>::ivfflat_search_query_parallel(
                             } else {
                                 da_blas::cblas_gemm(
                                     CblasRowMajor, CblasNoTrans, CblasTrans, q_count,
-                                    this_list_blk_sz, n_features, (T)-1.0, queries,
-                                    n_features, this_list + t * n_features, n_features,
-                                    (T)0.0, fine_distances, this_list_blk_sz);
+                                    this_list_blk_sz, n_features, static_cast<T>(-1.0),
+                                    queries, n_features, this_list + t * n_features,
+                                    n_features, static_cast<T>(0.0), fine_distances,
+                                    this_list_blk_sz);
                             }
                             update_heaps_from_list_blk(this_list_blk_sz, q_count,
                                                        this_list_idx + t, fine_distances,
@@ -1146,7 +1208,7 @@ da_status approximate_neighbors<T>::ivf_search(da_int n_queries, da_int n_featur
     da_int s = static_cast<da_int>(
         (-n_features + std::sqrt(static_cast<double>(n_features * n_features + budget))));
 
-    da_int max_threads = (da_int)omp_get_max_threads();
+    da_int max_threads = static_cast<da_int>(omp_get_max_threads());
     da_int query_ub =
         std::max(static_cast<da_int>(1), static_cast<da_int>(n_queries / max_threads));
     da_int query_blk_sz = std::min(s, query_ub);
@@ -1155,12 +1217,14 @@ da_status approximate_neighbors<T>::ivf_search(da_int n_queries, da_int n_featur
     if (query_blk_sz < s) {
         da_int numer = budget - query_blk_sz * n_features;
         da_int denom = query_blk_sz + n_features;
-        list_blk_sz = std::min(std::max((da_int)1, numer / denom), max_list_size);
+        list_blk_sz =
+            std::min(std::max(static_cast<da_int>(1), numer / denom), max_list_size);
     }
     if (list_blk_sz < s) {
         da_int numer = budget - list_blk_sz * n_features;
         da_int denom = list_blk_sz + n_features;
-        query_blk_sz = std::min(std::max((da_int)1, numer / denom), query_ub);
+        query_blk_sz =
+            std::min(std::max(static_cast<da_int>(1), numer / denom), query_ub);
     }
 
     // Debug override: allows tests to force specific block sizes via da_debug_set
@@ -1168,11 +1232,13 @@ da_status approximate_neighbors<T>::ivf_search(da_int n_queries, da_int n_featur
         auto &hidden = context::get_context()->hidden_settings;
         auto it_q = hidden.find("ivf.query_blk_sz");
         if (it_q != hidden.end() && !it_q->second.empty())
-            query_blk_sz =
-                std::min(std::max((da_int)std::stoi(it_q->second), (da_int)1), n_queries);
+            query_blk_sz = std::min(std::max(static_cast<da_int>(std::stoi(it_q->second)),
+                                             static_cast<da_int>(1)),
+                                    n_queries);
         auto it_l = hidden.find("ivf.list_blk_sz");
         if (it_l != hidden.end() && !it_l->second.empty())
-            list_blk_sz = std::min(std::max((da_int)std::stoi(it_l->second), (da_int)1),
+            list_blk_sz = std::min(std::max(static_cast<da_int>(std::stoi(it_l->second)),
+                                            static_cast<da_int>(1)),
                                    max_list_size);
     }
 
@@ -1200,11 +1266,11 @@ da_status approximate_neighbors<T>::ivf_search(da_int n_queries, da_int n_featur
             return da_error(this->err, da_status_memory_error, // LCOV_EXCL_LINE
                             "Memory allocation failed.");
         }
-        da_blas::omatcopy('T', n_queries, n_features, (T)1.0, X_test, ldx_test,
-                          X_test_copy.data(), n_features);
+        da_blas::omatcopy('T', n_queries, n_features, static_cast<T>(1.0), X_test,
+                          ldx_test, X_test_copy.data(), n_features);
         X_test_ptr = X_test_copy.data();
         ldx_test = n_features;
-        da_blas::omatcopy('T', n_list, n_features, (T)1.0, centroids.data(),
+        da_blas::omatcopy('T', n_list, n_features, static_cast<T>(1.0), centroids.data(),
                           this->ld_centroids, centroids_copy.data(), n_features);
         centroids_ptr = centroids_copy.data();
         ld_centroids_local = n_features;
@@ -1233,11 +1299,11 @@ da_status approximate_neighbors<T>::ivf_search(da_int n_queries, da_int n_featur
         case approx_nn_metric::cosine: {
 #pragma omp simd
             for (da_int i = 0; i < k_neigh * n_queries; i++)
-                n_dist[i] = (T)1.0 + n_dist[i];
+                n_dist[i] = static_cast<T>(1.0) + n_dist[i];
             break;
         }
         case approx_nn_metric::inner_product: {
-            da_blas::cblas_scal(k_neigh * n_queries, (T)-1.0, n_dist, 1);
+            da_blas::cblas_scal(k_neigh * n_queries, static_cast<T>(-1.0), n_dist, 1);
             break;
         }
         default:

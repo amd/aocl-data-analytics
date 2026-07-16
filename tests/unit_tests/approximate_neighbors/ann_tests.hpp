@@ -86,6 +86,7 @@ template <typename T> struct ANNParamType {
     // Override computed block sizes via da_debug_set (0 = use computed default)
     da_int query_blk_sz_override{0};
     da_int list_blk_sz_override{0};
+    da_int add_blk_sz_override{0};
 
     ANNParamType(){};
     ANNParamType(da_int nlist, da_int nprobe, da_int k, std::string metric,
@@ -1998,7 +1999,8 @@ ANNParamType<T>
 IVFBlockingTestData(da_int n_samples, da_int n_features, da_int n_list, da_int k,
                     da_int query_blk_sz_override, da_int list_blk_sz_override,
                     const std::string &metric, const std::string &order, da_int ld_extra,
-                    da_int n_queries, const std::string &test_name) {
+                    da_int n_queries, const std::string &test_name,
+                    da_int add_blk_sz_override = 0) {
     ANNParamType<T> param;
     param.test_name = test_name;
     param.n_samples = n_samples;
@@ -2014,6 +2016,7 @@ IVFBlockingTestData(da_int n_samples, da_int n_features, da_int n_list, da_int k
     param.algorithm = "ivfflat";
     param.query_blk_sz_override = query_blk_sz_override;
     param.list_blk_sz_override = list_blk_sz_override;
+    param.add_blk_sz_override = add_blk_sz_override;
 
     // Generate dense row-major data with fixed seeds
     std::mt19937 rng_train(42);
@@ -2061,83 +2064,91 @@ IVFBlockingTestData(da_int n_samples, da_int n_features, da_int n_list, da_int k
 }
 
 template <typename T> void GetIVFBlockingTests(std::vector<ANNParamType<T>> &params) {
-    // Helper macro to avoid repetition: push one case per n_queries value
+    // Helper: push one case per n_queries value. a_ov=0 means use computed add block size.
     auto add = [&](da_int ns, da_int nf, da_int nl, da_int k, da_int q_ov, da_int l_ov,
-                   const std::string &metric, const std::string &order, da_int ld_extra,
-                   std::initializer_list<int> nqs, const std::string &prefix) {
+                   da_int a_ov, const std::string &metric, const std::string &order,
+                   da_int ld_extra, std::initializer_list<int> nqs,
+                   const std::string &prefix) {
         for (int nq : nqs)
-            params.push_back(IVFBlockingTestData<T>(ns, nf, nl, k, q_ov, l_ov, metric,
-                                                    order, ld_extra, (da_int)nq,
-                                                    prefix + "_nq" + std::to_string(nq)));
+            params.push_back(IVFBlockingTestData<T>(
+                ns, nf, nl, k, q_ov, l_ov, metric, order, ld_extra, (da_int)nq,
+                prefix + "_nq" + std::to_string(nq), a_ov));
     };
 
     // --- sqeuclidean row-major ---
-    add(200, 4, 8, 10, 1, 1, "sqeuclidean", "row-major", 0, {16, 24, 40},
+    add(200, 4, 8, 10, 1, 1, 0, "sqeuclidean", "row-major", 0, {16, 24, 40},
         "sqeuc_row_q1_l1");
-    add(200, 4, 8, 10, 4, 3, "sqeuclidean", "row-major", 0, {9, 17, 40},
-        "sqeuc_row_q4_l3");
-    add(200, 4, 8, 10, 8, 7, "sqeuclidean", "row-major", 0, {6, 8, 9, 16, 17, 24, 40},
-        "sqeuc_row_q8_l7");
-    add(200, 4, 8, 10, 8, 8, "sqeuclidean", "row-major", 0, {16, 24}, "sqeuc_row_q8_l8");
-    add(200, 4, 8, 10, 16, 7, "sqeuclidean", "row-major", 0, {24, 40},
-        "sqeuc_row_q16_l7");
-    add(200, 4, 8, 10, 32, 15, "sqeuclidean", "row-major", 0, {40, 64},
+    add(200, 4, 8, 10, 4, 3, 4, "sqeuclidean", "row-major", 0, {9, 17, 40},
+        "sqeuc_row_q4_l3_a4");
+    add(200, 4, 8, 10, 8, 7, 1, "sqeuclidean", "row-major", 0, {6, 8, 9, 16, 17, 24, 40},
+        "sqeuc_row_q8_l7_a1");
+    add(200, 4, 8, 10, 8, 8, 0, "sqeuclidean", "row-major", 0, {16, 24},
+        "sqeuc_row_q8_l8");
+    add(200, 4, 8, 10, 16, 7, 16, "sqeuclidean", "row-major", 0, {24, 40},
+        "sqeuc_row_q16_l7_a16");
+    add(200, 4, 8, 10, 32, 15, 0, "sqeuclidean", "row-major", 0, {40, 64},
         "sqeuc_row_q32_l15");
 
     // --- sqeuclidean column-major ---
-    add(200, 4, 8, 10, 4, 3, "sqeuclidean", "column-major", 0, {8, 9, 24},
-        "sqeuc_col_q4_l3");
-    add(200, 4, 8, 10, 8, 7, "sqeuclidean", "column-major", 0, {8, 9, 24, 40},
+    add(200, 4, 8, 10, 4, 3, 4, "sqeuclidean", "column-major", 0, {8, 9, 24},
+        "sqeuc_col_q4_l3_a4");
+    add(200, 4, 8, 10, 8, 7, 0, "sqeuclidean", "column-major", 0, {8, 9, 24, 40},
         "sqeuc_col_q8_l7");
-    add(200, 4, 8, 10, 16, 15, "sqeuclidean", "column-major", 0, {24, 40},
-        "sqeuc_col_q16_l15");
+    add(200, 4, 8, 10, 16, 15, 1, "sqeuclidean", "column-major", 0, {24, 40},
+        "sqeuc_col_q16_l15_a1");
 
     // --- sqeuclidean padded row-major (+3) ---
-    add(200, 4, 8, 10, 8, 7, "sqeuclidean", "row-major", 3, {8, 9, 24, 40},
+    add(200, 4, 8, 10, 8, 7, 0, "sqeuclidean", "row-major", 3, {8, 9, 24, 40},
         "sqeuc_row_pad3_q8_l7");
-    add(200, 4, 8, 10, 1, 1, "sqeuclidean", "row-major", 3, {9, 16},
-        "sqeuc_row_pad3_q1_l1");
+    add(200, 4, 8, 10, 1, 1, 8, "sqeuclidean", "row-major", 3, {9, 16},
+        "sqeuc_row_pad3_q1_l1_a8");
 
     // --- sqeuclidean padded column-major (+7) ---
-    add(200, 4, 8, 10, 8, 7, "sqeuclidean", "column-major", 7, {8, 24},
+    add(200, 4, 8, 10, 8, 7, 0, "sqeuclidean", "column-major", 7, {8, 24},
         "sqeuc_col_pad7_q8_l7");
 
     // --- inner product row-major ---
-    add(200, 4, 8, 10, 1, 1, "inner product", "row-major", 0, {16, 24}, "ip_row_q1_l1");
-    add(200, 4, 8, 10, 8, 7, "inner product", "row-major", 0, {8, 9, 24, 40},
+    add(200, 4, 8, 10, 1, 1, 1, "inner product", "row-major", 0, {16, 24},
+        "ip_row_q1_l1_a1");
+    add(200, 4, 8, 10, 8, 7, 0, "inner product", "row-major", 0, {8, 9, 24, 40},
         "ip_row_q8_l7");
-    add(200, 4, 8, 10, 16, 7, "inner product", "row-major", 0, {24, 40}, "ip_row_q16_l7");
-    add(200, 4, 8, 10, 32, 15, "inner product", "row-major", 0, {40, 64},
+    add(200, 4, 8, 10, 16, 7, 16, "inner product", "row-major", 0, {24, 40},
+        "ip_row_q16_l7_a16");
+    add(200, 4, 8, 10, 32, 15, 0, "inner product", "row-major", 0, {40, 64},
         "ip_row_q32_l15");
 
     // --- inner product column-major ---
-    add(200, 4, 8, 10, 8, 8, "inner product", "column-major", 0, {8, 24, 40},
-        "ip_col_q8_l8");
+    add(200, 4, 8, 10, 8, 8, 4, "inner product", "column-major", 0, {8, 24, 40},
+        "ip_col_q8_l8_a4");
 
     // --- inner product padded row-major (+3) ---
-    add(200, 4, 8, 10, 8, 7, "inner product", "row-major", 3, {8, 24},
+    add(200, 4, 8, 10, 8, 7, 0, "inner product", "row-major", 3, {8, 24},
         "ip_row_pad3_q8_l7");
 
     // --- cosine row-major ---
-    add(200, 4, 8, 10, 4, 3, "cosine", "row-major", 0, {9, 17}, "cosine_row_q4_l3");
-    add(200, 4, 8, 10, 8, 7, "cosine", "row-major", 0, {8, 9, 24, 40},
-        "cosine_row_q8_l7");
-    add(200, 4, 8, 10, 16, 15, "cosine", "row-major", 0, {24, 40}, "cosine_row_q16_l15");
-    add(200, 4, 8, 10, 32, 15, "cosine", "row-major", 0, {40, 64}, "cosine_row_q32_l15");
+    add(200, 4, 8, 10, 4, 3, 4, "cosine", "row-major", 0, {9, 17}, "cosine_row_q4_l3_a4");
+    add(200, 4, 8, 10, 8, 7, 1, "cosine", "row-major", 0, {8, 9, 24, 40},
+        "cosine_row_q8_l7_a1");
+    add(200, 4, 8, 10, 16, 15, 0, "cosine", "row-major", 0, {24, 40},
+        "cosine_row_q16_l15");
+    add(200, 4, 8, 10, 32, 15, 0, "cosine", "row-major", 0, {40, 64},
+        "cosine_row_q32_l15");
 
     // --- cosine column-major ---
-    add(200, 4, 8, 10, 8, 7, "cosine", "column-major", 0, {8, 24, 40},
-        "cosine_col_q8_l7");
+    add(200, 4, 8, 10, 8, 7, 8, "cosine", "column-major", 0, {8, 24, 40},
+        "cosine_col_q8_l7_a8");
 
     // --- cosine padded row-major (+3) ---
-    add(200, 4, 8, 10, 8, 7, "cosine", "row-major", 3, {8, 24}, "cosine_row_pad3_q8_l7");
+    add(200, 4, 8, 10, 8, 7, 0, "cosine", "row-major", 3, {8, 24},
+        "cosine_row_pad3_q8_l7");
 
     // --- cosine padded column-major (+7) ---
-    add(200, 4, 8, 10, 8, 7, "cosine", "column-major", 7, {8, 24},
+    add(200, 4, 8, 10, 8, 7, 0, "cosine", "column-major", 7, {8, 24},
         "cosine_col_pad7_q8_l7");
 
-    // --- large cases
-    add(1000, 6, 16, 10, 8, 7, "sqeuclidean", "row-major", 0, {500, 2000}, "large_q8_l7");
-    add(1000, 6, 16, 10, 32, 15, "sqeuclidean", "row-major", 0, {500, 2000},
+    // --- large cases ---
+    add(1000, 6, 16, 10, 8, 7, 50, "sqeuclidean", "row-major", 0, {500, 2000},
+        "large_q8_l7_a50");
+    add(1000, 6, 16, 10, 32, 15, 0, "sqeuclidean", "row-major", 0, {500, 2000},
         "large_q32_l15");
 }

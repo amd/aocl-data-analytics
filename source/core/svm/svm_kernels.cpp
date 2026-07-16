@@ -34,7 +34,7 @@ namespace da_svm {
 /* These functions contain performance-critical loops which must vectorize for performance. */
 
 /*-------------------------------------------------------------
-  ---------------------------  WSSI --------------------------- 
+  ---------------------------  WSSI ---------------------------
   ------------------------------------------------------------- */
 
 template <typename T>
@@ -63,6 +63,16 @@ void wssi_kernel<double, vectorization_type::scalar>(da_int *I_up, double *gradi
                                                      da_int ws_size) {
     wssi_kernel_scalar(I_up, gradient, min_grad_idx, min_grad_value, ws_size);
 }
+
+#ifdef __AVX512FP16__
+template <>
+void wssi_kernel<_Float16, vectorization_type::scalar>(da_int *I_up, _Float16 *gradient,
+                                                       da_int &min_grad_idx,
+                                                       _Float16 &min_grad_value,
+                                                       da_int ws_size) {
+    wssi_kernel_scalar(I_up, gradient, min_grad_idx, min_grad_value, ws_size);
+}
+#endif
 
 template <>
 void wssi_kernel<double, vectorization_type::avx>(da_int *I_up, double *gradient,
@@ -493,7 +503,7 @@ void wssi_kernel<float, vectorization_type::avx512>(da_int *I_up, float *gradien
 #endif
 
 /*-------------------------------------------------------------
-  ---------------------------  WSSJ --------------------------- 
+  ---------------------------  WSSJ ---------------------------
   ------------------------------------------------------------- */
 
 template <typename T>
@@ -546,6 +556,17 @@ void wssj_kernel<double, vectorization_type::scalar>(
     wssj_kernel_scalar(I_low, gradient, K_ith_row, K_diagonal, K_ii, max_grad_idx,
                        max_grad_value, min_grad, max_fun, delta, tau, ws_size);
 }
+
+#ifdef __AVX512FP16__
+template <>
+void wssj_kernel<_Float16, vectorization_type::scalar>(
+    da_int *I_low, _Float16 *gradient, _Float16 *K_ith_row, _Float16 *K_diagonal,
+    _Float16 &K_ii, da_int &max_grad_idx, _Float16 &max_grad_value, _Float16 &min_grad,
+    _Float16 &max_fun, _Float16 &delta, _Float16 &tau, da_int ws_size) {
+    wssj_kernel_scalar(I_low, gradient, K_ith_row, K_diagonal, K_ii, max_grad_idx,
+                       max_grad_value, min_grad, max_fun, delta, tau, ws_size);
+}
+#endif
 
 template <>
 void wssj_kernel<double, vectorization_type::avx>(
@@ -1173,6 +1194,700 @@ void wssj_kernel<float, vectorization_type::avx512>(
     }
 }
 #endif // __AVX512F__
+
+#ifdef __AVX512FP16__
+
+/*-------------------------------------------------------------
+  --------------------  WSSI _Float16 -------------------------
+  ------------------------------------------------------------- */
+
+// 128-bit: 8 x _Float16 elements per iteration
+template <>
+void wssi_kernel<_Float16, vectorization_type::avx>(da_int *I_up, _Float16 *gradient,
+                                                    da_int &min_grad_idx,
+                                                    _Float16 &min_grad_value,
+                                                    da_int ws_size) {
+    v8hf_t v_smallest_gradients;
+#if defined(AOCLDA_ILP64)
+    v8i64_t v_smallest_idx;
+    v_smallest_idx.v = _mm512_set1_epi64(min_grad_idx);
+#else
+    v8i32_t v_smallest_idx;
+    v_smallest_idx.v = _mm256_set1_epi32(min_grad_idx);
+#endif
+    v_smallest_gradients.v = _mm_set1_ph(min_grad_value);
+
+    for (da_int iter = 0; iter < ws_size; iter += 8) {
+        // Build mask from I_up
+#if defined(AOCLDA_ILP64)
+        __m512i i_up_v =
+            _mm512_loadu_si512(reinterpret_cast<const __m512i_u *>(&I_up[iter]));
+        __mmask8 i_up_mask =
+            _mm512_cmp_epi64_mask(i_up_v, _mm512_setzero_si512(), _MM_CMPINT_NE);
+#else
+        __m256i i_up_v =
+            _mm256_loadu_si256(reinterpret_cast<const __m256i_u *>(&I_up[iter]));
+        __mmask8 i_up_mask =
+            _mm256_cmp_epi32_mask(i_up_v, _mm256_setzero_si256(), _MM_CMPINT_NE);
+#endif
+        __m128h gradient_v = _mm_loadu_ph(&gradient[iter]);
+        __mmask8 cmp_mask =
+            _mm_cmp_ph_mask(gradient_v, v_smallest_gradients.v, _CMP_LT_OQ);
+        __mmask8 combined_mask = i_up_mask & cmp_mask;
+
+        if (combined_mask) {
+            v_smallest_gradients.v =
+                _mm_mask_blend_ph(combined_mask, v_smallest_gradients.v, gradient_v);
+#if defined(AOCLDA_ILP64)
+            v_smallest_idx.v = _mm512_mask_blend_epi64(
+                combined_mask, v_smallest_idx.v,
+                _mm512_set_epi64(iter + 7, iter + 6, iter + 5, iter + 4, iter + 3,
+                                 iter + 2, iter + 1, iter));
+#else
+            v_smallest_idx.v = _mm256_mask_blend_epi32(
+                combined_mask, v_smallest_idx.v,
+                _mm256_set_epi32(iter + 7, iter + 6, iter + 5, iter + 4, iter + 3,
+                                 iter + 2, iter + 1, iter));
+#endif
+        }
+    }
+
+    std::array<da_int, 8> smallest_idx({v_smallest_idx.i[0], v_smallest_idx.i[1],
+                                        v_smallest_idx.i[2], v_smallest_idx.i[3],
+                                        v_smallest_idx.i[4], v_smallest_idx.i[5],
+                                        v_smallest_idx.i[6], v_smallest_idx.i[7]});
+    if (*std::max_element(smallest_idx.begin(), smallest_idx.end()) == -1)
+        return;
+
+    min_grad_value = v_smallest_gradients.h[0];
+    min_grad_idx = smallest_idx[0];
+    for (da_int i = 1; i <= 7; i++) {
+        if (v_smallest_gradients.h[i] == min_grad_value) {
+            if (smallest_idx[i] < min_grad_idx) {
+                min_grad_value = v_smallest_gradients.h[i];
+                min_grad_idx = smallest_idx[i];
+            }
+        } else if (v_smallest_gradients.h[i] < min_grad_value) {
+            min_grad_value = v_smallest_gradients.h[i];
+            min_grad_idx = smallest_idx[i];
+        }
+    }
+}
+
+// 256-bit: 16 x _Float16 elements per iteration
+template <>
+void wssi_kernel<_Float16, vectorization_type::avx2>(da_int *I_up, _Float16 *gradient,
+                                                     da_int &min_grad_idx,
+                                                     _Float16 &min_grad_value,
+                                                     da_int ws_size) {
+    v16hf_t v_smallest_gradients;
+#if defined(AOCLDA_ILP64)
+    // 16 64-bit indices: two 512-bit integer vectors
+    v8i64_t v_smallest_idx1, v_smallest_idx2;
+    v_smallest_idx1.v = _mm512_set1_epi64(min_grad_idx);
+    v_smallest_idx2.v = _mm512_set1_epi64(min_grad_idx);
+#else
+    v16i32_t v_smallest_idx;
+    v_smallest_idx.v = _mm512_set1_epi32(min_grad_idx);
+#endif
+    v_smallest_gradients.v = _mm256_set1_ph(min_grad_value);
+
+    for (da_int iter = 0; iter < ws_size; iter += 16) {
+#if defined(AOCLDA_ILP64)
+        __m512i i_up_lower = _mm512_loadu_si512(&I_up[iter]);
+        __m512i i_up_upper = _mm512_loadu_si512(&I_up[iter + 8]);
+        __mmask8 i_up_mask_lower =
+            _mm512_cmp_epi64_mask(i_up_lower, _mm512_setzero_si512(), _MM_CMPINT_NE);
+        __mmask8 i_up_mask_upper =
+            _mm512_cmp_epi64_mask(i_up_upper, _mm512_setzero_si512(), _MM_CMPINT_NE);
+        __mmask16 i_up_mask = i_up_mask_lower | (i_up_mask_upper << 8);
+#else
+        __m512i i_up_v = _mm512_loadu_si512(&I_up[iter]);
+        __mmask16 i_up_mask =
+            _mm512_cmp_epi32_mask(i_up_v, _mm512_setzero_si512(), _MM_CMPINT_NE);
+#endif
+        __m256h gradient_v = _mm256_loadu_ph(&gradient[iter]);
+        __mmask16 cmp_mask =
+            _mm256_cmp_ph_mask(gradient_v, v_smallest_gradients.v, _CMP_LT_OQ);
+        __mmask16 combined_mask = i_up_mask & cmp_mask;
+
+        if (combined_mask) {
+            v_smallest_gradients.v =
+                _mm256_mask_blend_ph(combined_mask, v_smallest_gradients.v, gradient_v);
+#if defined(AOCLDA_ILP64)
+            v_smallest_idx1.v = _mm512_mask_blend_epi64(
+                combined_mask & 0xFF, v_smallest_idx1.v,
+                _mm512_set_epi64(iter + 7, iter + 6, iter + 5, iter + 4, iter + 3,
+                                 iter + 2, iter + 1, iter));
+            v_smallest_idx2.v = _mm512_mask_blend_epi64(
+                (combined_mask >> 8) & 0xFF, v_smallest_idx2.v,
+                _mm512_set_epi64(iter + 15, iter + 14, iter + 13, iter + 12, iter + 11,
+                                 iter + 10, iter + 9, iter + 8));
+#else
+            v_smallest_idx.v = _mm512_mask_blend_epi32(
+                combined_mask, v_smallest_idx.v,
+                _mm512_set_epi32(iter + 15, iter + 14, iter + 13, iter + 12, iter + 11,
+                                 iter + 10, iter + 9, iter + 8, iter + 7, iter + 6,
+                                 iter + 5, iter + 4, iter + 3, iter + 2, iter + 1, iter));
+#endif
+        }
+    }
+
+#if defined(AOCLDA_ILP64)
+    std::array<da_int, 16> smallest_idx(
+        {v_smallest_idx1.i[0], v_smallest_idx1.i[1], v_smallest_idx1.i[2],
+         v_smallest_idx1.i[3], v_smallest_idx1.i[4], v_smallest_idx1.i[5],
+         v_smallest_idx1.i[6], v_smallest_idx1.i[7], v_smallest_idx2.i[0],
+         v_smallest_idx2.i[1], v_smallest_idx2.i[2], v_smallest_idx2.i[3],
+         v_smallest_idx2.i[4], v_smallest_idx2.i[5], v_smallest_idx2.i[6],
+         v_smallest_idx2.i[7]});
+#else
+    std::array<da_int, 16> smallest_idx(
+        {v_smallest_idx.i[0], v_smallest_idx.i[1], v_smallest_idx.i[2],
+         v_smallest_idx.i[3], v_smallest_idx.i[4], v_smallest_idx.i[5],
+         v_smallest_idx.i[6], v_smallest_idx.i[7], v_smallest_idx.i[8],
+         v_smallest_idx.i[9], v_smallest_idx.i[10], v_smallest_idx.i[11],
+         v_smallest_idx.i[12], v_smallest_idx.i[13], v_smallest_idx.i[14],
+         v_smallest_idx.i[15]});
+#endif
+    if (*std::max_element(smallest_idx.begin(), smallest_idx.end()) == -1)
+        return;
+
+    min_grad_value = v_smallest_gradients.h[0];
+    min_grad_idx = smallest_idx[0];
+    for (da_int i = 1; i <= 15; i++) {
+        if (v_smallest_gradients.h[i] == min_grad_value) {
+            if (smallest_idx[i] < min_grad_idx) {
+                min_grad_value = v_smallest_gradients.h[i];
+                min_grad_idx = smallest_idx[i];
+            }
+        } else if (v_smallest_gradients.h[i] < min_grad_value) {
+            min_grad_value = v_smallest_gradients.h[i];
+            min_grad_idx = smallest_idx[i];
+        }
+    }
+}
+
+// 512-bit: 32 x _Float16 elements per iteration
+template <>
+void wssi_kernel<_Float16, vectorization_type::avx512>(da_int *I_up, _Float16 *gradient,
+                                                       da_int &min_grad_idx,
+                                                       _Float16 &min_grad_value,
+                                                       da_int ws_size) {
+    v32hf_t v_smallest_gradients;
+#if defined(AOCLDA_ILP64)
+    // 32 64-bit indices: four 512-bit integer vectors
+    v8i64_t v_smallest_idx1, v_smallest_idx2, v_smallest_idx3, v_smallest_idx4;
+    v_smallest_idx1.v = _mm512_set1_epi64(min_grad_idx);
+    v_smallest_idx2.v = _mm512_set1_epi64(min_grad_idx);
+    v_smallest_idx3.v = _mm512_set1_epi64(min_grad_idx);
+    v_smallest_idx4.v = _mm512_set1_epi64(min_grad_idx);
+#else
+    // 32 32-bit indices: two 512-bit integer vectors
+    v16i32_t v_smallest_idx1, v_smallest_idx2;
+    v_smallest_idx1.v = _mm512_set1_epi32(min_grad_idx);
+    v_smallest_idx2.v = _mm512_set1_epi32(min_grad_idx);
+#endif
+    v_smallest_gradients.v = _mm512_set1_ph(min_grad_value);
+
+    for (da_int iter = 0; iter < ws_size; iter += 32) {
+#if defined(AOCLDA_ILP64)
+        __m512i i_up_0 = _mm512_loadu_si512(&I_up[iter]);
+        __m512i i_up_1 = _mm512_loadu_si512(&I_up[iter + 8]);
+        __m512i i_up_2 = _mm512_loadu_si512(&I_up[iter + 16]);
+        __m512i i_up_3 = _mm512_loadu_si512(&I_up[iter + 24]);
+        __mmask8 m0 =
+            _mm512_cmp_epi64_mask(i_up_0, _mm512_setzero_si512(), _MM_CMPINT_NE);
+        __mmask8 m1 =
+            _mm512_cmp_epi64_mask(i_up_1, _mm512_setzero_si512(), _MM_CMPINT_NE);
+        __mmask8 m2 =
+            _mm512_cmp_epi64_mask(i_up_2, _mm512_setzero_si512(), _MM_CMPINT_NE);
+        __mmask8 m3 =
+            _mm512_cmp_epi64_mask(i_up_3, _mm512_setzero_si512(), _MM_CMPINT_NE);
+        __mmask32 i_up_mask = (__mmask32)m0 | ((__mmask32)m1 << 8) |
+                              ((__mmask32)m2 << 16) | ((__mmask32)m3 << 24);
+#else
+        __m512i i_up_lower = _mm512_loadu_si512(&I_up[iter]);
+        __m512i i_up_upper = _mm512_loadu_si512(&I_up[iter + 16]);
+        __mmask16 m_lower =
+            _mm512_cmp_epi32_mask(i_up_lower, _mm512_setzero_si512(), _MM_CMPINT_NE);
+        __mmask16 m_upper =
+            _mm512_cmp_epi32_mask(i_up_upper, _mm512_setzero_si512(), _MM_CMPINT_NE);
+        __mmask32 i_up_mask = (__mmask32)m_lower | ((__mmask32)m_upper << 16);
+#endif
+        __m512h gradient_v = _mm512_loadu_ph(&gradient[iter]);
+        __mmask32 cmp_mask =
+            _mm512_cmp_ph_mask(gradient_v, v_smallest_gradients.v, _CMP_LT_OQ);
+        __mmask32 combined_mask = i_up_mask & cmp_mask;
+
+        if (combined_mask) {
+            v_smallest_gradients.v =
+                _mm512_mask_blend_ph(combined_mask, v_smallest_gradients.v, gradient_v);
+#if defined(AOCLDA_ILP64)
+            v_smallest_idx1.v = _mm512_mask_blend_epi64(
+                combined_mask & 0xFF, v_smallest_idx1.v,
+                _mm512_set_epi64(iter + 7, iter + 6, iter + 5, iter + 4, iter + 3,
+                                 iter + 2, iter + 1, iter));
+            v_smallest_idx2.v = _mm512_mask_blend_epi64(
+                (combined_mask >> 8) & 0xFF, v_smallest_idx2.v,
+                _mm512_set_epi64(iter + 15, iter + 14, iter + 13, iter + 12, iter + 11,
+                                 iter + 10, iter + 9, iter + 8));
+            v_smallest_idx3.v = _mm512_mask_blend_epi64(
+                (combined_mask >> 16) & 0xFF, v_smallest_idx3.v,
+                _mm512_set_epi64(iter + 23, iter + 22, iter + 21, iter + 20, iter + 19,
+                                 iter + 18, iter + 17, iter + 16));
+            v_smallest_idx4.v = _mm512_mask_blend_epi64(
+                (combined_mask >> 24) & 0xFF, v_smallest_idx4.v,
+                _mm512_set_epi64(iter + 31, iter + 30, iter + 29, iter + 28, iter + 27,
+                                 iter + 26, iter + 25, iter + 24));
+#else
+            v_smallest_idx1.v = _mm512_mask_blend_epi32(
+                combined_mask & 0xFFFF, v_smallest_idx1.v,
+                _mm512_set_epi32(iter + 15, iter + 14, iter + 13, iter + 12, iter + 11,
+                                 iter + 10, iter + 9, iter + 8, iter + 7, iter + 6,
+                                 iter + 5, iter + 4, iter + 3, iter + 2, iter + 1, iter));
+            v_smallest_idx2.v = _mm512_mask_blend_epi32(
+                (combined_mask >> 16) & 0xFFFF, v_smallest_idx2.v,
+                _mm512_set_epi32(iter + 31, iter + 30, iter + 29, iter + 28, iter + 27,
+                                 iter + 26, iter + 25, iter + 24, iter + 23, iter + 22,
+                                 iter + 21, iter + 20, iter + 19, iter + 18, iter + 17,
+                                 iter + 16));
+#endif
+        }
+    }
+
+#if defined(AOCLDA_ILP64)
+    std::array<da_int, 32> smallest_idx(
+        {v_smallest_idx1.i[0], v_smallest_idx1.i[1], v_smallest_idx1.i[2],
+         v_smallest_idx1.i[3], v_smallest_idx1.i[4], v_smallest_idx1.i[5],
+         v_smallest_idx1.i[6], v_smallest_idx1.i[7], v_smallest_idx2.i[0],
+         v_smallest_idx2.i[1], v_smallest_idx2.i[2], v_smallest_idx2.i[3],
+         v_smallest_idx2.i[4], v_smallest_idx2.i[5], v_smallest_idx2.i[6],
+         v_smallest_idx2.i[7], v_smallest_idx3.i[0], v_smallest_idx3.i[1],
+         v_smallest_idx3.i[2], v_smallest_idx3.i[3], v_smallest_idx3.i[4],
+         v_smallest_idx3.i[5], v_smallest_idx3.i[6], v_smallest_idx3.i[7],
+         v_smallest_idx4.i[0], v_smallest_idx4.i[1], v_smallest_idx4.i[2],
+         v_smallest_idx4.i[3], v_smallest_idx4.i[4], v_smallest_idx4.i[5],
+         v_smallest_idx4.i[6], v_smallest_idx4.i[7]});
+#else
+    std::array<da_int, 32> smallest_idx(
+        {v_smallest_idx1.i[0],  v_smallest_idx1.i[1],  v_smallest_idx1.i[2],
+         v_smallest_idx1.i[3],  v_smallest_idx1.i[4],  v_smallest_idx1.i[5],
+         v_smallest_idx1.i[6],  v_smallest_idx1.i[7],  v_smallest_idx1.i[8],
+         v_smallest_idx1.i[9],  v_smallest_idx1.i[10], v_smallest_idx1.i[11],
+         v_smallest_idx1.i[12], v_smallest_idx1.i[13], v_smallest_idx1.i[14],
+         v_smallest_idx1.i[15], v_smallest_idx2.i[0],  v_smallest_idx2.i[1],
+         v_smallest_idx2.i[2],  v_smallest_idx2.i[3],  v_smallest_idx2.i[4],
+         v_smallest_idx2.i[5],  v_smallest_idx2.i[6],  v_smallest_idx2.i[7],
+         v_smallest_idx2.i[8],  v_smallest_idx2.i[9],  v_smallest_idx2.i[10],
+         v_smallest_idx2.i[11], v_smallest_idx2.i[12], v_smallest_idx2.i[13],
+         v_smallest_idx2.i[14], v_smallest_idx2.i[15]});
+#endif
+    if (*std::max_element(smallest_idx.begin(), smallest_idx.end()) == -1)
+        return;
+
+    min_grad_value = v_smallest_gradients.h[0];
+    min_grad_idx = smallest_idx[0];
+    for (da_int i = 1; i <= 31; i++) {
+        if (v_smallest_gradients.h[i] == min_grad_value) {
+            if (smallest_idx[i] < min_grad_idx) {
+                min_grad_value = v_smallest_gradients.h[i];
+                min_grad_idx = smallest_idx[i];
+            }
+        } else if (v_smallest_gradients.h[i] < min_grad_value) {
+            min_grad_value = v_smallest_gradients.h[i];
+            min_grad_idx = smallest_idx[i];
+        }
+    }
+}
+
+/*-------------------------------------------------------------
+  --------------------  WSSJ _Float16 -------------------------
+  ------------------------------------------------------------- */
+
+// 128-bit: 8 x _Float16 elements per iteration
+template <>
+void wssj_kernel<_Float16, vectorization_type::avx>(
+    da_int *I_low, _Float16 *gradient, _Float16 *K_ith_row, _Float16 *K_diagonal,
+    _Float16 &K_ii, da_int &max_grad_idx, _Float16 &max_grad_value, _Float16 &min_grad,
+    _Float16 &max_fun, _Float16 &delta, _Float16 &tau, da_int ws_size) {
+    v8hf_t v_largest_gradients, v_largest_fun, v_delta;
+#if defined(AOCLDA_ILP64)
+    v8i64_t v_largest_idx;
+    v_largest_idx.v = _mm512_set1_epi64(max_grad_idx);
+#else
+    v8i32_t v_largest_idx;
+    v_largest_idx.v = _mm256_set1_epi32(max_grad_idx);
+#endif
+    v_largest_gradients.v = _mm_set1_ph(max_grad_value);
+    v_largest_fun.v = _mm_set1_ph(max_fun);
+    v_delta.v = _mm_set1_ph(delta);
+
+    for (da_int iter = 0; iter < ws_size; iter += 8) {
+#if defined(AOCLDA_ILP64)
+        __m512i i_low_v =
+            _mm512_loadu_si512(reinterpret_cast<const __m512i_u *>(&I_low[iter]));
+        __mmask8 i_low_mask =
+            _mm512_cmp_epi64_mask(i_low_v, _mm512_setzero_si512(), _MM_CMPINT_NE);
+#else
+        __m256i i_low_v =
+            _mm256_loadu_si256(reinterpret_cast<const __m256i_u *>(&I_low[iter]));
+        __mmask8 i_low_mask =
+            _mm256_cmp_epi32_mask(i_low_v, _mm256_setzero_si256(), _MM_CMPINT_NE);
+#endif
+        __m128h gradient_v = _mm_loadu_ph(&gradient[iter]);
+        __mmask8 cmp_mask =
+            _mm_cmp_ph_mask(gradient_v, v_largest_gradients.v, _CMP_GT_OQ);
+        __mmask8 max_grad_mask = i_low_mask & cmp_mask;
+        v_largest_gradients.v =
+            _mm_mask_blend_ph(max_grad_mask, v_largest_gradients.v, gradient_v);
+
+        __m128h b = _mm_sub_ph(gradient_v, _mm_set1_ph(min_grad));
+        __mmask8 positive_b_mask = _mm_cmp_ph_mask(b, _mm_setzero_ph(), _CMP_GT_OQ);
+        __mmask8 combined_ilow_posb = i_low_mask & positive_b_mask;
+
+        __m128h a = _mm_add_ph(_mm_set1_ph(K_ii), _mm_loadu_ph(&K_diagonal[iter]));
+        a = _mm_sub_ph(
+            a, _mm_mul_ph(_mm_set1_ph((_Float16)2.0f), _mm_loadu_ph(&K_ith_row[iter])));
+        __mmask8 negative_a_mask = _mm_cmp_ph_mask(a, _mm_setzero_ph(), _CMP_LE_OQ);
+        a = _mm_mask_blend_ph(negative_a_mask, a, _mm_set1_ph(tau));
+
+        __m128h ratio = _mm_div_ph(b, a);
+        __m128h function_val = _mm_mul_ph(ratio, b);
+        __mmask8 max_fun_mask =
+            _mm_cmp_ph_mask(function_val, v_largest_fun.v, _CMP_GT_OQ);
+        __mmask8 combined_all = max_fun_mask & combined_ilow_posb;
+
+        v_largest_fun.v = _mm_mask_blend_ph(combined_all, v_largest_fun.v, function_val);
+        v_delta.v = _mm_mask_blend_ph(combined_all, v_delta.v, ratio);
+#if defined(AOCLDA_ILP64)
+        v_largest_idx.v = _mm512_mask_blend_epi64(
+            combined_all, v_largest_idx.v,
+            _mm512_set_epi64(iter + 7, iter + 6, iter + 5, iter + 4, iter + 3, iter + 2,
+                             iter + 1, iter));
+#else
+        v_largest_idx.v = _mm256_mask_blend_epi32(
+            combined_all, v_largest_idx.v,
+            _mm256_set_epi32(iter + 7, iter + 6, iter + 5, iter + 4, iter + 3, iter + 2,
+                             iter + 1, iter));
+#endif
+    }
+
+    // Pick max_grad_value
+    max_grad_value = v_largest_gradients.h[0];
+    for (da_int i = 1; i <= 7; i++)
+        if (v_largest_gradients.h[i] > max_grad_value)
+            max_grad_value = v_largest_gradients.h[i];
+
+    std::array<da_int, 8> largest_idx(
+        {v_largest_idx.i[0], v_largest_idx.i[1], v_largest_idx.i[2], v_largest_idx.i[3],
+         v_largest_idx.i[4], v_largest_idx.i[5], v_largest_idx.i[6], v_largest_idx.i[7]});
+    if (*std::max_element(largest_idx.begin(), largest_idx.end()) == -1)
+        return;
+
+    max_grad_idx = largest_idx[0];
+    max_fun = v_largest_fun.h[0];
+    delta = v_delta.h[0];
+    for (da_int i = 1; i <= 7; i++) {
+        if (v_largest_fun.h[i] == max_fun) {
+            if (largest_idx[i] < max_grad_idx) {
+                max_grad_idx = largest_idx[i];
+                max_fun = v_largest_fun.h[i];
+                delta = v_delta.h[i];
+            }
+        } else if (v_largest_fun.h[i] > max_fun) {
+            max_grad_idx = largest_idx[i];
+            max_fun = v_largest_fun.h[i];
+            delta = v_delta.h[i];
+        }
+    }
+}
+
+// 256-bit: 16 x _Float16 elements per iteration
+template <>
+void wssj_kernel<_Float16, vectorization_type::avx2>(
+    da_int *I_low, _Float16 *gradient, _Float16 *K_ith_row, _Float16 *K_diagonal,
+    _Float16 &K_ii, da_int &max_grad_idx, _Float16 &max_grad_value, _Float16 &min_grad,
+    _Float16 &max_fun, _Float16 &delta, _Float16 &tau, da_int ws_size) {
+    v16hf_t v_largest_gradients, v_largest_fun, v_delta;
+#if defined(AOCLDA_ILP64)
+    v8i64_t v_largest_idx1, v_largest_idx2;
+    v_largest_idx1.v = _mm512_set1_epi64(max_grad_idx);
+    v_largest_idx2.v = _mm512_set1_epi64(max_grad_idx);
+#else
+    v16i32_t v_largest_idx;
+    v_largest_idx.v = _mm512_set1_epi32(max_grad_idx);
+#endif
+    v_largest_gradients.v = _mm256_set1_ph(max_grad_value);
+    v_largest_fun.v = _mm256_set1_ph(max_fun);
+    v_delta.v = _mm256_set1_ph(delta);
+
+    for (da_int iter = 0; iter < ws_size; iter += 16) {
+#if defined(AOCLDA_ILP64)
+        __m512i i_low_lower = _mm512_loadu_si512(&I_low[iter]);
+        __m512i i_low_upper = _mm512_loadu_si512(&I_low[iter + 8]);
+        __mmask8 m_lower =
+            _mm512_cmp_epi64_mask(i_low_lower, _mm512_setzero_si512(), _MM_CMPINT_NE);
+        __mmask8 m_upper =
+            _mm512_cmp_epi64_mask(i_low_upper, _mm512_setzero_si512(), _MM_CMPINT_NE);
+        __mmask16 i_low_mask = m_lower | (m_upper << 8);
+#else
+        __m512i i_low_v = _mm512_loadu_si512(&I_low[iter]);
+        __mmask16 i_low_mask =
+            _mm512_cmp_epi32_mask(i_low_v, _mm512_setzero_si512(), _MM_CMPINT_NE);
+#endif
+        __m256h gradient_v = _mm256_loadu_ph(&gradient[iter]);
+        __mmask16 cmp_mask =
+            _mm256_cmp_ph_mask(gradient_v, v_largest_gradients.v, _CMP_GT_OQ);
+        __mmask16 max_grad_mask = i_low_mask & cmp_mask;
+        v_largest_gradients.v =
+            _mm256_mask_blend_ph(max_grad_mask, v_largest_gradients.v, gradient_v);
+
+        __m256h b = _mm256_sub_ph(gradient_v, _mm256_set1_ph(min_grad));
+        __mmask16 positive_b_mask =
+            _mm256_cmp_ph_mask(b, _mm256_setzero_ph(), _CMP_GT_OQ);
+        __mmask16 combined_ilow_posb = i_low_mask & positive_b_mask;
+
+        __m256h a =
+            _mm256_add_ph(_mm256_set1_ph(K_ii), _mm256_loadu_ph(&K_diagonal[iter]));
+        a = _mm256_sub_ph(a, _mm256_mul_ph(_mm256_set1_ph((_Float16)2.0f),
+                                           _mm256_loadu_ph(&K_ith_row[iter])));
+        __mmask16 negative_a_mask =
+            _mm256_cmp_ph_mask(a, _mm256_setzero_ph(), _CMP_LE_OQ);
+        a = _mm256_mask_blend_ph(negative_a_mask, a, _mm256_set1_ph(tau));
+
+        __m256h ratio = _mm256_div_ph(b, a);
+        __m256h function_val = _mm256_mul_ph(ratio, b);
+        __mmask16 max_fun_mask =
+            _mm256_cmp_ph_mask(function_val, v_largest_fun.v, _CMP_GT_OQ);
+        __mmask16 combined_all = max_fun_mask & combined_ilow_posb;
+
+        v_largest_fun.v =
+            _mm256_mask_blend_ph(combined_all, v_largest_fun.v, function_val);
+        v_delta.v = _mm256_mask_blend_ph(combined_all, v_delta.v, ratio);
+#if defined(AOCLDA_ILP64)
+        v_largest_idx1.v = _mm512_mask_blend_epi64(
+            combined_all & 0xFF, v_largest_idx1.v,
+            _mm512_set_epi64(iter + 7, iter + 6, iter + 5, iter + 4, iter + 3, iter + 2,
+                             iter + 1, iter));
+        v_largest_idx2.v = _mm512_mask_blend_epi64(
+            (combined_all >> 8) & 0xFF, v_largest_idx2.v,
+            _mm512_set_epi64(iter + 15, iter + 14, iter + 13, iter + 12, iter + 11,
+                             iter + 10, iter + 9, iter + 8));
+#else
+        v_largest_idx.v = _mm512_mask_blend_epi32(
+            combined_all, v_largest_idx.v,
+            _mm512_set_epi32(iter + 15, iter + 14, iter + 13, iter + 12, iter + 11,
+                             iter + 10, iter + 9, iter + 8, iter + 7, iter + 6, iter + 5,
+                             iter + 4, iter + 3, iter + 2, iter + 1, iter));
+#endif
+    }
+
+    max_grad_value = v_largest_gradients.h[0];
+    for (da_int i = 1; i <= 15; i++)
+        if (v_largest_gradients.h[i] > max_grad_value)
+            max_grad_value = v_largest_gradients.h[i];
+
+#if defined(AOCLDA_ILP64)
+    std::array<da_int, 16> largest_idx(
+        {v_largest_idx1.i[0], v_largest_idx1.i[1], v_largest_idx1.i[2],
+         v_largest_idx1.i[3], v_largest_idx1.i[4], v_largest_idx1.i[5],
+         v_largest_idx1.i[6], v_largest_idx1.i[7], v_largest_idx2.i[0],
+         v_largest_idx2.i[1], v_largest_idx2.i[2], v_largest_idx2.i[3],
+         v_largest_idx2.i[4], v_largest_idx2.i[5], v_largest_idx2.i[6],
+         v_largest_idx2.i[7]});
+#else
+    std::array<da_int, 16> largest_idx(
+        {v_largest_idx.i[0], v_largest_idx.i[1], v_largest_idx.i[2], v_largest_idx.i[3],
+         v_largest_idx.i[4], v_largest_idx.i[5], v_largest_idx.i[6], v_largest_idx.i[7],
+         v_largest_idx.i[8], v_largest_idx.i[9], v_largest_idx.i[10], v_largest_idx.i[11],
+         v_largest_idx.i[12], v_largest_idx.i[13], v_largest_idx.i[14],
+         v_largest_idx.i[15]});
+#endif
+    if (*std::max_element(largest_idx.begin(), largest_idx.end()) == -1)
+        return;
+
+    max_grad_idx = largest_idx[0];
+    max_fun = v_largest_fun.h[0];
+    delta = v_delta.h[0];
+    for (da_int i = 1; i <= 15; i++) {
+        if (v_largest_fun.h[i] == max_fun) {
+            if (largest_idx[i] < max_grad_idx) {
+                max_grad_idx = largest_idx[i];
+                max_fun = v_largest_fun.h[i];
+                delta = v_delta.h[i];
+            }
+        } else if (v_largest_fun.h[i] > max_fun) {
+            max_grad_idx = largest_idx[i];
+            max_fun = v_largest_fun.h[i];
+            delta = v_delta.h[i];
+        }
+    }
+}
+
+// 512-bit: 32 x _Float16 elements per iteration
+template <>
+void wssj_kernel<_Float16, vectorization_type::avx512>(
+    da_int *I_low, _Float16 *gradient, _Float16 *K_ith_row, _Float16 *K_diagonal,
+    _Float16 &K_ii, da_int &max_grad_idx, _Float16 &max_grad_value, _Float16 &min_grad,
+    _Float16 &max_fun, _Float16 &delta, _Float16 &tau, da_int ws_size) {
+    v32hf_t v_largest_gradients, v_largest_fun, v_delta;
+#if defined(AOCLDA_ILP64)
+    v8i64_t v_largest_idx1, v_largest_idx2, v_largest_idx3, v_largest_idx4;
+    v_largest_idx1.v = _mm512_set1_epi64(max_grad_idx);
+    v_largest_idx2.v = _mm512_set1_epi64(max_grad_idx);
+    v_largest_idx3.v = _mm512_set1_epi64(max_grad_idx);
+    v_largest_idx4.v = _mm512_set1_epi64(max_grad_idx);
+#else
+    v16i32_t v_largest_idx1, v_largest_idx2;
+    v_largest_idx1.v = _mm512_set1_epi32(max_grad_idx);
+    v_largest_idx2.v = _mm512_set1_epi32(max_grad_idx);
+#endif
+    v_largest_gradients.v = _mm512_set1_ph(max_grad_value);
+    v_largest_fun.v = _mm512_set1_ph(max_fun);
+    v_delta.v = _mm512_set1_ph(delta);
+
+    for (da_int iter = 0; iter < ws_size; iter += 32) {
+#if defined(AOCLDA_ILP64)
+        __m512i i_low_0 = _mm512_loadu_si512(&I_low[iter]);
+        __m512i i_low_1 = _mm512_loadu_si512(&I_low[iter + 8]);
+        __m512i i_low_2 = _mm512_loadu_si512(&I_low[iter + 16]);
+        __m512i i_low_3 = _mm512_loadu_si512(&I_low[iter + 24]);
+        __mmask8 m0 =
+            _mm512_cmp_epi64_mask(i_low_0, _mm512_setzero_si512(), _MM_CMPINT_NE);
+        __mmask8 m1 =
+            _mm512_cmp_epi64_mask(i_low_1, _mm512_setzero_si512(), _MM_CMPINT_NE);
+        __mmask8 m2 =
+            _mm512_cmp_epi64_mask(i_low_2, _mm512_setzero_si512(), _MM_CMPINT_NE);
+        __mmask8 m3 =
+            _mm512_cmp_epi64_mask(i_low_3, _mm512_setzero_si512(), _MM_CMPINT_NE);
+        __mmask32 i_low_mask = (__mmask32)m0 | ((__mmask32)m1 << 8) |
+                               ((__mmask32)m2 << 16) | ((__mmask32)m3 << 24);
+#else
+        __m512i i_low_lower = _mm512_loadu_si512(&I_low[iter]);
+        __m512i i_low_upper = _mm512_loadu_si512(&I_low[iter + 16]);
+        __mmask16 m_lower =
+            _mm512_cmp_epi32_mask(i_low_lower, _mm512_setzero_si512(), _MM_CMPINT_NE);
+        __mmask16 m_upper =
+            _mm512_cmp_epi32_mask(i_low_upper, _mm512_setzero_si512(), _MM_CMPINT_NE);
+        __mmask32 i_low_mask = (__mmask32)m_lower | ((__mmask32)m_upper << 16);
+#endif
+        __m512h gradient_v = _mm512_loadu_ph(&gradient[iter]);
+        __mmask32 cmp_mask =
+            _mm512_cmp_ph_mask(gradient_v, v_largest_gradients.v, _CMP_GT_OQ);
+        __mmask32 max_grad_mask = i_low_mask & cmp_mask;
+        v_largest_gradients.v =
+            _mm512_mask_blend_ph(max_grad_mask, v_largest_gradients.v, gradient_v);
+
+        __m512h b = _mm512_sub_ph(gradient_v, _mm512_set1_ph(min_grad));
+        __mmask32 positive_b_mask =
+            _mm512_cmp_ph_mask(b, _mm512_setzero_ph(), _CMP_GT_OQ);
+        __mmask32 combined_ilow_posb = i_low_mask & positive_b_mask;
+
+        __m512h a =
+            _mm512_add_ph(_mm512_set1_ph(K_ii), _mm512_loadu_ph(&K_diagonal[iter]));
+        a = _mm512_sub_ph(a, _mm512_mul_ph(_mm512_set1_ph((_Float16)2.0f),
+                                           _mm512_loadu_ph(&K_ith_row[iter])));
+        __mmask32 negative_a_mask =
+            _mm512_cmp_ph_mask(a, _mm512_setzero_ph(), _CMP_LE_OQ);
+        a = _mm512_mask_blend_ph(negative_a_mask, a, _mm512_set1_ph(tau));
+
+        __m512h ratio = _mm512_div_ph(b, a);
+        __m512h function_val = _mm512_mul_ph(ratio, b);
+        __mmask32 max_fun_mask =
+            _mm512_cmp_ph_mask(function_val, v_largest_fun.v, _CMP_GT_OQ);
+        __mmask32 combined_all = max_fun_mask & combined_ilow_posb;
+
+        v_largest_fun.v =
+            _mm512_mask_blend_ph(combined_all, v_largest_fun.v, function_val);
+        v_delta.v = _mm512_mask_blend_ph(combined_all, v_delta.v, ratio);
+#if defined(AOCLDA_ILP64)
+        v_largest_idx1.v = _mm512_mask_blend_epi64(
+            combined_all & 0xFF, v_largest_idx1.v,
+            _mm512_set_epi64(iter + 7, iter + 6, iter + 5, iter + 4, iter + 3, iter + 2,
+                             iter + 1, iter));
+        v_largest_idx2.v = _mm512_mask_blend_epi64(
+            (combined_all >> 8) & 0xFF, v_largest_idx2.v,
+            _mm512_set_epi64(iter + 15, iter + 14, iter + 13, iter + 12, iter + 11,
+                             iter + 10, iter + 9, iter + 8));
+        v_largest_idx3.v = _mm512_mask_blend_epi64(
+            (combined_all >> 16) & 0xFF, v_largest_idx3.v,
+            _mm512_set_epi64(iter + 23, iter + 22, iter + 21, iter + 20, iter + 19,
+                             iter + 18, iter + 17, iter + 16));
+        v_largest_idx4.v = _mm512_mask_blend_epi64(
+            (combined_all >> 24) & 0xFF, v_largest_idx4.v,
+            _mm512_set_epi64(iter + 31, iter + 30, iter + 29, iter + 28, iter + 27,
+                             iter + 26, iter + 25, iter + 24));
+#else
+        v_largest_idx1.v = _mm512_mask_blend_epi32(
+            combined_all & 0xFFFF, v_largest_idx1.v,
+            _mm512_set_epi32(iter + 15, iter + 14, iter + 13, iter + 12, iter + 11,
+                             iter + 10, iter + 9, iter + 8, iter + 7, iter + 6, iter + 5,
+                             iter + 4, iter + 3, iter + 2, iter + 1, iter));
+        v_largest_idx2.v = _mm512_mask_blend_epi32(
+            (combined_all >> 16) & 0xFFFF, v_largest_idx2.v,
+            _mm512_set_epi32(iter + 31, iter + 30, iter + 29, iter + 28, iter + 27,
+                             iter + 26, iter + 25, iter + 24, iter + 23, iter + 22,
+                             iter + 21, iter + 20, iter + 19, iter + 18, iter + 17,
+                             iter + 16));
+#endif
+    }
+
+    max_grad_value = v_largest_gradients.h[0];
+    for (da_int i = 1; i <= 31; i++)
+        if (v_largest_gradients.h[i] > max_grad_value)
+            max_grad_value = v_largest_gradients.h[i];
+
+#if defined(AOCLDA_ILP64)
+    std::array<da_int, 32> largest_idx(
+        {v_largest_idx1.i[0], v_largest_idx1.i[1], v_largest_idx1.i[2],
+         v_largest_idx1.i[3], v_largest_idx1.i[4], v_largest_idx1.i[5],
+         v_largest_idx1.i[6], v_largest_idx1.i[7], v_largest_idx2.i[0],
+         v_largest_idx2.i[1], v_largest_idx2.i[2], v_largest_idx2.i[3],
+         v_largest_idx2.i[4], v_largest_idx2.i[5], v_largest_idx2.i[6],
+         v_largest_idx2.i[7], v_largest_idx3.i[0], v_largest_idx3.i[1],
+         v_largest_idx3.i[2], v_largest_idx3.i[3], v_largest_idx3.i[4],
+         v_largest_idx3.i[5], v_largest_idx3.i[6], v_largest_idx3.i[7],
+         v_largest_idx4.i[0], v_largest_idx4.i[1], v_largest_idx4.i[2],
+         v_largest_idx4.i[3], v_largest_idx4.i[4], v_largest_idx4.i[5],
+         v_largest_idx4.i[6], v_largest_idx4.i[7]});
+#else
+    std::array<da_int, 32> largest_idx(
+        {v_largest_idx1.i[0],  v_largest_idx1.i[1],  v_largest_idx1.i[2],
+         v_largest_idx1.i[3],  v_largest_idx1.i[4],  v_largest_idx1.i[5],
+         v_largest_idx1.i[6],  v_largest_idx1.i[7],  v_largest_idx1.i[8],
+         v_largest_idx1.i[9],  v_largest_idx1.i[10], v_largest_idx1.i[11],
+         v_largest_idx1.i[12], v_largest_idx1.i[13], v_largest_idx1.i[14],
+         v_largest_idx1.i[15], v_largest_idx2.i[0],  v_largest_idx2.i[1],
+         v_largest_idx2.i[2],  v_largest_idx2.i[3],  v_largest_idx2.i[4],
+         v_largest_idx2.i[5],  v_largest_idx2.i[6],  v_largest_idx2.i[7],
+         v_largest_idx2.i[8],  v_largest_idx2.i[9],  v_largest_idx2.i[10],
+         v_largest_idx2.i[11], v_largest_idx2.i[12], v_largest_idx2.i[13],
+         v_largest_idx2.i[14], v_largest_idx2.i[15]});
+#endif
+    if (*std::max_element(largest_idx.begin(), largest_idx.end()) == -1)
+        return;
+
+    max_grad_idx = largest_idx[0];
+    max_fun = v_largest_fun.h[0];
+    delta = v_delta.h[0];
+    for (da_int i = 1; i <= 31; i++) {
+        if (v_largest_fun.h[i] == max_fun) {
+            if (largest_idx[i] < max_grad_idx) {
+                max_grad_idx = largest_idx[i];
+                max_fun = v_largest_fun.h[i];
+                delta = v_delta.h[i];
+            }
+        } else if (v_largest_fun.h[i] > max_fun) {
+            max_grad_idx = largest_idx[i];
+            max_fun = v_largest_fun.h[i];
+            delta = v_delta.h[i];
+        }
+    }
+}
+
+#endif // __AVX512FP16__
+
 } // namespace da_svm
 
 } // namespace ARCH

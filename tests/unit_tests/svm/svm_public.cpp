@@ -32,9 +32,11 @@
 #include "svm_utils.hpp"
 #include "gmock/gmock.h"
 #include "gtest/gtest.h"
+#include <cstring>
 #include <iostream>
 #include <list>
 #include <string>
+#include <type_traits>
 // taken from  "da_kernel_utils.hpp"
 enum vectorization_type : da_int {
     undefined = -1,
@@ -42,7 +44,7 @@ enum vectorization_type : da_int {
     avx = 2,
     avx2 = 3,
     avx512 = 4,
-    count = 5
+    count = 4
 };
 
 // Test kernel overrides
@@ -989,6 +991,17 @@ TYPED_TEST(svm_public_test, bad_handle_tests) {
 }
 
 TYPED_TEST(svm_public_test, mixed_precision_svc) {
+    // Mixed precision uses a lower precision warm start: double -> float, and
+    // float -> _Float16. The _Float16 path relies on hardware that supports
+    // half precision (AVX-512-FP16), which is only available on Zen6, so
+    // skip the float case on older machines.
+    da_int len{100};
+    char arch[100], ns[100];
+    ASSERT_EQ(da_get_arch_info(&len, arch, ns), da_status_success);
+    const bool is_zen6 = (std::strcmp(arch, "zen6") == 0);
+    if (std::is_same_v<TypeParam, float> && !is_zen6) {
+        GTEST_SKIP() << "Mixed precision (float -> _Float16) requires Zen6 hardware";
+    }
     // Well-separated binary classification dataset (row-major, 10 samples, 2 features)
     // Class 0: cluster near (0,0);  Class 1: cluster near (10,10)
     std::vector<TypeParam> X_train = {
@@ -1014,6 +1027,14 @@ TYPED_TEST(svm_public_test, mixed_precision_svc) {
               da_status_success);
     ASSERT_EQ(da_svm_compute<TypeParam>(baseline), da_status_success);
 
+    // Without mixed precision the low precision iteration count must be zero.
+    da_int n_classifiers = 1;
+    da_int lp_n_iter_base = -1;
+    ASSERT_EQ(da_handle_get_result(baseline, da_result::da_svm_lp_n_iterations,
+                                   &n_classifiers, &lp_n_iter_base),
+              da_status_success);
+    EXPECT_EQ(lp_n_iter_base, 0);
+
     std::vector<TypeParam> y_pred_base(n_test);
     ASSERT_EQ(da_svm_predict(baseline, n_test, n_feat, X_test.data(), n_feat,
                              y_pred_base.data()),
@@ -1034,6 +1055,14 @@ TYPED_TEST(svm_public_test, mixed_precision_svc) {
                               y_train.data()),
               da_status_success);
     ASSERT_EQ(da_svm_compute<TypeParam>(refined), da_status_success);
+
+    // With mixed precision the low precision phase must run at least one iteration.
+    n_classifiers = 1;
+    da_int lp_n_iter_ref = 0;
+    ASSERT_EQ(da_handle_get_result(refined, da_result::da_svm_lp_n_iterations,
+                                   &n_classifiers, &lp_n_iter_ref),
+              da_status_success);
+    EXPECT_GT(lp_n_iter_ref, 0);
 
     std::vector<TypeParam> y_pred_ref(n_test);
     ASSERT_EQ(
@@ -1056,6 +1085,16 @@ TYPED_TEST(svm_public_test, mixed_precision_svc) {
 }
 
 TYPED_TEST(svm_public_test, mixed_precision_svr) {
+    // Mixed precision uses a lower precision warm start: double -> float, and
+    // float -> _Float16. The _Float16 path requires Zen6 hardware (AVX-512-FP16),
+    // so skip the float case on older machines.
+    da_int len{100};
+    char arch[100], ns[100];
+    ASSERT_EQ(da_get_arch_info(&len, arch, ns), da_status_success);
+    const bool is_zen6 = (std::strcmp(arch, "zen6") == 0);
+    if (std::is_same_v<TypeParam, float> && !is_zen6) {
+        GTEST_SKIP() << "Mixed precision (float -> _Float16) requires Zen6 hardware";
+    }
     // Simple regression: y = x, samples along a line
     // clang-format off
     std::vector<TypeParam> X_train = {1.0, 2.0, 3.0, 4.0, 5.0, 6.0, 7.0, 8.0};
@@ -1076,6 +1115,14 @@ TYPED_TEST(svm_public_test, mixed_precision_svr) {
               da_status_success);
     ASSERT_EQ(da_svm_compute<TypeParam>(baseline), da_status_success);
 
+    // Without mixed precision the low precision iteration count must be zero.
+    da_int n_classifiers = 1;
+    da_int lp_n_iter_base = -1;
+    ASSERT_EQ(da_handle_get_result(baseline, da_result::da_svm_lp_n_iterations,
+                                   &n_classifiers, &lp_n_iter_base),
+              da_status_success);
+    EXPECT_EQ(lp_n_iter_base, 0);
+
     std::vector<TypeParam> y_pred_base(n_test);
     ASSERT_EQ(da_svm_predict(baseline, n_test, n_feat, X_test.data(), n_test,
                              y_pred_base.data()),
@@ -1091,6 +1138,14 @@ TYPED_TEST(svm_public_test, mixed_precision_svr) {
                               y_train.data()),
               da_status_success);
     ASSERT_EQ(da_svm_compute<TypeParam>(refined), da_status_success);
+
+    // With mixed precision the low precision phase must run at least one iteration.
+    n_classifiers = 1;
+    da_int lp_n_iter_ref = 0;
+    ASSERT_EQ(da_handle_get_result(refined, da_result::da_svm_lp_n_iterations,
+                                   &n_classifiers, &lp_n_iter_ref),
+              da_status_success);
+    EXPECT_GT(lp_n_iter_ref, 0);
 
     std::vector<TypeParam> y_pred_ref(n_test);
     ASSERT_EQ(

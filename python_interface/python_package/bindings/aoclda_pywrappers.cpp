@@ -210,6 +210,7 @@ PYBIND11_MODULE(_aoclda, m) {
         .def("get_loss", &linmod::get_loss)
         .def("get_norm_gradient_loss", &linmod::get_norm_gradient_loss)
         .def("get_n_iter", &linmod::get_n_iter)
+        .def("get_lp_n_iter", &linmod::get_lp_n_iter)
         .def("get_time", &linmod::get_time)
         .def(py::pickle([](linmod &p) { return p.save_model(); },
                         [](py::dict t) { return pyda_handle::load_model<linmod>(t); }));
@@ -335,6 +336,7 @@ PYBIND11_MODULE(_aoclda, m) {
         .def("get_n_features", &tsne::get_n_features)
         .def("get_n_components", &tsne::get_n_components)
         .def("get_n_iter", &tsne::get_n_iter)
+        .def("get_lp_n_iter", &tsne::get_lp_n_iter)
         .def("get_kl_divergence", &tsne::get_kl_divergence);
 
     /**********************************/
@@ -373,6 +375,7 @@ PYBIND11_MODULE(_aoclda, m) {
         .def("get_n_features", &kmeans::get_n_features)
         .def("get_n_clusters", &kmeans::get_n_clusters)
         .def("get_n_iter", &kmeans::get_n_iter)
+        .def("get_lp_n_iter", &kmeans::get_lp_n_iter)
         .def(py::pickle([](kmeans &p) { return p.save_model(); },
                         [](py::dict t) { return pyda_handle::load_model<kmeans>(t); }));
 
@@ -778,6 +781,7 @@ PYBIND11_MODULE(_aoclda, m) {
         .def("get_n_features", &py_svm::get_n_features)
         .def("get_n_classes", &py_svm::get_n_classes)
         .def("get_n_iterations", &py_svm::get_n_iterations)
+        .def("get_lp_n_iterations", &py_svm::get_lp_n_iterations)
         .def("get_n_sv", &py_svm::get_n_sv)
         .def("get_n_sv_per_class", &py_svm::get_n_sv_per_class)
         .def("get_dual_coef", &py_svm::get_dual_coef)
@@ -816,6 +820,7 @@ PYBIND11_MODULE(_aoclda, m) {
         .def("get_n_features", &py_svm::get_n_features)
         .def("get_n_classes", &py_svm::get_n_classes)
         .def("get_n_iterations", &py_svm::get_n_iterations)
+        .def("get_lp_n_iterations", &py_svm::get_lp_n_iterations)
         .def("get_n_sv", &py_svm::get_n_sv)
         .def("get_dual_coef", &py_svm::get_dual_coef)
         .def("get_bias", &py_svm::get_bias)
@@ -865,6 +870,7 @@ PYBIND11_MODULE(_aoclda, m) {
         .def("get_n_features", &py_svm::get_n_features)
         .def("get_n_classes", &py_svm::get_n_classes)
         .def("get_n_iterations", &py_svm::get_n_iterations)
+        .def("get_lp_n_iterations", &py_svm::get_lp_n_iterations)
         .def("get_n_sv", &py_svm::get_n_sv)
         .def("get_n_sv_per_class", &py_svm::get_n_sv_per_class)
         .def("get_dual_coef", &py_svm::get_dual_coef)
@@ -903,6 +909,7 @@ PYBIND11_MODULE(_aoclda, m) {
         .def("get_n_features", &py_svm::get_n_features)
         .def("get_n_classes", &py_svm::get_n_classes)
         .def("get_n_iterations", &py_svm::get_n_iterations)
+        .def("get_lp_n_iterations", &py_svm::get_lp_n_iterations)
         .def("get_n_sv", &py_svm::get_n_sv)
         .def("get_dual_coef", &py_svm::get_dual_coef)
         .def("get_bias", &py_svm::get_bias)

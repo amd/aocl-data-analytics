@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2026 Advanced Micro Devices, Inc. All rights reserved.
+ * Copyright (C) 2023-2026 Advanced Micro Devices, Inc. All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without modification,
  * are permitted provided that the following conditions are met:
@@ -96,6 +96,7 @@ enum da_result_ {
     da_svm_probaA, ///< Array of parameters A for each binary classifier when probability estimates are enabled.
     da_svm_probaB, ///< Array of parameters B for each binary classifier when probability estimates are enabled.
     da_svm_dual_coef, ///< Weights assigned to each support vector, reflecting their importance in defining the optimal decision boundary.
+    da_svm_lp_n_iterations, ///< Number of low precision iterations performed for each classifier when mixed precision iterative refinement is used. Contains zeros when mixed precision is not used.
     // ANN 801...900
     da_approx_nn_cluster_centroids =
         801,                 ///< Values of each centroid vector after training

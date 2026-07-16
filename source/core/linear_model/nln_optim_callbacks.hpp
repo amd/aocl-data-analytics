@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2025 Advanced Micro Devices, Inc. All rights reserved.
+ * Copyright (C) 2025-2026 Advanced Micro Devices, Inc. All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without modification,
  * are permitted provided that the following conditions are met:
@@ -26,6 +26,8 @@
  */
 
 #include "aoclda_types.h"
+#include "da_std.hpp"
+#include "fp16_helpers.hpp"
 #include "linmod_types.hpp"
 #include "macros.h"
 #include <vector>
@@ -67,13 +69,14 @@ template <class T> class usrdata_base {
      * See details in the standardization function
      * pointer to an array of at least nfeat
      */
-    const T *xv{nullptr};
+    const da_fp16::wider_t<T> *xv{nullptr};
     da_linmod_types::scaling_t scaling{da_linmod_types::scaling_t::none};
 
     // coefficients are restricted to the positive cone?
     bool positive = false;
     usrdata_base(da_order order, const T *X, da_int ldX, const T *y, da_int nsamples,
-                 da_int nfeat, bool intercept, T lambda, T alpha, const T *xv = nullptr,
+                 da_int nfeat, bool intercept, T lambda, T alpha,
+                 const da_fp16::wider_t<T> *xv = nullptr,
                  da_linmod_types::scaling_t scaling = da_linmod_types::scaling_t::none);
     virtual ~usrdata_base();
 };
@@ -122,7 +125,8 @@ template <class T> class stepfun_usrdata_linreg : public usrdata_base<T> {
 
     stepfun_usrdata_linreg(da_order order, const T *X, da_int ldX, const T *y,
                            da_int nsamples, da_int nfeat, bool intercept, T lambda,
-                           T alpha, const T *xv, da_linmod_types::scaling_t scaling);
+                           T alpha, const da_fp16::wider_t<T> *xv,
+                           da_linmod_types::scaling_t scaling);
     ~stepfun_usrdata_linreg();
 };
 
@@ -139,7 +143,7 @@ template <class T> class stepfun_usrdata_linreg : public usrdata_base<T> {
 template <typename T>
 void eval_feature_matrix(da_order order, da_int n, const T *x, da_int m, const T *X,
                          da_int ldX, T *v, bool intercept, bool trans = false,
-                         T alpha = 1.0, T beta = 0.0);
+                         T alpha = T(1), T beta = T(0));
 
 /* Add regularization, l1 and l2 terms */
 template <typename T> T regfun(da_int n, const T *x, const T l1reg, const T l2reg);

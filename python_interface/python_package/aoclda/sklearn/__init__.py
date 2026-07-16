@@ -25,8 +25,6 @@
 
 
 # pylint: disable = missing-module-docstring, import-outside-toplevel
-
-import sys
 from .patch_sklearn import skpatch, undo_skpatch
 
 __all__ = ["skpatch", "undo_skpatch"]

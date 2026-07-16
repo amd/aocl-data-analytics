@@ -152,6 +152,11 @@ class tsne():
         return self.tsne.get_n_iter()
 
     @property
+    def lp_n_iter(self):
+        """int: The number of low precision iterations performed if mixed precision was enabled."""
+        return self.tsne.get_lp_n_iter()
+
+    @property
     def kl_divergence(self):
         """float: The final KL divergence."""
         return self.tsne.get_kl_divergence()

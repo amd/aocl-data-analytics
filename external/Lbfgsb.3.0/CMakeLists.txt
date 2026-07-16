@@ -26,39 +26,44 @@
 # that the Fortran OpenMP runtime library is found. find_package(OpenMP
 # REQUIRED)
 
+set(CMAKE_Fortran_PREPROCESS ON)
+
 if(NOT WIN32)
-  set(CMAKE_Fortran_FLAGS -cpp -Wno-unused-parameter -mavx2)
-  if(CMAKE_Fortran_COMPILER_ID MATCHES "Flang")
-    # Ask compiler to ignore unknon warning options
-    list(APPEND CMAKE_Fortran_FLAGS -Qunused-arguments -Wno-unused-command-line-argument -Wno-unknown-warning-option)
-  endif()
+  AppendFortranFlags(_Fortran_FLAGS REQUIRED -march=x86-64-v3)
+  AppendFortranFlags(_Fortran_FLAGS 
+    -Qunused-arguments
+    -Wno-compare-reals
+    -Wno-maybe-uninitialized
+    -Wno-unused-dummy-argument
+    -Wno-unused-parameter
+    -Wno-unused-variable
+  )
 else()
-  set(CMAKE_Fortran_PREPROCESS ON)
   if(CMAKE_Fortran_COMPILER_ID MATCHES "Intel")
-    set(CMAKE_Fortran_FLAGS /QxCORE-AVX2)
+    set(_Fortran_FLAGS /QxCORE-AVX2)
   endif()
 endif()
 
 if(BUILD_ILP64)
   if(CMAKE_Fortran_COMPILER_ID MATCHES "GNU")
-    list(APPEND CMAKE_Fortran_FLAGS -finteger-4-integer-8)
+    list(APPEND _Fortran_FLAGS -finteger-4-integer-8)
   elseif(CMAKE_Fortran_COMPILER_ID MATCHES "Flang")
-    list(APPEND CMAKE_Fortran_FLAGS -fdefault-integer-8)
+    list(APPEND _Fortran_FLAGS -fdefault-integer-8)
   elseif(CMAKE_Fortran_COMPILER_ID MATCHES "Intel")
-    list(APPEND CMAKE_Fortran_FLAGS -i8)
+    list(APPEND _Fortran_FLAGS -i8)
   else()
     message(FATAL_ERROR "Unknown Fortran compiler!")
   endif()
 endif()
 
-list(JOIN CMAKE_Fortran_FLAGS " " CMAKE_Fortran_FLAGS)
+list(JOIN _Fortran_FLAGS " " _Fortran_FLAGS)
 
 set(LBFGSB_SRC lbfgsb_mod.F90 linpack.F90 timer.F90 lbfgsb.F90)
 
 message(NOTICE
         "L-BFGS-B: Fortran Compiler ID     : ${CMAKE_Fortran_COMPILER_ID}")
 
-message(NOTICE "L-BFGS-B: Fortran Compiler flags  : ${CMAKE_Fortran_FLAGS}")
+message(NOTICE "L-BFGS-B: Fortran Compiler flags  : ${_Fortran_FLAGS}")
 
 # Writing a function that will be used to generate the required object libraries
 # for the required precisions.
@@ -73,6 +78,8 @@ function(generate_lbfgsb_targets precision)
                                     ${precision}working_precision.F90)
   # Add macro SINGLE_PREC for single precision, it's empty string for double
   target_compile_definitions(${lbfgsb_prec} PRIVATE ${local_defs})
+  separate_arguments(_compiler_flags UNIX_COMMAND "${_Fortran_FLAGS}")
+  target_compile_options(${lbfgsb_prec} PRIVATE ${_compiler_flags})
   if(WIN32)
     if(CMAKE_Fortran_COMPILER_ID MATCHES "Intel")
       target_link_directories(${lbfgsb_prec} PRIVATE "${IFORT_LIBS}")
@@ -91,10 +98,6 @@ function(generate_lbfgsb_targets precision)
   if(BUILD_SHARED_LIBS)
     set_target_properties(${lbfgsb_prec} PROPERTIES POSITION_INDEPENDENT_CODE
                                                     ON)
-  endif()
-  # Suppress warnings
-  if(NOT WIN32)
-    include(${CMAKE_SOURCE_DIR}/cmake/Suppressions_external.cmake)
   endif()
 endfunction()
 

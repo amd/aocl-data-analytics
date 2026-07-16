@@ -219,9 +219,20 @@ class BaseSVM:
     @property
     def n_iter(self):
         """
-        int: The number of features in the training data.
+        numpy.ndarray of shape (n_classifiers,): The number of iterations performed
+        for each binary classifier. In this context it counts the number of SMO
+        subproblems solved.
         """
         return self._model.get_n_iterations()
+
+    @property
+    def lp_n_iter(self):
+        """
+        numpy.ndarray of shape (n_classifiers,): The number of low precision
+        iterations performed for each binary classifier when mixed precision is
+        enabled. Contains zeros when mixed precision is not used.
+        """
+        return self._model.get_lp_n_iterations()
 
     @property
     def n_support(self):

@@ -84,7 +84,7 @@ template <typename T> class da_optimization : public basic_handle<T> {
 
     // Last iterate information
     // Objective function value
-    T f = 0.0;
+    T f = T(0);
     // Objective function gradient
     std::vector<T> g;
     // Information vector

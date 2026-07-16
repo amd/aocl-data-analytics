@@ -30,6 +30,8 @@
 #include "basic_handle.hpp"
 #include "da_cblas.hh"
 #include "da_error.hpp"
+#include "da_std.hpp"
+#include "fp16_helpers.hpp"
 #include "lapack_templates.hpp"
 #include "linmod_types.hpp"
 #include "macros.h"
@@ -194,8 +196,10 @@ template <typename T> class linear_model : public basic_handle<T> {
     scaling_t scaling = scaling_t::automatic; // What scaling was applied
     std::vector<T> std_shifts; // column-wise means [ X | y ], size nfeat + 1
     std::vector<T> std_scales; // column-wise scales stored as [ X | y ] size nfeat + 1
-    // column-wise X (variance) "proportions" of size nfeat (or norm squared of X)
-    std::vector<T> std_xv;
+    // column-wise X (variance) "proportions" of size nfeat (or norm squared of X).
+    // Stored in the wider type (float for T = _Float16) since `<X[j],X[j]>/N` can
+    // otherwise underflow for small X, giving NaN (0/0) in the coord update.
+    std::vector<da_fp16::wider_t<T>> std_xv;
     /* Training data
      * coef: vector containing the trained coefficients of the model
        dual_coef: vector containing the trained dual coefficients of the model
@@ -243,9 +247,9 @@ template <typename T> class linear_model : public basic_handle<T> {
     // For use with mixed precision iterative refinement
     bool use_mixed_precision = false;
     da_int lp_n_iter = 0;
-    // Lower precision data members (int16 is a proxy for bfloat16, though we don't use it yet)
+    // Lower precision type: float for double; _Float16 for float (coord solver only).
     using lp_type =
-        typename std::conditional<std::is_same_v<T, double>, float, int16_t>::type;
+        typename std::conditional<std::is_same_v<T, double>, float, _Float16>::type;
     da_status lower_precision_init(da_int &ncoefs, const T *coefs_in, T *&coefs_out);
     da_status convert_inputs_to_lower_precision(std::vector<lp_type> &XUSR_lp,
                                                 da_int &ldXUSR_lp,

@@ -155,13 +155,6 @@
       }
     },
     {
-      "name": "memsan",
-      "hidden": true,
-      "cacheVariables": {
-        "MEMSAN": "ON"
-      }
-    },
-    {
       "name": "coverage",
       "hidden": true,
       "cacheVariables": {
@@ -208,13 +201,6 @@
       "hidden": true,
       "cacheVariables": {
         "BUILD_DOC": "ON"
-      }
-    },
-    {
-      "name": "libmem",
-      "hidden": true,
-      "cacheVariables": {
-        "USE_LIBMEM": "ON"
       }
     },
     {

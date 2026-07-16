@@ -33,6 +33,7 @@
 #include "da_std.hpp"
 #include "da_utils.hpp"
 #include "da_vector.hpp"
+#include "fp16_helpers.hpp"
 #include "kernel_functions.hpp"
 #include "kf_tuning_tables.hpp"
 #include "macros.h"
@@ -165,7 +166,7 @@ da_status base_svm<T>::compute_impl(const std::vector<T> *initial_alpha) {
 
         // 0 is transformed to -1 in initialisation
         for (da_int i = 0; i < n; i++)
-            y[i] = idx_is_positive[i] ? 1.0 : 0.0;
+            y[i] = idx_is_positive[i] ? (T)1.0 : (T)0.0;
 
 #pragma omp parallel for collapse(2) schedule(static) default(none)                      \
     shared(X, XUSR, idx_class, n, p, ldx)
@@ -337,7 +338,7 @@ da_status base_svm<T>::compute_impl(const std::vector<T> *initial_alpha) {
         // Check global convergence
         // Stop when first_diff does not change for 5 iteration OR first_diff is less than tolerance
         // Additionally make sure that we perform at least 5 iterations
-        no_diff_counter = std::abs(first_diff - previous_first_diff) < tol * 1e-3
+        no_diff_counter = da_std::abs(first_diff - previous_first_diff) < tol * 1e-3
                               ? no_diff_counter + 1
                               : 0;
         previous_first_diff = first_diff;
@@ -473,8 +474,10 @@ da_status base_svm<T>::decision_function(da_int nsamples, da_int nfeat, const T 
     constexpr da_int max_inner_block_size = 256;
 
     // Outer (sample) blocking
+    // Integer ceiling of nsamples / thread_count (avoids floating point, which
+    // can overflow for large nsamples).
     da_int outer_block_size =
-        std::min((da_int)std::ceil((T)nsamples / thread_count), max_outer_block_size);
+        std::min((nsamples + thread_count - 1) / thread_count, max_outer_block_size);
     da_int outer_block_count, outer_block_remainder;
     da_utils::blocking_scheme(nsamples, outer_block_size, outer_block_count,
                               outer_block_remainder);
@@ -835,25 +838,52 @@ template <typename T> da_int base_svm<T>::maxpowtwo(da_int &n) {
 template <typename T>
 void base_svm<T>::wssi(std::vector<da_int> &I_up, std::vector<T> &gradient, da_int &i,
                        T &min_grad) {
+    // SIMD wssi/wssj kernels exist for float/double unconditionally, but for
+    // _Float16 they are only compiled when AVX-512-FP16 is available. On builds
+    // without it (e.g. AVX-512 but no FP16) only the scalar _Float16 kernel is
+    // defined, so guard the vectorized branches to avoid referencing the
+    // (undefined) FP16 SIMD kernels. The tuning tables already select scalar for
+    // _Float16 at runtime on such hardware, so this is purely a build-time guard.
+#ifdef __AVX512FP16__
+    constexpr bool simd_available = true;
+#else
+    constexpr bool simd_available = !std::is_same_v<T, _Float16>;
+#endif
     // Start with very large value to find minimum and its index
     T min_grad_value = std::numeric_limits<T>::max();
     da_int min_grad_idx = -1;
     switch (wssi_vec_type) {
     case vectorization_type::avx:
-        wssi_kernel<T, avx>(I_up.data(), gradient.data(), min_grad_idx, min_grad_value,
-                            ws_size);
+        if constexpr (simd_available)
+            wssi_kernel<T, avx>(I_up.data(), gradient.data(), min_grad_idx,
+                                min_grad_value, ws_size);
+        else
+            wssi_kernel<T, scalar>(I_up.data(), gradient.data(), min_grad_idx,
+                                   min_grad_value, ws_size);
         break;
     case vectorization_type::avx2:
-        wssi_kernel<T, avx2>(I_up.data(), gradient.data(), min_grad_idx, min_grad_value,
-                             ws_size);
+        if constexpr (simd_available)
+            wssi_kernel<T, avx2>(I_up.data(), gradient.data(), min_grad_idx,
+                                 min_grad_value, ws_size);
+        else
+            wssi_kernel<T, scalar>(I_up.data(), gradient.data(), min_grad_idx,
+                                   min_grad_value, ws_size);
         break;
     case vectorization_type::avx512:
 #ifdef __AVX512F__
-        wssi_kernel<T, avx512>(I_up.data(), gradient.data(), min_grad_idx, min_grad_value,
-                               ws_size);
+        if constexpr (simd_available)
+            wssi_kernel<T, avx512>(I_up.data(), gradient.data(), min_grad_idx,
+                                   min_grad_value, ws_size);
+        else
+            wssi_kernel<T, scalar>(I_up.data(), gradient.data(), min_grad_idx,
+                                   min_grad_value, ws_size);
 #else
-        wssi_kernel<T, avx2>(I_up.data(), gradient.data(), min_grad_idx, min_grad_value,
-                             ws_size);
+        if constexpr (simd_available)
+            wssi_kernel<T, avx2>(I_up.data(), gradient.data(), min_grad_idx,
+                                 min_grad_value, ws_size);
+        else
+            wssi_kernel<T, scalar>(I_up.data(), gradient.data(), min_grad_idx,
+                                   min_grad_value, ws_size);
 #endif
         break;
     default:
@@ -886,26 +916,54 @@ void base_svm<T>::wssj(std::vector<da_int> &I_low, std::vector<T> &gradient, da_
     T *K_ith_row = &kernel_matrix_row_major[i * ws_size];
     T K_ii = K_ith_row[i];
 
+    // See wssi() above: the vectorized _Float16 kernels only exist with
+    // AVX-512-FP16, so guard the SIMD branches and fall back to scalar otherwise.
+#ifdef __AVX512FP16__
+    constexpr bool simd_available = true;
+#else
+    constexpr bool simd_available = !std::is_same_v<T, _Float16>;
+#endif
+
     switch (wssj_vec_type) {
     case vectorization_type::avx:
-        wssj_kernel<T, avx>(I_low.data(), gradient.data(), K_ith_row,
-                            kernel_matrix_diagonal.data(), K_ii, j, max_grad, min_grad,
-                            max_fun, delta, tau, ws_size);
+        if constexpr (simd_available)
+            wssj_kernel<T, avx>(I_low.data(), gradient.data(), K_ith_row,
+                                kernel_matrix_diagonal.data(), K_ii, j, max_grad,
+                                min_grad, max_fun, delta, tau, ws_size);
+        else
+            wssj_kernel<T, scalar>(I_low.data(), gradient.data(), K_ith_row,
+                                   kernel_matrix_diagonal.data(), K_ii, j, max_grad,
+                                   min_grad, max_fun, delta, tau, ws_size);
         break;
     case vectorization_type::avx2:
-        wssj_kernel<T, avx2>(I_low.data(), gradient.data(), K_ith_row,
-                             kernel_matrix_diagonal.data(), K_ii, j, max_grad, min_grad,
-                             max_fun, delta, tau, ws_size);
+        if constexpr (simd_available)
+            wssj_kernel<T, avx2>(I_low.data(), gradient.data(), K_ith_row,
+                                 kernel_matrix_diagonal.data(), K_ii, j, max_grad,
+                                 min_grad, max_fun, delta, tau, ws_size);
+        else
+            wssj_kernel<T, scalar>(I_low.data(), gradient.data(), K_ith_row,
+                                   kernel_matrix_diagonal.data(), K_ii, j, max_grad,
+                                   min_grad, max_fun, delta, tau, ws_size);
         break;
     case vectorization_type::avx512:
 #ifdef __AVX512F__
-        wssj_kernel<T, avx512>(I_low.data(), gradient.data(), K_ith_row,
-                               kernel_matrix_diagonal.data(), K_ii, j, max_grad, min_grad,
-                               max_fun, delta, tau, ws_size);
+        if constexpr (simd_available)
+            wssj_kernel<T, avx512>(I_low.data(), gradient.data(), K_ith_row,
+                                   kernel_matrix_diagonal.data(), K_ii, j, max_grad,
+                                   min_grad, max_fun, delta, tau, ws_size);
+        else
+            wssj_kernel<T, scalar>(I_low.data(), gradient.data(), K_ith_row,
+                                   kernel_matrix_diagonal.data(), K_ii, j, max_grad,
+                                   min_grad, max_fun, delta, tau, ws_size);
 #else
-        wssj_kernel<T, avx2>(I_low.data(), gradient.data(), K_ith_row,
-                             kernel_matrix_diagonal.data(), K_ii, j, max_grad, min_grad,
-                             max_fun, delta, tau, ws_size);
+        if constexpr (simd_available)
+            wssj_kernel<T, avx2>(I_low.data(), gradient.data(), K_ith_row,
+                                 kernel_matrix_diagonal.data(), K_ii, j, max_grad,
+                                 min_grad, max_fun, delta, tau, ws_size);
+        else
+            wssj_kernel<T, scalar>(I_low.data(), gradient.data(), K_ith_row,
+                                   kernel_matrix_diagonal.data(), K_ii, j, max_grad,
+                                   min_grad, max_fun, delta, tau, ws_size);
 #endif
         break;
     default:
@@ -995,8 +1053,18 @@ template <typename T> da_status base_svm<T>::serialize(serialization_buffer &buf
     return status;
 };
 
+// The _Float16 classifier is only used internally as a mixed-precision warm-start
+// scratch object; it is never serialized. Specialize serialize() to a no-op so the
+// generic body (which would odr-use dispatch_buffer_io<_Float16>) is not instantiated.
+template <> da_status base_svm<_Float16>::serialize(serialization_buffer &) {
+    return da_status_not_implemented;
+}
+
 template class base_svm<float>;
 template class base_svm<double>;
+#ifdef __AVX512FP16__
+template class base_svm<_Float16>;
+#endif
 
 } // namespace da_svm
 

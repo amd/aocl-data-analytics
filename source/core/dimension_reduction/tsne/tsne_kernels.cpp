@@ -175,6 +175,77 @@ inline __attribute__((__always_inline__)) void hreduce_d2(avxvector_t<bsz::b512,
 
 #endif // __AVX512F__
 
+#ifdef __AVX512FP16__
+
+// b128 helpers exist only for _Float16 (b128 has 8 lanes = 4 (x,y) pairs).
+template <typename T>
+inline __attribute__((__always_inline__)) avxvector_t<bsz::b128, T>
+swap_adjacent_p(avxvector_t<bsz::b128, T> v) {
+    static_assert(std::is_same_v<T, _Float16>,
+                  "b128 swap_adjacent_p only supported for _Float16");
+    // Swap each adjacent (x,y) pair: rotate each 32-bit lane by 16 bits.
+    return _mm_castsi128_ph(_mm_rol_epi32(_mm_castph_si128(v), 16));
+}
+
+template <typename T>
+inline __attribute__((__always_inline__)) void hreduce_d2(avxvector_t<bsz::b128, T> v,
+                                                          T *out) {
+    static_assert(std::is_same_v<T, _Float16>,
+                  "b128 hreduce_d2 only supported for _Float16");
+    alignas(16) T tmp[8];
+    _mm_store_ph(tmp, v);
+    T sx = (T)0, sy = (T)0;
+    for (int i = 0; i < 4; ++i) {
+        sx += tmp[2 * i];
+        sy += tmp[2 * i + 1];
+    }
+    out[0] = sx;
+    out[1] = sy;
+}
+
+template <>
+inline __attribute__((__always_inline__)) avxvector_t<bsz::b256, _Float16>
+swap_adjacent_p<_Float16>(avxvector_t<bsz::b256, _Float16> v) {
+    // Swap each adjacent (x,y) pair: rotate each 32-bit lane by 16 bits.
+    return _mm256_castsi256_ph(_mm256_rol_epi32(_mm256_castph_si256(v), 16));
+}
+
+template <>
+inline __attribute__((__always_inline__)) void
+hreduce_d2<_Float16>(avxvector_t<bsz::b256, _Float16> v, _Float16 *out) {
+    alignas(32) _Float16 tmp[16];
+    _mm256_store_ph(tmp, v);
+    _Float16 sx = (_Float16)0, sy = (_Float16)0;
+    for (int i = 0; i < 8; ++i) {
+        sx += tmp[2 * i];
+        sy += tmp[2 * i + 1];
+    }
+    out[0] = sx;
+    out[1] = sy;
+}
+
+template <>
+inline __attribute__((__always_inline__)) avxvector_t<bsz::b512, _Float16>
+swap_adjacent_p<_Float16>(avxvector_t<bsz::b512, _Float16> v) {
+    return _mm512_castsi512_ph(_mm512_rol_epi32(_mm512_castph_si512(v), 16));
+}
+
+template <>
+inline __attribute__((__always_inline__)) void
+hreduce_d2<_Float16>(avxvector_t<bsz::b512, _Float16> v, _Float16 *out) {
+    alignas(64) _Float16 tmp[32];
+    _mm512_store_ph(tmp, v);
+    _Float16 sx = (_Float16)0, sy = (_Float16)0;
+    for (int i = 0; i < 16; ++i) {
+        sx += tmp[2 * i];
+        sy += tmp[2 * i + 1];
+    }
+    out[0] = sx;
+    out[1] = sy;
+}
+
+#endif // __AVX512FP16__
+
 template <bsz SZ, typename T>
 inline __attribute__((__always_inline__)) void
 attractive_forces_multi_d2(const T *emb_i, const da_int *col_idx, const T *P_vals,
@@ -245,6 +316,20 @@ template void attractive_forces_scalar_impl<float, 3>(const float *, const da_in
 template void attractive_forces_scalar_impl<double, 3>(const double *, const da_int *,
                                                        const double *, const double *,
                                                        double, da_int, da_int, double *);
+#ifdef __AVX512FP16__
+template void attractive_forces_scalar_impl<_Float16, 1>(const _Float16 *, const da_int *,
+                                                         const _Float16 *,
+                                                         const _Float16 *, _Float16,
+                                                         da_int, da_int, _Float16 *);
+template void attractive_forces_scalar_impl<_Float16, 2>(const _Float16 *, const da_int *,
+                                                         const _Float16 *,
+                                                         const _Float16 *, _Float16,
+                                                         da_int, da_int, _Float16 *);
+template void attractive_forces_scalar_impl<_Float16, 3>(const _Float16 *, const da_int *,
+                                                         const _Float16 *,
+                                                         const _Float16 *, _Float16,
+                                                         da_int, da_int, _Float16 *);
+#endif
 
 #define ATTRACTIVE_FORCES_KT_INSTANTIATE(SZ, SUF, D)                                     \
     template void attractive_forces_kt<SZ, SUF, D>(const SUF *, const da_int *,          \
@@ -263,6 +348,18 @@ DA_KT_INSTANTIATE_EXT(ATTRACTIVE_FORCES_KT_INSTANTIATE, bsz::b512, 2)
 DA_KT_INSTANTIATE_EXT(ATTRACTIVE_FORCES_KT_INSTANTIATE, bsz::b512, 3)
 #endif
 
+#ifdef __AVX512FP16__
+DA_KT_INSTANTIATE_FP16_EXT(ATTRACTIVE_FORCES_KT_INSTANTIATE, bsz::b128, 1)
+DA_KT_INSTANTIATE_FP16_EXT(ATTRACTIVE_FORCES_KT_INSTANTIATE, bsz::b128, 2)
+DA_KT_INSTANTIATE_FP16_EXT(ATTRACTIVE_FORCES_KT_INSTANTIATE, bsz::b128, 3)
+DA_KT_INSTANTIATE_FP16_EXT(ATTRACTIVE_FORCES_KT_INSTANTIATE, bsz::b256, 1)
+DA_KT_INSTANTIATE_FP16_EXT(ATTRACTIVE_FORCES_KT_INSTANTIATE, bsz::b256, 2)
+DA_KT_INSTANTIATE_FP16_EXT(ATTRACTIVE_FORCES_KT_INSTANTIATE, bsz::b256, 3)
+DA_KT_INSTANTIATE_FP16_EXT(ATTRACTIVE_FORCES_KT_INSTANTIATE, bsz::b512, 1)
+DA_KT_INSTANTIATE_FP16_EXT(ATTRACTIVE_FORCES_KT_INSTANTIATE, bsz::b512, 2)
+DA_KT_INSTANTIATE_FP16_EXT(ATTRACTIVE_FORCES_KT_INSTANTIATE, bsz::b512, 3)
+#endif
+
 #define ATTRACTIVE_FORCES_MULTI_D2_INSTANTIATE(SZ, T)                                    \
     template void attractive_forces_multi_d2<SZ, T>(                                     \
         const T *emb_i, const da_int *col_idx, const T *P_vals, const T *embedding,      \
@@ -271,6 +368,12 @@ DA_KT_INSTANTIATE_EXT(ATTRACTIVE_FORCES_KT_INSTANTIATE, bsz::b512, 3)
 DA_KT_INSTANTIATE(ATTRACTIVE_FORCES_MULTI_D2_INSTANTIATE, bsz::b256)
 #ifdef __AVX512F__
 DA_KT_INSTANTIATE(ATTRACTIVE_FORCES_MULTI_D2_INSTANTIATE, bsz::b512)
+#endif
+
+#ifdef __AVX512FP16__
+DA_KT_INSTANTIATE_FP16(ATTRACTIVE_FORCES_MULTI_D2_INSTANTIATE, bsz::b128)
+DA_KT_INSTANTIATE_FP16(ATTRACTIVE_FORCES_MULTI_D2_INSTANTIATE, bsz::b256)
+DA_KT_INSTANTIATE_FP16(ATTRACTIVE_FORCES_MULTI_D2_INSTANTIATE, bsz::b512)
 #endif
 
 #undef ATTRACTIVE_FORCES_KT_INSTANTIATE

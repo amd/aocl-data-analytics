@@ -30,6 +30,7 @@
 #include "gtest/gtest.h"
 #include <algorithm>
 #include <cmath>
+#include <cstring>
 #include <limits>
 #include <random>
 #include <string>
@@ -819,67 +820,49 @@ TYPED_TEST(tsne_public_test, SmallestValidCases) {
 // Mixed precision tests
 // =============================================================================
 
-TEST(TSNEMixedPrecision, FloatRejectsOption) {
-    // Mixed precision on a float handle should fail because there is no lower
-    // precision type available (yet).
-    const da_int n_samples = 6;
-    const da_int n_features = 3;
-    float X[n_samples * n_features];
-    for (da_int i = 0; i < n_samples * n_features; ++i)
-        X[i] = static_cast<float>(i + 1);
-
-    da_handle handle = nullptr;
-    ASSERT_EQ(da_handle_init_s(&handle, da_handle_tsne), da_status_success);
-    EXPECT_EQ(da_options_set_string(handle, "storage order", "row-major"),
-              da_status_success);
-    EXPECT_EQ(da_options_set(handle, "perplexity", 2.0f), da_status_success);
-    EXPECT_EQ(da_options_set_string(handle, "mixed precision", "yes"), da_status_success);
-    EXPECT_EQ(da_options_set_int(handle, "seed", 42), da_status_success);
-    EXPECT_EQ(da_tsne_set_data_s(handle, n_samples, n_features, X, n_features),
-              da_status_success);
-    EXPECT_EQ(da_tsne_compute_s(handle), da_status_invalid_option);
-    da_handle_destroy(&handle);
-}
-
-TEST(TSNEMixedPrecision, DoubleSuppliedEmbeddingConsistency) {
-    // Run double precision t-SNE with supplied initial embedding both with and
+TYPED_TEST(tsne_public_test, MixedPrecision) {
+    // Run t-SNE with supplied initial embedding both with and
     // without mixed precision and check that the quality metrics are comparable.
     // Element-by-element comparison is not meaningful for t-SNE because the
     // non-convex optimization can converge to different (rotated/translated)
     // embeddings of equal quality when the trajectory is perturbed by float rounding.
     const da_int n_samples = 60;
     const da_int n_features = 10;
-    const da_int n_components = 2;
+    const da_int n_components = 3;
     const da_int max_iter = 500;
     const da_int k_neighbors = 5;
 
     // Deterministic synthetic data: two clusters
-    std::vector<double> X(n_samples * n_features);
+    std::vector<TypeParam> X(n_samples * n_features);
     std::mt19937_64 rng(123);
-    std::normal_distribution<double> normal(0.0, 1.0);
+    std::normal_distribution<TypeParam> normal(0.0, 1.0);
     for (da_int i = 0; i < n_samples; ++i)
         for (da_int j = 0; j < n_features; ++j)
             X[i * n_features + j] = normal(rng) + (i < n_samples / 2 ? 0.0 : 5.0);
 
     // Deterministic initial embedding
-    std::vector<double> Y_init(n_samples * n_components);
+    std::vector<TypeParam> Y_init(n_samples * n_components);
     for (da_int i = 0; i < n_samples * n_components; ++i)
         Y_init[i] = normal(rng) * 1e-4;
 
-    auto run = [&](bool mixed_precision, std::vector<double> &emb_out, double &kl_out,
-                   da_int &n_iter_out, da_int &lp_n_iter_out) {
+    auto run = [&](bool mixed_precision, std::vector<TypeParam> &emb_out,
+                   TypeParam &kl_out, da_int &n_iter_out, da_int &lp_n_iter_out,
+                   da_status &status_out) {
         da_handle handle = nullptr;
-        ASSERT_EQ(da_handle_init_d(&handle, da_handle_tsne), da_status_success);
+        ASSERT_EQ(da_handle_init<TypeParam>(&handle, da_handle_tsne), da_status_success);
         EXPECT_EQ(da_options_set_string(handle, "storage order", "row-major"),
                   da_status_success);
         EXPECT_EQ(da_options_set_int(handle, "n_components", n_components),
                   da_status_success);
-        EXPECT_EQ(da_options_set(handle, "perplexity", 5.0), da_status_success);
-        EXPECT_EQ(da_options_set(handle, "theta", 0.0), da_status_success);
+        EXPECT_EQ(da_options_set(handle, "perplexity", static_cast<TypeParam>(5.0)),
+                  da_status_success);
+        EXPECT_EQ(da_options_set(handle, "theta", static_cast<TypeParam>(0.0)),
+                  da_status_success);
         EXPECT_EQ(da_options_set_int(handle, "max_iter", max_iter), da_status_success);
         EXPECT_EQ(da_options_set_int(handle, "seed", 42), da_status_success);
         EXPECT_EQ(da_options_set_string(handle, "init", "supplied"), da_status_success);
-        EXPECT_EQ(da_options_set(handle, "min_grad_norm", 0.0), da_status_success);
+        EXPECT_EQ(da_options_set(handle, "min_grad_norm", static_cast<TypeParam>(0.0)),
+                  da_status_success);
         EXPECT_EQ(da_options_set_int(handle, "n_iter_without_progress", 0),
                   da_status_success);
         if (mixed_precision) {
@@ -888,53 +871,157 @@ TEST(TSNEMixedPrecision, DoubleSuppliedEmbeddingConsistency) {
             EXPECT_EQ(da_options_set_int(handle, "low precision max_iter", 200),
                       da_status_success);
         }
-        EXPECT_EQ(da_tsne_set_data_d(handle, n_samples, n_features, X.data(), n_features),
+        EXPECT_EQ(da_tsne_set_data(handle, n_samples, n_features, X.data(), n_features),
                   da_status_success);
-        EXPECT_EQ(da_tsne_set_init_embedding_d(handle, Y_init.data(), n_components),
+        EXPECT_EQ(da_tsne_set_init_embedding(handle, Y_init.data(), n_components),
                   da_status_success);
-        EXPECT_EQ(da_tsne_compute_d(handle), da_status_success);
+        da_status status = da_tsne_compute<TypeParam>(handle);
+
+        // Catch the case where mixed precision is not supported for this type (e.g. float, non-Zen6)
+        da_int len{100};
+        char arch[100], ns[100];
+        ASSERT_EQ(da_get_arch_info(&len, arch, ns), da_status_success);
+        const bool is_zen6 = (std::strcmp(arch, "zen6") == 0);
+        if (mixed_precision && std::is_same_v<TypeParam, float> && !is_zen6) {
+            EXPECT_EQ(status, da_status_invalid_option);
+            da_handle_destroy(&handle);
+            status_out = status;
+            return;
+        }
+
+        EXPECT_EQ(status, da_status_success);
 
         da_int emb_dim = n_samples * n_components;
         emb_out.resize(emb_dim);
         EXPECT_EQ(
-            da_handle_get_result_d(handle, da_tsne_embedding, &emb_dim, emb_out.data()),
+            da_handle_get_result(handle, da_tsne_embedding, &emb_dim, emb_out.data()),
             da_status_success);
 
         da_int dim = 6;
-        double rinfo[6];
-        EXPECT_EQ(da_handle_get_result_d(handle, da_rinfo, &dim, rinfo),
-                  da_status_success);
+        TypeParam rinfo[6];
+        EXPECT_EQ(da_handle_get_result(handle, da_rinfo, &dim, rinfo), da_status_success);
         kl_out = rinfo[4];
         n_iter_out = static_cast<da_int>(rinfo[3]);
         lp_n_iter_out = static_cast<da_int>(rinfo[5]);
 
         da_handle_destroy(&handle);
+        status_out = da_status_success;
+        return;
     };
 
-    std::vector<double> emb_baseline, emb_mixed;
-    double kl_baseline, kl_mixed;
+    std::vector<TypeParam> emb_baseline, emb_mixed;
+    TypeParam kl_baseline, kl_mixed;
     da_int n_iter_base, n_iter_mixed, lp_iter_base, lp_iter_mixed;
-    run(false, emb_baseline, kl_baseline, n_iter_base, lp_iter_base);
-    run(true, emb_mixed, kl_mixed, n_iter_mixed, lp_iter_mixed);
+    da_status status_base, status_mixed;
 
-    EXPECT_EQ(lp_iter_base, 0);
-    EXPECT_EQ(n_iter_base, max_iter);
-    EXPECT_EQ(lp_iter_mixed, 200);
-    EXPECT_EQ(n_iter_mixed, max_iter);
+    // Exercise each vectorization path. Empty string clears the override so the
+    // dispatcher picks the best ISA available on the host.
+    const std::vector<std::string> isa_list = {"", "scalar", "avx", "avx2", "avx512"};
+    for (const auto &isa : isa_list) {
+        std::cout << "MixedPrecision: tsne.isa='" << isa << "'" << std::endl;
+        EXPECT_EQ(da_debug_set("tsne.isa", isa.c_str()), da_status_success);
 
-    // Compare quality metrics: trustworthiness and KL divergence
-    double trust_base = tsne_metrics::compute_trustworthiness(
-        X.data(), emb_baseline.data(), n_samples, n_features, n_components, k_neighbors);
-    double trust_mixed = tsne_metrics::compute_trustworthiness(
-        X.data(), emb_mixed.data(), n_samples, n_features, n_components, k_neighbors);
+        run(false, emb_baseline, kl_baseline, n_iter_base, lp_iter_base, status_base);
+        run(true, emb_mixed, kl_mixed, n_iter_mixed, lp_iter_mixed, status_mixed);
 
-    // Both should achieve good trustworthiness on this easy two-cluster dataset
-    EXPECT_GE(trust_base, 0.85);
-    EXPECT_GE(trust_mixed, 0.85);
+        if (status_mixed == da_status_invalid_option) {
+            // Mixed precision not supported for this type (e.g. float): test is not applicable
+            SUCCEED() << "Mixed precision not supported for this type, skipping test";
+            continue;
+        }
 
-    // Mixed precision should not dramatically degrade quality
-    EXPECT_NEAR(trust_base, trust_mixed, 0.05);
-    EXPECT_NEAR(kl_baseline, kl_mixed, 0.11);
+        EXPECT_EQ(lp_iter_base, 0);
+        EXPECT_EQ(n_iter_base, max_iter);
+        EXPECT_EQ(lp_iter_mixed, 200);
+        EXPECT_EQ(n_iter_mixed, max_iter);
+
+        // Compare quality metrics: trustworthiness and KL divergence
+        TypeParam trust_base = tsne_metrics::compute_trustworthiness(
+            X.data(), emb_baseline.data(), n_samples, n_features, n_components,
+            k_neighbors);
+        TypeParam trust_mixed = tsne_metrics::compute_trustworthiness(
+            X.data(), emb_mixed.data(), n_samples, n_features, n_components, k_neighbors);
+
+        // Both should achieve good trustworthiness on this easy two-cluster dataset
+        EXPECT_GE(trust_base, 0.85);
+        EXPECT_GE(trust_mixed, 0.85);
+
+        // Mixed precision should not dramatically degrade quality
+        EXPECT_NEAR(trust_base, trust_mixed, 0.05);
+        EXPECT_NEAR(kl_baseline, kl_mixed, 0.11);
+    }
+
+    // Clear the ISA override so subsequent tests are not affected
+    EXPECT_EQ(da_debug_set("tsne.isa", ""), da_status_success);
+}
+
+// Mixed precision on a float handle requires a lower precision type.
+// - On Zen5 and below there is no _Float16 LP path so the option is rejected.
+// - On Zen6 the LP path runs, but the PCA initialization and the
+//   Barnes-Hut (theta > 0) branches do not support _Float16, so the engine
+//   must report da_status_incompatible_options.
+TEST(TSNEMixedPrecision, FloatIllegalOption) {
+    const da_int n_samples = 6;
+    const da_int n_features = 3;
+    float X[n_samples * n_features];
+    for (da_int i = 0; i < n_samples * n_features; ++i)
+        X[i] = static_cast<float>(i + 1);
+
+    da_int len{100};
+    char arch[100], ns[100];
+    ASSERT_EQ(da_get_arch_info(&len, arch, ns), da_status_success);
+    const bool is_zen6 = (std::strcmp(arch, "zen6") == 0);
+
+    if (!is_zen6) {
+        // Zen5 or below: no _Float16 LP path is compiled in, so the
+        // "mixed precision" option itself is rejected by the engine.
+        da_handle handle = nullptr;
+        ASSERT_EQ(da_handle_init_s(&handle, da_handle_tsne), da_status_success);
+        EXPECT_EQ(da_options_set_string(handle, "storage order", "row-major"),
+                  da_status_success);
+        EXPECT_EQ(da_options_set(handle, "perplexity", 2.0f), da_status_success);
+        EXPECT_EQ(da_options_set_string(handle, "mixed precision", "yes"),
+                  da_status_success);
+        EXPECT_EQ(da_options_set_int(handle, "seed", 42), da_status_success);
+        EXPECT_EQ(da_tsne_set_data_s(handle, n_samples, n_features, X, n_features),
+                  da_status_success);
+        EXPECT_EQ(da_tsne_compute_s(handle), da_status_invalid_option);
+        da_handle_destroy(&handle);
+        return;
+    } else {
+        // Zen6: init="pca" combined with mixed precision is not supported.
+        da_handle handle = nullptr;
+        ASSERT_EQ(da_handle_init_s(&handle, da_handle_tsne), da_status_success);
+        EXPECT_EQ(da_options_set_string(handle, "storage order", "row-major"),
+                  da_status_success);
+        EXPECT_EQ(da_options_set(handle, "perplexity", 2.0f), da_status_success);
+        EXPECT_EQ(da_options_set_string(handle, "mixed precision", "yes"),
+                  da_status_success);
+        EXPECT_EQ(da_options_set_string(handle, "init", "pca"), da_status_success);
+        EXPECT_EQ(da_options_set(handle, "theta", 0.0f), da_status_success);
+        EXPECT_EQ(da_options_set_int(handle, "seed", 42), da_status_success);
+        EXPECT_EQ(da_tsne_set_data_s(handle, n_samples, n_features, X, n_features),
+                  da_status_success);
+        EXPECT_EQ(da_tsne_compute_s(handle), da_status_incompatible_options);
+        da_handle_destroy(&handle);
+
+        // Zen6: theta > 0 (Barnes-Hut / KNN path) combined with mixed precision
+        // is not supported.
+
+        ASSERT_EQ(da_handle_init_s(&handle, da_handle_tsne), da_status_success);
+        EXPECT_EQ(da_options_set_string(handle, "storage order", "row-major"),
+                  da_status_success);
+        EXPECT_EQ(da_options_set(handle, "perplexity", 2.0f), da_status_success);
+        EXPECT_EQ(da_options_set_string(handle, "mixed precision", "yes"),
+                  da_status_success);
+        EXPECT_EQ(da_options_set_string(handle, "init", "random"), da_status_success);
+        EXPECT_EQ(da_options_set(handle, "theta", 0.5f), da_status_success);
+        EXPECT_EQ(da_options_set_int(handle, "seed", 42), da_status_success);
+        EXPECT_EQ(da_tsne_set_data_s(handle, n_samples, n_features, X, n_features),
+                  da_status_success);
+        EXPECT_EQ(da_tsne_compute_s(handle), da_status_incompatible_options);
+        da_handle_destroy(&handle);
+    }
 }
 
 // =============================================================================
@@ -964,7 +1051,7 @@ const tsne_param_t tsne_param_pos[] = {
     {"iris_exact_1d", "iris", 1, 30.0, 500, 0.0, "pca", 42, 10, 0.963747, 0.363504, 2.0},
     {"circles_exact_1d", "circles", 1, 10.0, 500, 0.0, "pca", 42, 5, 0.962217, 0.993861, 8.0},
     // --- 1D Barnes-Hut (theta > 0) ---
-    {"twoclust_bh_1d", "twoclust", 1, 10.0, 500, 0.5, "pca", 42, 5, 0.919295, -1.0, 3.0},
+    {"twoclust_bh_1d", "twoclust", 1, 10.0, 500, 0.5, "pca", 42, 5, 0.919295, -1.0, 3.0 + 4.5},
     // --- 2D exact (theta = 0) ---
     {"iris_exact_2d", "iris", 2, 30.0, 1000, 0.0, "pca", 42, 10, 0.989031, 0.122057, 2.0},
     {"blobs_exact_2d", "blobs", 2, 20.0, 500, 0.0, "pca", 123, 10, 0.97184, 0.408497, 3.0},

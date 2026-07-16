@@ -346,3 +346,6 @@ da_status basic_handle<T>::get_result_common(da_result query, da_int *dim,
 
 template class basic_handle<double>;
 template class basic_handle<float>;
+#ifdef __AVX512FP16__
+template class basic_handle<_Float16>;
+#endif

@@ -61,33 +61,34 @@ inline da_status register_tsne_options(da_options::OptionRegistry &opts,
             da_options::lbound_t::greaterequal, imax, da_options::ubound_t::p_inf, 300));
         opts.register_opt(oi);
 
-        std::shared_ptr<OptionNumeric<T>> oT;
-        oT = std::make_shared<OptionNumeric<T>>(OptionNumeric<T>(
-            "perplexity", "Target perplexity for conditional probabilities.", (T)1,
-            da_options::lbound_t::greaterequal, (T)0, da_options::ubound_t::p_inf,
-            static_cast<T>(30)));
+        using opt_T = std::conditional_t<std::is_same_v<T, _Float16>, float, T>;
+        std::shared_ptr<OptionNumeric<opt_T>> oT;
+        oT = std::make_shared<OptionNumeric<opt_T>>(OptionNumeric<opt_T>(
+            "perplexity", "Target perplexity for conditional probabilities.", (opt_T)1,
+            da_options::lbound_t::greaterequal, (opt_T)0, da_options::ubound_t::p_inf,
+            static_cast<opt_T>(30)));
         opts.register_opt(oT);
-        oT = std::make_shared<OptionNumeric<T>>(
-            OptionNumeric<T>("learning rate",
-                             "Gradient descent learning rate. Use any non-positive "
-                             "value for auto: max(N / early_exaggeration / 4, 50).",
-                             (T)0, da_options::lbound_t::m_inf, (T)0,
-                             da_options::ubound_t::p_inf, static_cast<T>(-1)));
+        oT = std::make_shared<OptionNumeric<opt_T>>(
+            OptionNumeric<opt_T>("learning rate",
+                                 "Gradient descent learning rate. Use any non-positive "
+                                 "value for auto: max(N / early_exaggeration / 4, 50).",
+                                 (opt_T)0, da_options::lbound_t::m_inf, (opt_T)0,
+                                 da_options::ubound_t::p_inf, static_cast<opt_T>(-1)));
         opts.register_opt(oT);
-        oT = std::make_shared<OptionNumeric<T>>(OptionNumeric<T>(
-            "early exaggeration", "Exaggeration factor for early iterations.", (T)1,
-            da_options::lbound_t::greaterequal, (T)0, da_options::ubound_t::p_inf,
-            static_cast<T>(12)));
+        oT = std::make_shared<OptionNumeric<opt_T>>(OptionNumeric<opt_T>(
+            "early exaggeration", "Exaggeration factor for early iterations.", (opt_T)1,
+            da_options::lbound_t::greaterequal, (opt_T)0, da_options::ubound_t::p_inf,
+            static_cast<opt_T>(12)));
         opts.register_opt(oT);
-        oT = std::make_shared<OptionNumeric<T>>(OptionNumeric<T>(
-            "min_grad_norm", "Stop if the gradient norm is below this threshold.", (T)0,
-            da_options::lbound_t::greaterequal, (T)0, da_options::ubound_t::p_inf,
-            static_cast<T>(1e-7)));
+        oT = std::make_shared<OptionNumeric<opt_T>>(OptionNumeric<opt_T>(
+            "min_grad_norm", "Stop if the gradient norm is below this threshold.",
+            (opt_T)0, da_options::lbound_t::greaterequal, (opt_T)0,
+            da_options::ubound_t::p_inf, static_cast<opt_T>(1e-7)));
         opts.register_opt(oT);
-        oT = std::make_shared<OptionNumeric<T>>(
-            OptionNumeric<T>("theta", "Barnes-Hut approximation parameter (0 for exact).",
-                             (T)0, da_options::lbound_t::greaterequal, (T)1,
-                             da_options::ubound_t::lessequal, static_cast<T>(0.5)));
+        oT = std::make_shared<OptionNumeric<opt_T>>(OptionNumeric<opt_T>(
+            "theta", "Barnes-Hut approximation parameter (0 for exact).", (opt_T)0,
+            da_options::lbound_t::greaterequal, (opt_T)1, da_options::ubound_t::lessequal,
+            static_cast<opt_T>(0.5)));
         opts.register_opt(oT);
 
         oi = std::make_shared<OptionNumeric<da_int>>(OptionNumeric<da_int>(
@@ -98,12 +99,12 @@ inline da_status register_tsne_options(da_options::OptionRegistry &opts,
             200));
         opts.register_opt(oi);
 
-        oT = std::make_shared<OptionNumeric<T>>(OptionNumeric<T>(
+        oT = std::make_shared<OptionNumeric<opt_T>>(OptionNumeric<opt_T>(
             "low precision min_grad_norm",
             "If mixed precision iterative refinement is enabled, gradient norm "
             "convergence threshold for the low precision phase.",
-            (T)0, da_options::lbound_t::greaterequal, (T)0, da_options::ubound_t::p_inf,
-            static_cast<T>(1e-4)));
+            (opt_T)0, da_options::lbound_t::greaterequal, (opt_T)0,
+            da_options::ubound_t::p_inf, static_cast<opt_T>(1e-4)));
         opts.register_opt(oT);
 
         std::shared_ptr<OptionString> os;

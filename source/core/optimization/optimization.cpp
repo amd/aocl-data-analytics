@@ -27,6 +27,7 @@
 
 #include "optimization.hpp"
 #include "da_error.hpp"
+#include "da_std.hpp"
 #include "macros.h"
 #include "optimization_options.hpp"
 #include "ralfit_driver.hpp"
@@ -160,11 +161,11 @@ da_status da_optimization<T>::add_bound_cons(std::vector<T> &l, std::vector<T> &
 
     // Quick check on bounds
     for (da_int i = 0; i < this->nvar; i++) {
-        if (std::isnan(l[i])) {
+        if (da_std::isnan(l[i])) {
             return da_error(this->err, da_status_option_invalid_bounds,
                             "Constraint l[" + std::to_string(i) + "] is NaN.");
         }
-        if (std::isnan(u[i])) {
+        if (da_std::isnan(u[i])) {
             return da_error(this->err, da_status_option_invalid_bounds,
                             "Constraint u[" + std::to_string(i) + "] is NaN.");
         }
@@ -349,25 +350,34 @@ da_status da_optimization<T>::solve(std::vector<T> &x, void *usrdata) {
 
     switch (solver) {
     case solver_lbfgsb:
-        if (prnlvl > 0) {
-            std::cout << "-----------------------------------------------------\n"
-                      << "    AOCL-DA L-BFGS-B Nonlinear Programming Solver\n"
-                      << "-----------------------------------------------------\n";
-        }
-        if (prn == "yes")
-            this->opts.print_options();
-        // Derivative based solver, allocate gradient memory
-        try {
-            this->g.resize(this->nvar);
-        } catch (std::bad_alloc &) {
-            return da_error(this->err, da_status_memory_error,
-                            "Could not allocate memory for gradient vector");
-        }
-        status =
-            lbfgsb_fcomm(this->opts, this->nvar, x, this->l, this->u, this->info, this->g,
-                         this->objfun, this->objgrd, this->monit, usrdata, *this->err);
+        if constexpr (std::is_same_v<T, _Float16>) {
+            // L-BFGS-B is not instantiated for _Float16. Mixed precision iterative
+            // refinement only supports coord at this precision.
+            status = da_error(
+                this->err, da_status_incompatible_options,
+                "L-BFGS-B is not supported in _Float16; use coordinate descent.");
+            break;
+        } else {
+            if (prnlvl > 0) {
+                std::cout << "-----------------------------------------------------\n"
+                          << "    AOCL-DA L-BFGS-B Nonlinear Programming Solver\n"
+                          << "-----------------------------------------------------\n";
+            }
+            if (prn == "yes")
+                this->opts.print_options();
+            // Derivative based solver, allocate gradient memory
+            try {
+                this->g.resize(this->nvar);
+            } catch (std::bad_alloc &) {
+                return da_error(this->err, da_status_memory_error,
+                                "Could not allocate memory for gradient vector");
+            }
+            status = lbfgsb_fcomm(this->opts, this->nvar, x, this->l, this->u, this->info,
+                                  this->g, this->objfun, this->objgrd, this->monit,
+                                  usrdata, *this->err);
 
-        break;
+            break;
+        }
     case solver_coord:
         if (prnlvl > 0) {
             std::cout << "-----------------------------------------------------------\n"
@@ -381,19 +391,26 @@ da_status da_optimization<T>::solve(std::vector<T> &x, void *usrdata) {
                          this->stepfun, this->monit, usrdata, *this->err, this->stepchk);
         break;
     case solver_ralfit:
-        if (prnlvl > 0) {
-            std::cout << " ------------------------------------------------------\n"
-                      << "     AOCL-DA NLP Solver for Nonlinear Least-Squares    \n"
-                      << " ------------------------------------------------------\n";
-        }
-        if (prn == "yes")
-            this->opts.print_options();
+        if constexpr (std::is_same_v<T, _Float16>) {
+            status =
+                da_error(this->err, da_status_incompatible_options,
+                         "RALFit is not supported in _Float16; use coordinate descent.");
+            break;
+        } else {
+            if (prnlvl > 0) {
+                std::cout << " ------------------------------------------------------\n"
+                          << "     AOCL-DA NLP Solver for Nonlinear Least-Squares    \n"
+                          << " ------------------------------------------------------\n";
+            }
+            if (prn == "yes")
+                this->opts.print_options();
 
-        status = ralfit::ralfit_driver(this->opts, this->nvar, this->nres, x.data(),
-                                       this->resfun, this->resgrd, this->reshes,
-                                       this->reshp, this->l_usrptr, this->u_usrptr,
-                                       this->w_usrptr, usrdata, this->info, *this->err);
-        break;
+            status = ralfit::ralfit_driver(
+                this->opts, this->nvar, this->nres, x.data(), this->resfun, this->resgrd,
+                this->reshes, this->reshp, this->l_usrptr, this->u_usrptr, this->w_usrptr,
+                usrdata, this->info, *this->err);
+            break;
+        }
     case solver_undefined:
         status = da_error(
             this->err, da_status_internal_error,
@@ -413,6 +430,9 @@ da_status da_optimization<T>::solve(std::vector<T> &x, void *usrdata) {
 
 template class da_optimization<float>;
 template class da_optimization<double>;
+#ifdef __AVX512FP16__
+template class da_optimization<_Float16>;
+#endif
 
 } // namespace da_optim
 

@@ -20,6 +20,13 @@
  * THE SOFTWARE.
  *
  * ************************************************************************ */
+#if defined(__clang__)
+#pragma clang diagnostic ignored "-Wunknown-warning-option"
+#pragma clang diagnostic ignored "-Wpass-failed"
+#elif defined(__GNUC__)
+#pragma GCC diagnostic ignored "-Wpragmas"
+#pragma GCC diagnostic ignored "-Wopenmp-simd"
+#endif
 
 #include "aoclda_types.h"
 #include "da_kernel_utils.hpp"
@@ -38,7 +45,9 @@ using namespace kernel_templates;
 /* Reduction part of the elkan iteration, on a pair of scattered vectors */
 template <typename T> T elkan_reduction_kernel_scalar(da_int m, const T *x, T *y) {
     T sum = (T)0.0;
+#ifndef _WIN32
 #pragma omp simd reduction(+ : sum)
+#endif
     for (da_int k = 0; k < m; k++) {
         T tmp = x[k] - y[k];
         sum += tmp * tmp;
@@ -49,6 +58,10 @@ template <typename T> T elkan_reduction_kernel_scalar(da_int m, const T *x, T *y
 template float elkan_reduction_kernel_scalar<float>(da_int m, const float *x, float *y);
 template double elkan_reduction_kernel_scalar<double>(da_int m, const double *x,
                                                       double *y);
+#ifdef __AVX512FP16__
+template _Float16 elkan_reduction_kernel_scalar<_Float16>(da_int m, const _Float16 *x,
+                                                          _Float16 *y);
+#endif
 
 // KT variants of elkan_reduce_kernel
 template <bsz SZ, typename T>
@@ -90,8 +103,15 @@ inline __attribute__((__always_inline__)) T elkan_reduction_kt(da_int m, const T
 
 DA_KT_INSTANTIATE(ELKAN_REDUCTION_KT_INSTANTIATE, bsz::b128)
 DA_KT_INSTANTIATE(ELKAN_REDUCTION_KT_INSTANTIATE, bsz::b256)
+
 #ifdef __AVX512F__
 DA_KT_INSTANTIATE(ELKAN_REDUCTION_KT_INSTANTIATE, bsz::b512)
+#endif
+
+#ifdef __AVX512FP16__
+DA_KT_INSTANTIATE_FP16(ELKAN_REDUCTION_KT_INSTANTIATE, bsz::b128)
+DA_KT_INSTANTIATE_FP16(ELKAN_REDUCTION_KT_INSTANTIATE, bsz::b256)
+DA_KT_INSTANTIATE_FP16(ELKAN_REDUCTION_KT_INSTANTIATE, bsz::b512)
 #endif
 
 /* Within Elkan iteration update a block of the lower and upper bound matrices*/
@@ -122,6 +142,13 @@ template void elkan_iteration_kernel_scalar<double>(da_int block_size, double *l
                                                     da_int ldl_bound, double *u_bound,
                                                     double *centre_shift, da_int *labels,
                                                     da_int n_clusters);
+#ifdef __AVX512FP16__
+template void elkan_iteration_kernel_scalar<_Float16>(da_int block_size,
+                                                      _Float16 *l_bound, da_int ldl_bound,
+                                                      _Float16 *u_bound,
+                                                      _Float16 *centre_shift,
+                                                      da_int *labels, da_int n_clusters);
+#endif
 
 // KT variants of elkan_iteration_kernel
 template <bsz SZ, typename SUF>
@@ -159,32 +186,25 @@ elkan_iteration_kt(da_int block_size, SUF *l_bound, da_int ldl_bound, SUF *u_bou
     }
 }
 // instantiate
-template void elkan_iteration_kt<bsz::b128, double>(da_int block_size, double *l_bound,
-                                                    da_int ldl_bound, double *u_bound,
-                                                    double *centre_shift, da_int *labels,
-                                                    da_int n_clusters);
-template void elkan_iteration_kt<bsz::b128, float>(da_int block_size, float *l_bound,
-                                                   da_int ldl_bound, float *u_bound,
-                                                   float *centre_shift, da_int *labels,
-                                                   da_int n_clusters);
-template void elkan_iteration_kt<bsz::b256, double>(da_int block_size, double *l_bound,
-                                                    da_int ldl_bound, double *u_bound,
-                                                    double *centre_shift, da_int *labels,
-                                                    da_int n_clusters);
-template void elkan_iteration_kt<bsz::b256, float>(da_int block_size, float *l_bound,
-                                                   da_int ldl_bound, float *u_bound,
-                                                   float *centre_shift, da_int *labels,
-                                                   da_int n_clusters);
+#define ELKAN_ITERATION_KT_INSTANTIATE(SZ, SUF)                                          \
+    template void elkan_iteration_kt<SZ, SUF>(                                           \
+        da_int block_size, SUF * l_bound, da_int ldl_bound, SUF * u_bound,               \
+        SUF * centre_shift, da_int * labels, da_int n_clusters);
+
+DA_KT_INSTANTIATE(ELKAN_ITERATION_KT_INSTANTIATE, bsz::b128)
+DA_KT_INSTANTIATE(ELKAN_ITERATION_KT_INSTANTIATE, bsz::b256)
+
 #ifdef __AVX512F__
-template void elkan_iteration_kt<bsz::b512, double>(da_int block_size, double *l_bound,
-                                                    da_int ldl_bound, double *u_bound,
-                                                    double *centre_shift, da_int *labels,
-                                                    da_int n_clusters);
-template void elkan_iteration_kt<bsz::b512, float>(da_int block_size, float *l_bound,
-                                                   da_int ldl_bound, float *u_bound,
-                                                   float *centre_shift, da_int *labels,
-                                                   da_int n_clusters);
+DA_KT_INSTANTIATE(ELKAN_ITERATION_KT_INSTANTIATE, bsz::b512)
 #endif
+
+#ifdef __AVX512FP16__
+DA_KT_INSTANTIATE_FP16(ELKAN_ITERATION_KT_INSTANTIATE, bsz::b128)
+DA_KT_INSTANTIATE_FP16(ELKAN_ITERATION_KT_INSTANTIATE, bsz::b256)
+DA_KT_INSTANTIATE_FP16(ELKAN_ITERATION_KT_INSTANTIATE, bsz::b512)
+#endif
+
+#undef ELKAN_ITERATION_KT_INSTANTIATE
 
 template <class T>
 void lloyd_iteration_kernel_scalar(bool update_centres, da_int block_size,
@@ -217,6 +237,11 @@ template void lloyd_iteration_kernel_scalar<float>(bool, da_int, float *, da_int
                                                    da_int *, float *, da_int, da_int);
 template void lloyd_iteration_kernel_scalar<double>(bool, da_int, double *, da_int *,
                                                     da_int *, double *, da_int, da_int);
+#ifdef __AVX512FP16__
+template void lloyd_iteration_kernel_scalar<_Float16>(bool, da_int, _Float16 *, da_int *,
+                                                      da_int *, _Float16 *, da_int,
+                                                      da_int);
+#endif
 
 template <class T, vectorization_type U>
 void lloyd_iteration_kernel(bool update_centres, da_int block_size, T *centre_norms,
@@ -652,6 +677,284 @@ void lloyd_iteration_kernel<double, vectorization_type::avx512>(
     }
 }
 #endif
+
+// _Float16 Elkan kernels are provided by the generic KT templates above
+// (elkan_reduction_kt / elkan_iteration_kt) and instantiated for _Float16
+// via DA_KT_INSTANTIATE_FP16 when __AVX512FP16__ is defined.
+
+// _Float16 Lloyd kernels using native AVX512_FP16 intrinsics
+#ifdef __AVX512FP16__
+
+// --- Lloyd FP16 kernels ---
+
+// 128-bit: 8 × _Float16 elements per iteration
+template <>
+void lloyd_iteration_kernel<_Float16, vectorization_type::avx>(
+    bool update_centres, da_int block_size, _Float16 *centre_norms, da_int *cluster_count,
+    da_int *labels, _Float16 *work, da_int ldwork, da_int n_clusters) {
+
+    v8hf_t v_smallest_dists;
+
+    __m128h v_centre_norms = _mm_loadu_ph(centre_norms);
+
+    for (da_int i = 0; i < block_size; i++) {
+        da_int ind_outer = i * ldwork;
+        v_smallest_dists.v = _mm_add_ph(_mm_loadu_ph(work + ind_outer), v_centre_norms);
+
+#if defined(AOCLDA_ILP64)
+        v8i64_t v_labels;
+        v_labels.v = _mm512_set_epi64(7, 6, 5, 4, 3, 2, 1, 0);
+#else
+        v8i32_t v_labels;
+        v_labels.v = _mm256_set_epi32(7, 6, 5, 4, 3, 2, 1, 0);
+#endif
+
+        for (da_int j = 8; j < n_clusters; j += 8) {
+            da_int ind_inner = ind_outer + j;
+            __m128h v_tmp = _mm_add_ph(_mm_loadu_ph(work + ind_inner),
+                                       _mm_loadu_ph(centre_norms + j));
+            __mmask8 v_mask = _mm_cmp_ph_mask(v_tmp, v_smallest_dists.v, _CMP_LT_OQ);
+
+#if defined(AOCLDA_ILP64)
+            __m512i v_indices =
+                _mm512_set_epi64(j + 7, j + 6, j + 5, j + 4, j + 3, j + 2, j + 1, j);
+            v_labels.v = _mm512_mask_blend_epi64(v_mask, v_labels.v, v_indices);
+#else
+            __m256i v_indices =
+                _mm256_set_epi32(j + 7, j + 6, j + 5, j + 4, j + 3, j + 2, j + 1, j);
+            v_labels.v = _mm256_mask_blend_epi32(v_mask, v_labels.v, v_indices);
+#endif
+            v_smallest_dists.v = _mm_min_ph(v_smallest_dists.v, v_tmp);
+        }
+
+        da_int label = (da_int)v_labels.i[0];
+        for (da_int j = 1; j < 7; j++) {
+            if (v_smallest_dists.h[j] < v_smallest_dists.h[0]) {
+                v_smallest_dists.h[0] = v_smallest_dists.h[j];
+                label = (da_int)v_labels.i[j];
+            }
+        }
+        if (v_smallest_dists.h[7] < v_smallest_dists.h[0]) {
+            label = (da_int)v_labels.i[7];
+        }
+
+        labels[i] = label;
+        if (update_centres)
+            cluster_count[label] += 1;
+    }
+}
+
+// 256-bit: 16 × _Float16 elements per iteration
+template <>
+void lloyd_iteration_kernel<_Float16, vectorization_type::avx2>(
+    bool update_centres, da_int block_size, _Float16 *centre_norms, da_int *cluster_count,
+    da_int *labels, _Float16 *work, da_int ldwork, da_int n_clusters) {
+
+    v16hf_t v_smallest_dists;
+
+    __m256h v_centre_norms = _mm256_loadu_ph(centre_norms);
+
+    for (da_int i = 0; i < block_size; i++) {
+        da_int ind_outer = i * ldwork;
+        v_smallest_dists.v =
+            _mm256_add_ph(_mm256_loadu_ph(work + ind_outer), v_centre_norms);
+
+#if defined(AOCLDA_ILP64)
+        v8i64_t v_labels1, v_labels2;
+        v_labels1.v = _mm512_set_epi64(7, 6, 5, 4, 3, 2, 1, 0);
+        v_labels2.v = _mm512_set_epi64(15, 14, 13, 12, 11, 10, 9, 8);
+#else
+        v16i32_t v_labels;
+        v_labels.v =
+            _mm512_set_epi32(15, 14, 13, 12, 11, 10, 9, 8, 7, 6, 5, 4, 3, 2, 1, 0);
+#endif
+
+        for (da_int j = 16; j < n_clusters; j += 16) {
+            da_int ind_inner = ind_outer + j;
+            __m256h v_tmp = _mm256_add_ph(_mm256_loadu_ph(work + ind_inner),
+                                          _mm256_loadu_ph(centre_norms + j));
+            __mmask16 v_mask = _mm256_cmp_ph_mask(v_tmp, v_smallest_dists.v, _CMP_LT_OQ);
+
+#if defined(AOCLDA_ILP64)
+            __mmask8 v_mask_lower = v_mask & 0xFF;
+            __mmask8 v_mask_upper = (v_mask >> 8) & 0xFF;
+
+            __m512i v_indices1 =
+                _mm512_set_epi64(j + 7, j + 6, j + 5, j + 4, j + 3, j + 2, j + 1, j);
+            __m512i v_indices2 = _mm512_set_epi64(j + 15, j + 14, j + 13, j + 12, j + 11,
+                                                  j + 10, j + 9, j + 8);
+
+            v_labels1.v = _mm512_mask_blend_epi64(v_mask_lower, v_labels1.v, v_indices1);
+            v_labels2.v = _mm512_mask_blend_epi64(v_mask_upper, v_labels2.v, v_indices2);
+#else
+            __m512i v_indices = _mm512_set_epi32(j + 15, j + 14, j + 13, j + 12, j + 11,
+                                                 j + 10, j + 9, j + 8, j + 7, j + 6,
+                                                 j + 5, j + 4, j + 3, j + 2, j + 1, j);
+            v_labels.v = _mm512_mask_blend_epi32(v_mask, v_labels.v, v_indices);
+#endif
+            v_smallest_dists.v = _mm256_min_ph(v_smallest_dists.v, v_tmp);
+        }
+
+#if defined(AOCLDA_ILP64)
+        da_int label = v_labels1.i[0];
+        for (da_int j = 1; j < 8; j++) {
+            if (v_smallest_dists.h[j] < v_smallest_dists.h[0]) {
+                v_smallest_dists.h[0] = v_smallest_dists.h[j];
+                label = (da_int)v_labels1.i[j];
+            }
+        }
+        for (da_int j = 8; j < 15; j++) {
+            if (v_smallest_dists.h[j] < v_smallest_dists.h[0]) {
+                v_smallest_dists.h[0] = v_smallest_dists.h[j];
+                label = (da_int)v_labels2.i[j - 8];
+            }
+        }
+        if (v_smallest_dists.h[15] < v_smallest_dists.h[0]) {
+            label = (da_int)v_labels2.i[7];
+        }
+#else
+        da_int label = (da_int)v_labels.i[0];
+        for (da_int j = 1; j < 15; j++) {
+            if (v_smallest_dists.h[j] < v_smallest_dists.h[0]) {
+                v_smallest_dists.h[0] = v_smallest_dists.h[j];
+                label = (da_int)v_labels.i[j];
+            }
+        }
+        if (v_smallest_dists.h[15] < v_smallest_dists.h[0]) {
+            label = (da_int)v_labels.i[15];
+        }
+#endif
+        labels[i] = label;
+        if (update_centres)
+            cluster_count[label] += 1;
+    }
+}
+
+// 512-bit: 32 × _Float16 elements per iteration
+template <>
+void lloyd_iteration_kernel<_Float16, vectorization_type::avx512>(
+    bool update_centres, da_int block_size, _Float16 *centre_norms, da_int *cluster_count,
+    da_int *labels, _Float16 *work, da_int ldwork, da_int n_clusters) {
+
+    v32hf_t v_smallest_dists;
+
+    __m512h v_centre_norms = _mm512_loadu_ph(centre_norms);
+
+    for (da_int i = 0; i < block_size; i++) {
+        da_int ind_outer = i * ldwork;
+        v_smallest_dists.v =
+            _mm512_add_ph(_mm512_loadu_ph(work + ind_outer), v_centre_norms);
+
+#if defined(AOCLDA_ILP64)
+        v8i64_t v_labels1, v_labels2, v_labels3, v_labels4;
+        v_labels1.v = _mm512_set_epi64(7, 6, 5, 4, 3, 2, 1, 0);
+        v_labels2.v = _mm512_set_epi64(15, 14, 13, 12, 11, 10, 9, 8);
+        v_labels3.v = _mm512_set_epi64(23, 22, 21, 20, 19, 18, 17, 16);
+        v_labels4.v = _mm512_set_epi64(31, 30, 29, 28, 27, 26, 25, 24);
+#else
+        v16i32_t v_labels1, v_labels2;
+        v_labels1.v =
+            _mm512_set_epi32(15, 14, 13, 12, 11, 10, 9, 8, 7, 6, 5, 4, 3, 2, 1, 0);
+        v_labels2.v = _mm512_set_epi32(31, 30, 29, 28, 27, 26, 25, 24, 23, 22, 21, 20, 19,
+                                       18, 17, 16);
+#endif
+
+        for (da_int j = 32; j < n_clusters; j += 32) {
+            da_int ind_inner = ind_outer + j;
+            __m512h v_tmp = _mm512_add_ph(_mm512_loadu_ph(work + ind_inner),
+                                          _mm512_loadu_ph(centre_norms + j));
+            __mmask32 v_mask = _mm512_cmp_ph_mask(v_tmp, v_smallest_dists.v, _CMP_LT_OQ);
+
+#if defined(AOCLDA_ILP64)
+            __mmask8 v_mask0 = v_mask & 0xFF;
+            __mmask8 v_mask1 = (v_mask >> 8) & 0xFF;
+            __mmask8 v_mask2 = (v_mask >> 16) & 0xFF;
+            __mmask8 v_mask3 = (v_mask >> 24) & 0xFF;
+
+            __m512i v_indices1 =
+                _mm512_set_epi64(j + 7, j + 6, j + 5, j + 4, j + 3, j + 2, j + 1, j);
+            __m512i v_indices2 = _mm512_set_epi64(j + 15, j + 14, j + 13, j + 12, j + 11,
+                                                  j + 10, j + 9, j + 8);
+            __m512i v_indices3 = _mm512_set_epi64(j + 23, j + 22, j + 21, j + 20, j + 19,
+                                                  j + 18, j + 17, j + 16);
+            __m512i v_indices4 = _mm512_set_epi64(j + 31, j + 30, j + 29, j + 28, j + 27,
+                                                  j + 26, j + 25, j + 24);
+
+            v_labels1.v = _mm512_mask_blend_epi64(v_mask0, v_labels1.v, v_indices1);
+            v_labels2.v = _mm512_mask_blend_epi64(v_mask1, v_labels2.v, v_indices2);
+            v_labels3.v = _mm512_mask_blend_epi64(v_mask2, v_labels3.v, v_indices3);
+            v_labels4.v = _mm512_mask_blend_epi64(v_mask3, v_labels4.v, v_indices4);
+#else
+            __mmask16 v_mask_lower = v_mask & 0xFFFF;
+            __mmask16 v_mask_upper = (v_mask >> 16) & 0xFFFF;
+
+            __m512i v_indices1 = _mm512_set_epi32(j + 15, j + 14, j + 13, j + 12, j + 11,
+                                                  j + 10, j + 9, j + 8, j + 7, j + 6,
+                                                  j + 5, j + 4, j + 3, j + 2, j + 1, j);
+            __m512i v_indices2 = _mm512_set_epi32(
+                j + 31, j + 30, j + 29, j + 28, j + 27, j + 26, j + 25, j + 24, j + 23,
+                j + 22, j + 21, j + 20, j + 19, j + 18, j + 17, j + 16);
+
+            v_labels1.v = _mm512_mask_blend_epi32(v_mask_lower, v_labels1.v, v_indices1);
+            v_labels2.v = _mm512_mask_blend_epi32(v_mask_upper, v_labels2.v, v_indices2);
+#endif
+            v_smallest_dists.v = _mm512_min_ph(v_smallest_dists.v, v_tmp);
+        }
+
+#if defined(AOCLDA_ILP64)
+        da_int label = v_labels1.i[0];
+        for (da_int j = 1; j < 8; j++) {
+            if (v_smallest_dists.h[j] < v_smallest_dists.h[0]) {
+                v_smallest_dists.h[0] = v_smallest_dists.h[j];
+                label = (da_int)v_labels1.i[j];
+            }
+        }
+        for (da_int j = 8; j < 16; j++) {
+            if (v_smallest_dists.h[j] < v_smallest_dists.h[0]) {
+                v_smallest_dists.h[0] = v_smallest_dists.h[j];
+                label = (da_int)v_labels2.i[j - 8];
+            }
+        }
+        for (da_int j = 16; j < 24; j++) {
+            if (v_smallest_dists.h[j] < v_smallest_dists.h[0]) {
+                v_smallest_dists.h[0] = v_smallest_dists.h[j];
+                label = (da_int)v_labels3.i[j - 16];
+            }
+        }
+        for (da_int j = 24; j < 31; j++) {
+            if (v_smallest_dists.h[j] < v_smallest_dists.h[0]) {
+                v_smallest_dists.h[0] = v_smallest_dists.h[j];
+                label = (da_int)v_labels4.i[j - 24];
+            }
+        }
+        if (v_smallest_dists.h[31] < v_smallest_dists.h[0]) {
+            label = (da_int)v_labels4.i[7];
+        }
+#else
+        da_int label = (da_int)v_labels1.i[0];
+        for (da_int j = 1; j < 16; j++) {
+            if (v_smallest_dists.h[j] < v_smallest_dists.h[0]) {
+                v_smallest_dists.h[0] = v_smallest_dists.h[j];
+                label = (da_int)v_labels1.i[j];
+            }
+        }
+        for (da_int j = 16; j < 31; j++) {
+            if (v_smallest_dists.h[j] < v_smallest_dists.h[0]) {
+                v_smallest_dists.h[0] = v_smallest_dists.h[j];
+                label = (da_int)v_labels2.i[j - 16];
+            }
+        }
+        if (v_smallest_dists.h[31] < v_smallest_dists.h[0]) {
+            label = (da_int)v_labels2.i[15];
+        }
+#endif
+        labels[i] = label;
+        if (update_centres)
+            cluster_count[label] += 1;
+    }
+}
+
+#endif // __AVX512FP16__
 
 // LCOV_EXCL_STOP
 

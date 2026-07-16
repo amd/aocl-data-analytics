@@ -27,6 +27,7 @@
 #include "da_std.hpp"
 #include "da_utils.hpp"
 #include "da_vector.hpp"
+#include "fp16_helpers.hpp"
 #include "miscellaneous.hpp"
 #include "nearest_neighbors.hpp"
 #include "pairwise_distances.hpp"
@@ -80,7 +81,8 @@ using namespace kernel_templates;
 
 // clang-format off
 // d=2: multi-neighbor packing for avx2 / avx512.
-static const kernel_implementations<KFS, KFD> tsne_d2_impls = {
+static const kernel_implementations<KFS, KFD, KFH> &tsne_d2_impls() {
+    static const kernel_implementations<KFS, KFD, KFH> impls = {
 /*scalar*/ {{          attractive_forces_scalar_impl<float, 2>,
 /*   avx*/             attractive_forces_kt<bsz::b128, float, 2>,
 /*  avx2*/             attractive_forces_multi_d2<bsz::b256, float>,
@@ -88,11 +90,18 @@ static const kernel_implementations<KFS, KFD> tsne_d2_impls = {
 /*scalar*/ {{          attractive_forces_scalar_impl<double,2>,
 /*   avx*/             attractive_forces_kt<bsz::b128, double, 2>,
 /*  avx2*/             attractive_forces_multi_d2<bsz::b256, double>,
-/*avx512*/ ORL_AVX512F(attractive_forces_multi_d2<bsz::b512, double>) }}
-};
+/*avx512*/ ORL_AVX512F(attractive_forces_multi_d2<bsz::b512, double>) }},
+/*scalar*/ {{ ORL_AVXFP16(attractive_forces_scalar_impl<_Float16, 2>),
+/*   avx*/ ORL_AVXFP16(attractive_forces_kt<bsz::b128, _Float16, 2>),
+/*  avx2*/ ORL_AVXFP16(attractive_forces_multi_d2<bsz::b256, _Float16>),
+/*avx512*/ ORL_AVXFP16(attractive_forces_multi_d2<bsz::b512, _Float16>) }}
+    };
+    return impls;
+}
 
 // d=3: single-neighbor kt kernels.
-static const kernel_implementations<KFS, KFD> tsne_d3_impls = {
+static const kernel_implementations<KFS, KFD, KFH> &tsne_d3_impls() {
+    static const kernel_implementations<KFS, KFD, KFH> impls = {
 /*scalar*/ {{          attractive_forces_scalar_impl<float, 3>,
 /*   avx*/             attractive_forces_kt<bsz::b128, float, 3>,
 /*  avx2*/             attractive_forces_kt<bsz::b128, float, 3>,
@@ -100,17 +109,27 @@ static const kernel_implementations<KFS, KFD> tsne_d3_impls = {
 /*scalar*/ {{          attractive_forces_scalar_impl<double,3>,
 /*   avx*/             attractive_forces_scalar_impl<double, 3>,
 /*  avx2*/             attractive_forces_kt<bsz::b256, double, 3>,
-/*avx512*/ ORL_AVX512F(attractive_forces_kt<bsz::b256, double, 3>) }}
-};
+/*avx512*/ ORL_AVX512F(attractive_forces_kt<bsz::b256, double, 3>) }},
+/*scalar*/ {{ ORL_AVXFP16(attractive_forces_scalar_impl<_Float16, 3>),
+/*   avx*/ ORL_AVXFP16(attractive_forces_kt<bsz::b128, _Float16, 3>),
+/*  avx2*/ ORL_AVXFP16(attractive_forces_kt<bsz::b256, _Float16, 3>),
+/*avx512*/ ORL_AVXFP16(attractive_forces_kt<bsz::b512, _Float16, 3>) }}
+    };
+    return impls;
+}
 // clang-format on
 
-static const std::array<const kernel_implementations<KFS, KFD> *, 2>
-    attractive_forces_implementations = {{&tsne_d2_impls, &tsne_d3_impls}};
+static const std::array<const kernel_implementations<KFS, KFD, KFH> *, 2> &
+attractive_forces_implementations() {
+    static const std::array<const kernel_implementations<KFS, KFD, KFH> *, 2> impls = {
+        {&tsne_d2_impls(), &tsne_d3_impls()}};
+    return impls;
+}
 
 namespace testing {
-const std::array<const kernel_implementations<KFS, KFD> *, 2> &
+const std::array<const kernel_implementations<KFS, KFD, KFH> *, 2> &
 get_attractive_forces_implementations() {
-    return attractive_forces_implementations;
+    return attractive_forces_implementations();
 }
 } // namespace testing
 
@@ -153,11 +172,11 @@ template <typename T> void tsne<T>::assign_attractive_force_kernel() {
         return;
     }
     // Get best AVX ISA
-    vectorization_type isa = Oracle("tsne.isa");
+    vectorization_type isa = Oracle("tsne.isa", tid<T>());
     da_int n_comp = std::clamp(n_components, da_int(2), da_int(3)) - 2;
     // Get best kernel
     this->attractive_force_kernel_fn =
-        attractive_forces_implementations[n_comp]->get<T>(isa);
+        attractive_forces_implementations()[n_comp]->get<T>(isa);
 }
 
 template <typename T>
@@ -218,7 +237,8 @@ da_status tsne<T>::set_data(da_int n_samples_in, da_int n_features_in, const T *
     T temp_perplexity = (T)30.0;
     this->opts.get("perplexity", temp_perplexity);
 
-    reregister_tsne_options<T>(this->opts, n_samples, n_features);
+    reregister_tsne_options<std::conditional_t<std::is_same_v<T, _Float16>, float, T>>(
+        this->opts, n_samples, n_features);
 
     // Restore user values, clamped to valid range
     da_int max_components = std::min<da_int>(3, n_features);
@@ -234,12 +254,15 @@ da_status tsne<T>::set_data(da_int n_samples_in, da_int n_features_in, const T *
                            std::to_string(max_components) +
                            " due to the size of the data array.");
 
-    if (temp_perplexity > max_perplexity)
+    if (temp_perplexity > max_perplexity) {
+        using err_type = std::conditional_t<std::is_same_v<T, _Float16>, float, T>;
         return da_warn(this->err, da_status_incompatible_options,
                        "The requested perplexity has been decreased from " +
-                           std::to_string(temp_perplexity) + " to " +
-                           std::to_string(max_perplexity) +
+                           std::to_string(static_cast<err_type>(temp_perplexity)) +
+                           " to " +
+                           std::to_string(static_cast<err_type>(max_perplexity)) +
                            " due to the size of the data array.");
+    }
 
     return da_status_success;
 }
@@ -290,8 +313,8 @@ void compute_row_probabilities(const T *sq_distances, da_int k, T log_perplexity
     if (k == 0)
         return;
 
-    constexpr da_int max_iter = 100;
-    constexpr T binary_search_tol = (T)1e-5;
+    constexpr da_int max_iter = std::is_same_v<T, _Float16> ? 50 : 100;
+    constexpr T binary_search_tol = std::is_same_v<T, _Float16> ? (T)1e-3 : (T)1e-5;
 
     T beta = (T)1;
     T betamin = -std::numeric_limits<T>::infinity();
@@ -300,25 +323,25 @@ void compute_row_probabilities(const T *sq_distances, da_int k, T log_perplexity
     for (da_int iter = 0; iter < max_iter; ++iter) {
         T sum_p = (T)0, sum_dp = (T)0;
         for (da_int j = 0; j < k; ++j) {
-            const T p = std::exp(-beta * sq_distances[j]);
+            const T p = da_std::exp(-beta * sq_distances[j]);
             row_prob[j] = p;
             sum_p += p;
             sum_dp += sq_distances[j] * p;
         }
         if (sum_p <= (T)0) {
             betamax = beta;
-            beta = std::isinf(betamin) ? beta / (T)2 : (beta + betamin) / (T)2;
+            beta = da_std::isinf(betamin) ? beta / (T)2 : (beta + betamin) / (T)2;
             continue;
         }
-        const T H = std::log(sum_p) + beta * sum_dp / sum_p;
-        if (std::abs(H - log_perplexity) < binary_search_tol)
+        const T H = da_std::log(sum_p) + beta * sum_dp / sum_p;
+        if (da_std::abs(H - log_perplexity) < binary_search_tol)
             break;
         if (H > log_perplexity) {
             betamin = beta;
-            beta = std::isinf(betamax) ? beta * (T)2 : (beta + betamax) / (T)2;
+            beta = da_std::isinf(betamax) ? beta * (T)2 : (beta + betamax) / (T)2;
         } else {
             betamax = beta;
-            beta = std::isinf(betamin) ? beta / (T)2 : (beta + betamin) / (T)2;
+            beta = da_std::isinf(betamin) ? beta / (T)2 : (beta + betamin) / (T)2;
         }
     }
 
@@ -410,8 +433,18 @@ static da_status compute_distances_exact(da_int n, da_int n_features, const T *X
         return da_error(err, da_status_memory_error, // LCOV_EXCL_LINE
                         "Memory allocation error.");
     }
-    da_status status = da_metrics::pairwise_distances::sqeuclidean(
-        row_major, n, n, n_features, X, n_features, X, n_features, dist_matrix.data(), n);
+    da_status status;
+    if constexpr (std::is_same_v<T, _Float16>) {
+        // sqeuclidean lacks a _Float16 instantiation; the gemm-based path does.
+        // Passing Y=nullptr signals X_is_Y inside euclidean_gemm.
+        status = da_metrics::pairwise_distances::euclidean_gemm<T>(
+            row_major, n, n, n_features, X, n_features, X, n_features, dist_matrix.data(),
+            n, /*square_distances=*/true);
+    } else {
+        status = da_metrics::pairwise_distances::sqeuclidean(row_major, n, n, n_features,
+                                                             X, n_features, X, n_features,
+                                                             dist_matrix.data(), n);
+    }
     if (status != da_status_success)
         return da_error_bypass( // LCOV_EXCL_LINE
             err, status, "Failed to compute pairwise distances for affinities.");
@@ -435,58 +468,66 @@ static da_status compute_distances_knn(da_int k, da_int n, da_int n_features, co
                                        da_errors::da_error_t *err,
                                        da_vector::da_vector<da_int> &neighbor_indices,
                                        da_vector::da_vector<T> &sq_distances) {
-    // use k+1 to ensure we get k neighbors (we will skip the self-neighbor)
-    da_int k_query = k + 1;
 
-    da_neighbors::neighbors<T> nn(*err);
-    da_status status = nn.get_opts().set("storage order", "row-major");
-    if (status != da_status_success)
-        return status; // LCOV_EXCL_LINE
-    status = nn.get_opts().set("algorithm", "auto");
-    if (status != da_status_success)
-        return status; // LCOV_EXCL_LINE
-    status = nn.get_opts().set("metric", "euclidean");
-    if (status != da_status_success)
-        return status; // LCOV_EXCL_LINE
+    if constexpr (std::is_same_v<T, _Float16>) {
+        return da_error(
+            err, da_status_incompatible_options,
+            "The use of mixed precision iterative refinement with float32 data "
+            "is not supported for theta > 0.");
+    } else {
+        // use k+1 to ensure we get k neighbors (we will skip the self-neighbor)
+        da_int k_query = k + 1;
 
-    da_vector::da_vector<da_int> n_ind;
-    da_vector::da_vector<T> n_dist;
-    try {
-        n_ind.resize(n * k_query);
-        n_dist.resize(n * k_query);
-        neighbor_indices.resize(n * k);
-        sq_distances.resize(n * k);
-    } catch (std::bad_alloc &) {
-        return da_error(err, da_status_memory_error, // LCOV_EXCL_LINE
-                        "Memory allocation error.");
-    }
+        da_neighbors::neighbors<T> nn(*err);
+        da_status status = nn.get_opts().set("storage order", "row-major");
+        if (status != da_status_success)
+            return status; // LCOV_EXCL_LINE
+        status = nn.get_opts().set("algorithm", "auto");
+        if (status != da_status_success)
+            return status; // LCOV_EXCL_LINE
+        status = nn.get_opts().set("metric", "euclidean");
+        if (status != da_status_success)
+            return status; // LCOV_EXCL_LINE
 
-    status = nn.set_data(n, n_features, X, n_features);
-    if (status != da_status_success)
-        return status; // LCOV_EXCL_LINE
-
-    status = nn.kneighbors(n, n_features, X, n_features, n_ind.data(), n_dist.data(),
-                           k_query, true);
-    if (status != da_status_success)
-        return da_error_bypass( // LCOV_EXCL_LINE
-            err, status, "Failed to compute nearest neighbors for affinities.");
-
-    for (da_int i = 0; i < n; ++i) {
-        const da_int in_base = i * k_query;
-        const da_int out_base = i * k;
-        da_int filled = 0;
-        for (da_int t = 0; t < k_query && filled < k; ++t) {
-            const da_int j = n_ind[in_base + t];
-            if (j == i)
-                continue;
-            neighbor_indices[out_base + filled] = j;
-            const T d = n_dist[in_base + t];
-            sq_distances[out_base + filled] = d * d;
-            ++filled;
+        da_vector::da_vector<da_int> n_ind;
+        da_vector::da_vector<T> n_dist;
+        try {
+            n_ind.resize(n * k_query);
+            n_dist.resize(n * k_query);
+            neighbor_indices.resize(n * k);
+            sq_distances.resize(n * k);
+        } catch (std::bad_alloc &) {
+            return da_error(err, da_status_memory_error, // LCOV_EXCL_LINE
+                            "Memory allocation error.");
         }
-    }
 
-    return da_status_success;
+        status = nn.set_data(n, n_features, X, n_features);
+        if (status != da_status_success)
+            return status; // LCOV_EXCL_LINE
+
+        status = nn.kneighbors(n, n_features, X, n_features, n_ind.data(), n_dist.data(),
+                               k_query, true);
+        if (status != da_status_success)
+            return da_error_bypass( // LCOV_EXCL_LINE
+                err, status, "Failed to compute nearest neighbors for affinities.");
+
+        for (da_int i = 0; i < n; ++i) {
+            const da_int in_base = i * k_query;
+            const da_int out_base = i * k;
+            da_int filled = 0;
+            for (da_int t = 0; t < k_query && filled < k; ++t) {
+                const da_int j = n_ind[in_base + t];
+                if (j == i)
+                    continue;
+                neighbor_indices[out_base + filled] = j;
+                const T d = n_dist[in_base + t];
+                sq_distances[out_base + filled] = d * d;
+                ++filled;
+            }
+        }
+
+        return da_status_success;
+    }
 }
 
 template <typename T>
@@ -497,7 +538,7 @@ da_status compute_affinities(T perplexity, bool use_exact, da_int n, da_int n_fe
     const da_int k =
         use_exact ? (n - 1) : std::min<da_int>(n - 1, (da_int)(3 * perplexity + 1));
 
-    const T log_perplexity = std::log(perplexity);
+    const T log_perplexity = da_std::log(perplexity);
 
     // Compute squared distances into flat n-by-k arrays
     da_vector::da_vector<da_int> neighbor_indices;
@@ -558,44 +599,60 @@ da_status tsne<T>::initialize_embedding(const std::string &init_method, da_int s
                         "Memory allocation error.");
     }
 
-    if (init_method == "pca") {
-        // PCA initialization: project onto first n_components principal components.
-        da_pca::pca<T> pca(*this->err);
-        auto &opts = pca.get_opts();
-        opts.set("storage order", "row-major");
-        opts.set("n_components", n_components);
-        opts.set("pca method", "covariance");
-        opts.set("seed", seed);
-
-        da_status status = pca.init(n_samples, n_features, X, n_features);
-        if (status != da_status_success)
-            return status; // LCOV_EXCL_LINE
-        status = pca.compute();
-        if (status != da_status_success)
-            return status; // LCOV_EXCL_LINE
-
-        status = pca.transform(n_samples, n_features, X, n_features, embedding.data(),
-                               n_components);
-        if (status != da_status_success)
-            return status; // LCOV_EXCL_LINE
-
-        // Scale to small variance for stable optimization.
-        // sklearn uses std of the first column: X_embedded / std(X_embedded[:,0]) * 1e-4
-        T mean = 0, var = 0;
-        constexpr T target_stdv = (T)1e-4;
-        da_basic_statistics::variance(row_major, da_axis_all, n_samples, 1,
-                                      embedding.data(), n_components, -1, &mean, &var);
-        T stdv = std::sqrt(var);
-        // Guard against near-zero std dev (e.g. constant-column input)
-        constexpr T eps_safety_factor = (T)100;
-        const T min_stdv = std::numeric_limits<T>::epsilon() * eps_safety_factor;
-
-        if (stdv > min_stdv) {
-            T scale = target_stdv / stdv;
-            for (T &v : embedding)
-                v *= scale;
+    if constexpr (std::is_same_v<T, _Float16>) {
+        if (theta > (T)0) {
+            return da_error(
+                this->err, da_status_incompatible_options,
+                "The use of mixed precision iterative refinement with float32 data "
+                "is not supported for theta > 0.");
         }
-        return da_status_success;
+    }
+
+    if (init_method == "pca") {
+        if constexpr (std::is_same_v<T, _Float16>) {
+            return da_error(this->err, da_status_incompatible_options,
+                            "PCA initialization is not supported when using mixed "
+                            "precision iterative refinement with float32 data.");
+        } else {
+            // PCA initialization: project onto first n_components principal components.
+            da_pca::pca<T> pca(*this->err);
+            auto &opts = pca.get_opts();
+            opts.set("storage order", "row-major");
+            opts.set("n_components", n_components);
+            opts.set("pca method", "covariance");
+            opts.set("seed", seed);
+
+            da_status status = pca.init(n_samples, n_features, X, n_features);
+            if (status != da_status_success)
+                return status; // LCOV_EXCL_LINE
+            status = pca.compute();
+            if (status != da_status_success)
+                return status; // LCOV_EXCL_LINE
+
+            status = pca.transform(n_samples, n_features, X, n_features, embedding.data(),
+                                   n_components);
+            if (status != da_status_success)
+                return status; // LCOV_EXCL_LINE
+
+            // Scale to small variance for stable optimization.
+            // sklearn uses std of the first column: X_embedded / std(X_embedded[:,0]) * 1e-4
+            T mean = 0, var = 0;
+            constexpr T target_stdv = (T)1e-4;
+            da_basic_statistics::variance(row_major, da_axis_all, n_samples, 1,
+                                          embedding.data(), n_components, -1, &mean,
+                                          &var);
+            T stdv = da_std::sqrt(var);
+            // Guard against near-zero std dev (e.g. constant-column input)
+            constexpr T eps_safety_factor = (T)100;
+            const T min_stdv = std::numeric_limits<T>::epsilon() * eps_safety_factor;
+
+            if (stdv > min_stdv) {
+                T scale = target_stdv / stdv;
+                for (T &v : embedding)
+                    v *= scale;
+            }
+            return da_status_success;
+        }
     }
 
     // Set up random number generator
@@ -608,9 +665,10 @@ da_status tsne<T>::initialize_embedding(const std::string &init_method, da_int s
     }
 
     // Random initialization
-    std::normal_distribution<T> normal((T)(0), (T)(1.0e-4));
+    using norm_type = std::conditional_t<std::is_same_v<T, _Float16>, float, T>;
+    std::normal_distribution<norm_type> normal((norm_type)(0), (norm_type)(1.0e-4));
     for (T &v : embedding)
-        v = normal(rng);
+        v = static_cast<T>(normal(rng));
 
     return da_status_success;
 }
@@ -686,7 +744,7 @@ T compute_kl_divergence(da_int n, da_int d, const std::vector<da_int> &row_ptr,
             }
             const T Pij = std::max(p_vals[idx], eps);
             const T Qij = std::max((T)1 / (((T)1 + dist2) * sum_q_total), eps);
-            local += Pij * std::log(Pij / Qij);
+            local += Pij * da_std::log(Pij / Qij);
         }
         work[i] = local;
     }
@@ -923,7 +981,7 @@ da_status tsne<T>::gradient_descent_impl(T learning_rate, T early_exaggeration, 
             T grad_norm_sq = (T)0;
             for (da_int i = 0; i < n; ++i)
                 grad_norm_sq += thread_work[i];
-            if (min_grad_norm > 0 && std::sqrt(grad_norm_sq) <= min_grad_norm) {
+            if (min_grad_norm > 0 && da_std::sqrt(grad_norm_sq) <= min_grad_norm) {
                 n_iter_performed = iter + 1;
                 break;
             }
@@ -958,99 +1016,104 @@ da_status tsne<T>::gradient_descent_impl(T learning_rate, T early_exaggeration, 
 
 /* Iterative refinement: run gradient descent in lower precision, then use the
    resulting embedding as the starting point for the working precision phase. */
-template <> da_status tsne<double>::lower_precision_init() {
+template <typename T> da_status tsne<T>::lower_precision_init() {
 
-    da_int lp_max_iter = 200;
-    double lp_min_grad_norm = 1.0e-4;
-    this->opts.get("low precision max_iter", lp_max_iter);
-    this->opts.get("low precision min_grad_norm", lp_min_grad_norm);
+    if constexpr (da_fp16::fp16_codegen_ok<lp_type>) {
 
-    const da_int nnz = (da_int)P_values.size();
-    const da_int nd = n_samples * n_components;
+        da_int lp_max_iter = 200;
+        T lp_min_grad_norm = 1.0e-4;
+        this->opts.get("low precision max_iter", lp_max_iter);
+        this->opts.get("low precision min_grad_norm", lp_min_grad_norm);
 
-    // Allocate and convert P_values to float; copy integer CSR arrays
-    std::vector<float> P_values_lp;
-    std::vector<da_int> P_row_ptr_copy;
-    std::vector<da_int> P_col_idx_copy;
-    try {
-        P_values_lp.resize(nnz);
-        P_row_ptr_copy = P_row_ptr;
-        P_col_idx_copy = P_col_idx;
-    } catch (std::bad_alloc &) {
-        return da_error(this->err, da_status_memory_error,
-                        "Memory allocation error in lower_precision_init.");
-    }
-    for (da_int i = 0; i < nnz; ++i)
-        P_values_lp[i] = static_cast<float>(P_values[i]);
+        const da_int nnz = (da_int)P_values.size();
+        const da_int nd = n_samples * n_components;
 
-    // Handle embedding for LP phase: if user supplied one, convert it;
-    // otherwise pass an empty vector and let the LP phase initialize its own.
-    std::vector<float> embedding_lp;
-    if (has_supplied_embedding) {
+        // Allocate and convert P_values to lp_type; copy integer CSR arrays
+        std::vector<lp_type> P_values_lp;
+        std::vector<da_int> P_row_ptr_copy;
+        std::vector<da_int> P_col_idx_copy;
         try {
-            embedding_lp.resize(nd);
+            P_values_lp.resize(nnz);
+            P_row_ptr_copy = P_row_ptr;
+            P_col_idx_copy = P_col_idx;
         } catch (std::bad_alloc &) {
             return da_error(this->err, da_status_memory_error,
                             "Memory allocation error in lower_precision_init.");
         }
+        for (da_int i = 0; i < nnz; ++i)
+            P_values_lp[i] = static_cast<lp_type>(P_values[i]);
 
-        for (da_int i = 0; i < nd; ++i)
-            embedding_lp[i] = static_cast<float>(supplied_embedding[i]);
-    }
+        // Handle embedding for LP phase: if user supplied one, convert it;
+        // otherwise pass an empty vector and let the LP phase initialize its own.
+        std::vector<lp_type> embedding_lp;
+        if (has_supplied_embedding) {
+            try {
+                embedding_lp.resize(nd);
+            } catch (std::bad_alloc &) {
+                return da_error(this->err, da_status_memory_error,
+                                "Memory allocation error in lower_precision_init.");
+            }
 
-    // Create a float t-SNE instance via bypass constructor
-    tsne<float> lp_tsne(
-        *this->err, n_samples, n_features, n_components, lp_max_iter,
-        static_cast<float>(learning_rate), static_cast<float>(early_exaggeration),
-        static_cast<float>(theta), static_cast<float>(lp_min_grad_norm),
-        n_iter_without_progress, std::move(P_row_ptr_copy), std::move(P_col_idx_copy),
-        std::move(P_values_lp), std::move(embedding_lp), init_method, seed);
+            for (da_int i = 0; i < nd; ++i)
+                embedding_lp[i] = static_cast<lp_type>(supplied_embedding[i]);
+        }
 
-    // If no user-supplied embedding, the LP instance needs X data (in float)
-    // so that it can initialize its own embedding (PCA or random).
-    if (!has_supplied_embedding) {
-        const da_int n_total = n_samples * n_features;
+        // Create a float t-SNE instance via bypass constructor
+        tsne<lp_type> lp_tsne(
+            *this->err, n_samples, n_features, n_components, lp_max_iter,
+            static_cast<lp_type>(learning_rate), static_cast<lp_type>(early_exaggeration),
+            static_cast<lp_type>(theta), static_cast<lp_type>(lp_min_grad_norm),
+            n_iter_without_progress, std::move(P_row_ptr_copy), std::move(P_col_idx_copy),
+            std::move(P_values_lp), std::move(embedding_lp), init_method, seed);
+
+        // If no user-supplied embedding, the LP instance needs X data
+        // so that it can initialize its own embedding (PCA or random).
+        if (!has_supplied_embedding) {
+            const da_int n_total = n_samples * n_features;
+            try {
+                lp_tsne.X_copy.resize(n_total);
+            } catch (std::bad_alloc &) {
+                return da_error(this->err, da_status_memory_error,
+                                "Memory allocation error in lower_precision_init.");
+            }
+            da_utils::copy_array_convert_precision<T, lp_type>(
+                row_major, n_samples, n_features, X, n_features, lp_tsne.X_copy.data(),
+                n_features);
+            lp_tsne.X = lp_tsne.X_copy.data();
+        }
+
+        // Run the low precision t-SNE
+        da_status status = lp_tsne.compute();
+        if (status != da_status_success)
+            return status;
+
+        lp_n_iter = lp_tsne.n_iter_performed;
+
+        // Copy the refined embedding back to double precision
         try {
-            lp_tsne.X_copy.resize(n_total);
+            embedding.resize(nd);
+            iY.resize(nd);
+            gains.resize(nd);
         } catch (std::bad_alloc &) {
             return da_error(this->err, da_status_memory_error,
                             "Memory allocation error in lower_precision_init.");
         }
-        for (da_int i = 0; i < n_total; ++i)
-            lp_tsne.X_copy[i] = static_cast<float>(X[i]);
-        lp_tsne.X = lp_tsne.X_copy.data();
+        for (da_int i = 0; i < nd; ++i) {
+            embedding[i] = static_cast<T>(lp_tsne.embedding[i]);
+            iY[i] = static_cast<T>(lp_tsne.iY[i]);
+            gains[i] = static_cast<T>(lp_tsne.gains[i]);
+        }
+        start_iter = lp_n_iter;
+        return da_status_success;
+    } else {
+        // lp_type == _Float16 on a target without AVX-512 FP16: half-precision
+        // refinement is runtime-dead and deliberately not code-generated here.
+        return da_status_invalid_option; // LCOV-EXCL_LINE
     }
-
-    // Run the low precision t-SNE
-    da_status status = lp_tsne.compute();
-    if (status != da_status_success)
-        return status;
-
-    lp_n_iter = lp_tsne.n_iter_performed;
-
-    // Copy the refined embedding back to double precision
-    try {
-        embedding.resize(nd);
-        iY.resize(nd);
-        gains.resize(nd);
-    } catch (std::bad_alloc &) {
-        return da_error(this->err, da_status_memory_error,
-                        "Memory allocation error in lower_precision_init.");
-    }
-    for (da_int i = 0; i < nd; ++i) {
-        embedding[i] = static_cast<double>(lp_tsne.embedding[i]);
-        iY[i] = static_cast<double>(lp_tsne.iY[i]);
-        gains[i] = static_cast<double>(lp_tsne.gains[i]);
-    }
-    start_iter = lp_n_iter;
-    return da_status_success;
 }
 
-template <> da_status tsne<float>::lower_precision_init() {
-    // No lower precision available for float yet (future: half precision)
-    return da_error(this->err, da_status_invalid_option,
-                    "Mixed precision is not supported for single precision data. "
-                    "It is only available when the working precision is double.");
+template <> da_status tsne<_Float16>::lower_precision_init() {
+    return da_status_invalid_option; // LCOV-EXCL_LINE
 }
 
 template <typename T> da_status tsne<T>::compute() {
@@ -1260,6 +1323,45 @@ template void compute_repulsive_forces<double, 2>(BarnesHutTree<double, 2> &, da
 template void compute_repulsive_forces<double, 3>(BarnesHutTree<double, 3> &, da_int,
                                                   double *, double &,
                                                   std::vector<double> &);
+
+#ifdef __AVX512FP16__
+template class tsne<_Float16>;
+template void compute_row_probabilities<_Float16>(const _Float16 *, da_int, _Float16,
+                                                  _Float16 *);
+template da_status compute_affinities<_Float16>(_Float16, bool, da_int, da_int,
+                                                const _Float16 *, da_errors::da_error_t *,
+                                                std::vector<da_int> &,
+                                                std::vector<da_int> &,
+                                                std::vector<_Float16> &);
+template _Float16 compute_kl_divergence<_Float16>(da_int, da_int,
+                                                  const std::vector<da_int> &,
+                                                  const std::vector<da_int> &,
+                                                  const std::vector<_Float16> &,
+                                                  const std::vector<_Float16> &, _Float16,
+                                                  std::vector<_Float16> &);
+template void compute_attractive_forces<_Float16>(
+    da_int, da_int, _Float16, const std::vector<da_int> &, const std::vector<da_int> &,
+    const std::vector<_Float16> &, const std::vector<_Float16> &,
+    const std::vector<_Float16> &, _Float16, std::vector<_Float16> &,
+    attractive_forces_kernel_fn<_Float16>);
+template void update_embedding<_Float16>(da_int, da_int, _Float16, _Float16,
+                                         std::vector<_Float16> &, std::vector<_Float16> &,
+                                         std::vector<_Float16> &,
+                                         std::vector<_Float16> &);
+template da_status symmetrize_to_csr<_Float16>(da_int, da_int, const da_int *,
+                                               const _Float16 *, std::vector<da_int> &,
+                                               std::vector<da_int> &,
+                                               std::vector<_Float16> &);
+template void compute_repulsive_forces<_Float16, 1>(BarnesHutTree<_Float16, 1> &, da_int,
+                                                    _Float16 *, _Float16 &,
+                                                    std::vector<_Float16> &);
+template void compute_repulsive_forces<_Float16, 2>(BarnesHutTree<_Float16, 2> &, da_int,
+                                                    _Float16 *, _Float16 &,
+                                                    std::vector<_Float16> &);
+template void compute_repulsive_forces<_Float16, 3>(BarnesHutTree<_Float16, 3> &, da_int,
+                                                    _Float16 *, _Float16 &,
+                                                    std::vector<_Float16> &);
+#endif
 
 } // namespace da_tsne
 

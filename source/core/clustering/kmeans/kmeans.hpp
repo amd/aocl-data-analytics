@@ -103,7 +103,7 @@ template <typename T> class kmeans : public basic_handle<T> {
     da_int afk_mcmc_samples = 50;
 
     // Convergence tolerance
-    T tol = 1.0, lp_tol = 1.0;
+    T tol = (T)1.0, lp_tol = (T)1.0;
 
     // Bools related to mixed precision iterative refinement
     bool use_mixed_precision =
@@ -117,7 +117,8 @@ template <typename T> class kmeans : public basic_handle<T> {
     da_int padding = 0;
 
     // Norm of previous cluster centre array, for use in convergence testing
-    T normc = 0.0;
+    T normc = (T)0.0;
+    float normc_f = 0.0f; // Float-promoted version for _Float16 convergence testing
 
     // friend ANN class so we can do spherical k-means if necessary
     friend class ARCH::da_approx_nn::approximate_neighbors<T>;
@@ -154,12 +155,12 @@ template <typename T> class kmeans : public basic_handle<T> {
 
     // Lower precision data members (int16 is a proxy for bfloat16, though we don't use it yet)
     using lp_type =
-        typename std::conditional<std::is_same_v<T, double>, float, int16_t>::type;
+        typename std::conditional<std::is_same_v<T, double>, float, _Float16>::type;
     std::vector<lp_type> A_lp; // Lower precision copy of A for mixed precision
     std::vector<lp_type> C_lp; // Lower precision copy of C for mixed precision
 
     // Arrays used internally, and to store results
-    T best_inertia = 0.0, current_inertia = 0.0; // Inertia
+    T best_inertia = (T)0.0, current_inertia = (T)0.0; // Inertia
     std::vector<T> workcc1, workcs1, works1, works2, works3, works4, works5, workc1,
         workc2, workc3;
     std::vector<T> data_norms;     // Precomputed ||x_i|| for spherical k-means

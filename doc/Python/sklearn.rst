@@ -48,7 +48,17 @@ You can switch back to standard scikit-learn using
 
    undo_skpatch()
 
-Note that after calling ``undo_skpatch``, you must reimport scikit-learn.
+Note that ``undo_skpatch`` restores the original classes on the scikit-learn submodules directly;
+you do not need to reimport them. Names imported directly into local scope are not restored,
+however:
+
+.. code-block::
+
+   skpatch()
+   from sklearn.neighbors import KNeighborsClassifier   # binds the AOCL-DA replacement
+   undo_skpatch()
+   clf = KNeighborsClassifier()   # still AOCL-DA — rebind explicitly if needed:
+   KNeighborsClassifier = sklearn.neighbors.KNeighborsClassifier
 
 The ``skpatch`` and ``undo_skpatch`` functions can also be called with string or list arguments, specifying which scikit-learn package should be patched, for example:
 

@@ -97,14 +97,14 @@ TEST_F(HandleSerializationErrorTest, SaveToBufferClearsGarbage) {
     ASSERT_EQ(da_pca_compute_d(handle), da_status_success);
 
     // Buffer with garbage data
-    std::vector<char> buffer(500, 0xAB);
+    std::vector<char> buffer(500, 0x1A);
     ASSERT_FALSE(buffer.empty());
 
     // Save should clear garbage and produce valid data
     ASSERT_EQ(da_handle_save_model(handle, buffer), da_status_success);
 
     // Buffer should not start with garbage anymore
-    EXPECT_NE(buffer[0], static_cast<char>(0xAB));
+    EXPECT_NE(buffer[0], static_cast<char>(0x1A));
 
     // Verify the saved data can be loaded
     da_handle loaded = nullptr;
@@ -118,7 +118,7 @@ TEST_F(HandleSerializationErrorTest, SaveToBufferClearsGarbage) {
 // ==================== LOAD ERRORS ====================
 
 TEST_F(HandleSerializationErrorTest, LoadFromNullPtrHandleBufferPath) {
-    std::vector<char> buffer(100, 0xFF);
+    std::vector<char> buffer(100, 0x3F);
     EXPECT_EQ(da_handle_load_model(nullptr, buffer.data(), buffer.size()),
               da_status_invalid_pointer);
 }
@@ -164,7 +164,7 @@ TEST_F(HandleSerializationErrorTest, LoadFromNullFilename) {
 
 TEST_F(HandleSerializationErrorTest, LoadFromBufferZeroSize) {
     da_handle handle = nullptr;
-    std::vector<char> buffer(100, 0xFF);
+    std::vector<char> buffer(100, 0x2F);
     EXPECT_EQ(da_handle_load_model(&handle, buffer.data(), 0), da_status_invalid_input);
     EXPECT_EQ(handle, nullptr);
 }
@@ -200,7 +200,7 @@ TEST_F(HandleSerializationErrorTest, LoadFromEmptyFile) {
 
 TEST_F(HandleSerializationErrorTest, LoadFromCorruptBuffer) {
     da_handle handle = nullptr;
-    std::vector<char> buffer(3, 0xFF);
+    std::vector<char> buffer(3, 0x1F);
     da_status status = da_handle_load_model(&handle, buffer.data(), buffer.size());
     EXPECT_EQ(status, da_status_invalid_file_data);
     EXPECT_EQ(handle, nullptr);

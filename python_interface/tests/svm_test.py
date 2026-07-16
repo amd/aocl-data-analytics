@@ -145,6 +145,10 @@ def test_svc_functionality(numpy_precision, numpy_order, mixed_precision):
     """
     Test the functionality of the Python wrapper
     """
+    # float32 mixed precision uses a _Float16 warm start, which requires Zen6
+    # hardware (AVX-512-FP16). Skip it where that cannot be guaranteed.
+    if mixed_precision and numpy_precision == np.float32:
+        pytest.skip("float32 mixed precision uses _Float16, which requires Zen6 hardware")
 
     X_train = np.array(
         [[1.92, -0.52],
@@ -230,6 +234,10 @@ def test_svr_functionality(numpy_precision, numpy_order, mixed_precision):
     """
     Test the functionality of the Python wrapper
     """
+    # float32 mixed precision uses a _Float16 warm start, which requires Zen6
+    # hardware (AVX-512-FP16). Skip it where that cannot be guaranteed.
+    if mixed_precision and numpy_precision == np.float32:
+        pytest.skip("float32 mixed precision uses _Float16, which requires Zen6 hardware")
 
     X_train = np.array(
         [[1.29, -0.73],

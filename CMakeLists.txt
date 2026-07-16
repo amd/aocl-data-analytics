@@ -119,7 +119,6 @@ option(BUILD_FORTRAN
 option(BUILD_ILP64 "ILP64 Support" OFF)
 if(NOT WIN32) # Linux options only
   option(ASAN "Enable Address SANitizer tool (GNU/Linux)" OFF)
-  option(MEMSAN "Enable MEMory SANitizer tool (GNU/Linux)" OFF)
   option(VALGRIND "Enable memory leak detection tool (GNU/Linux)" OFF)
 endif()
 option(BUILD_DOC "Build HTML documentation" OFF)
@@ -132,7 +131,6 @@ option(BUILD_SMP "Build using OpenMP and link to threaded BLAS and LAPACK" ON)
 option(VECTORIZATION_REPORTS "Generate vectorization reports" OFF)
 option(DA_LOGGING "Compile with debug printing" OFF)
 option(BUILD_SHARED_LIBS "Shared library build" OFF)
-option(USE_LIBMEM "Link with AOCL LibMem" OFF)
 # ARCH can be set as shown below, with default "native". If "dynamic" is set,
 # then a list of target architectures will be built and returned in BUILD_ARCHS.
 # If "native" is set, then the native architecture will be built, and the
@@ -178,6 +176,11 @@ set(SPARSE_INCLUDE_DIR
 set(UTILS_INCLUDE_DIR
     ""
     CACHE STRING "Path to UTILS include directory")
+if(NOT WIN32)
+  set(DLP_INCLUDE_DIR
+      ""
+      CACHE STRING "Path to DLP include directory")
+endif()
 set(KT_PATH
   ""
   CACHE PATH "Path to kernel templates (defaults to SPARSE_INCLUDE_DIR if unset)")
@@ -193,6 +196,11 @@ set(SPARSE_LIB
 set(UTILS_LIB
     ""
     CACHE STRING "Path to AOCL-UTILS library")
+if(NOT WIN32)
+  set(DLP_LIB
+      ""
+      CACHE STRING "Path to DLP library")
+endif()
 set(UTILS_CPUID_LIB
     ""
     CACHE STRING "Path to AU-CPUID library")
@@ -204,9 +212,6 @@ if(USE_EXISTING_DA)
       ""
       CACHE STRING "Path to existing DA library")
 endif()
-set(LIBMEM_LIB
-    ""
-    CACHE STRING "Path to LIBMEM library")
 
 # Even serial builds need an OpenMP runtime to enable correct LAPACK linking
 if(BUILD_SMP)
@@ -228,6 +233,7 @@ else()
   )
   # Suppress warnings about unrecognized #pragma omp directives in serial builds
   if(CMAKE_CXX_COMPILER_ID MATCHES "GNU|Clang")
+    # clang-cl also accepts this flag
     add_compile_options(-Wno-unknown-pragmas)
   endif()
 endif()
@@ -237,11 +243,6 @@ endif()
 if(ASAN AND NOT UNIX)
   message(WARNING "Address SANitizer is only supported in GNU/Linux")
   set(ASAN OFF)
-endif()
-
-if(MEMSAN AND NOT UNIX)
-  message(WARNING "MEMory SANitizer is only supported in GNU/Linux")
-  set(MEMSAN OFF)
 endif()
 
 if(VALGRIND AND NOT UNIX)
@@ -256,11 +257,6 @@ if(COVERAGE
         OR NOT UNIX))
   message(WARNING "Coverage is only supported for  GNU/Linux GCC Debug build")
   set(COVERAGE OFF)
-endif()
-
-if(USE_LIBMEM AND NOT UNIX)
-  message(WARNING "LibMem is only supported on Linux")
-  set(USE_LIBMEM OFF)
 endif()
 
 if(${CMAKE_BUILD_TYPE} MATCHES "Debug")
@@ -285,15 +281,6 @@ endif()
 # Use -fPIC always
 set(CMAKE_POSITION_INDEPENDENT_CODE ON)
 
-# Check for CL compatibility layer of clang
-cmake_path(GET CMAKE_CXX_COMPILER FILENAME COMPILER_BASENAME)
-if(COMPILER_BASENAME MATCHES
-   "^(.+-)?(clang-cl)(-[0-9]+(\\.[0-9]+)*)?(-[^.]+)?(\\.exe)?$")
-  set(CLANG_OPTIONS_STYLE "MSVC")
-else()
-  set(CLANG_OPTIONS_STYLE "GNU")
-endif()
-
 # Check we can find AOCL installation
 if(CMAKE_AOCL_ROOT STREQUAL ""
    AND (BLAS_INCLUDE_DIR STREQUAL ""
@@ -316,6 +303,10 @@ else()
   add_compile_definitions(NO_FORTRAN)
 endif()
 
+include(CompilerFlagsSupport)
+GetCompilerFamily(COMPILER_FAMILY)
+
+
 if(WIN32)
   # MSVC has warnings about deprecated CRT functions; these definitions overload
   # them automatically with _s versions
@@ -329,8 +320,7 @@ if(WIN32)
 
   # Clang-cl on Windows: ensure we are linking against the correct MSVC runtime
   # libraries
-  if(CMAKE_CXX_COMPILER_ID STREQUAL "Clang" AND CLANG_OPTIONS_STYLE STREQUAL
-                                                "MSVC")
+  if(COMPILER_FAMILY MATCHES "LLVM-CL")
     if(BUILD_SHARED_LIBS)
       set(CMAKE_MSVC_RUNTIME_LIBRARY "MultiThreaded$<$<CONFIG:Debug>:Debug>DLL")
     else()
@@ -342,9 +332,7 @@ if(WIN32)
   set(CMAKE_FIND_LIBRARY_SUFFIXES ".lib" ".dll")
 
   if(BUILD_FORTRAN)
-    # Clang-cl or MSVC require ifort for the Fortran compilation
-    if(CLANG_OPTIONS_STYLE STREQUAL "MSVC" OR CMAKE_CXX_COMPILER_ID STREQUAL
-                                              "MSVC")
+    if(COMPILER_FAMILY MATCHES "LLVM-CL")
       if(CMAKE_Fortran_COMPILER_ID MATCHES "Flang")
         if(NOT DEFINED ENV{FLANG_COMPILER})
           message(
@@ -356,7 +344,7 @@ if(WIN32)
         set(FLANG_LIBS "${FLANG_PATH}/lib")
         set(FORTRAN_RUNTIME "${FLANG_LIBS}/flang.lib"
                             "${FLANG_LIBS}/libpgmath.lib")
-      else()
+      elseif(CMAKE_Fortran_COMPILER_ID MATCHES "Intel")
         set(IFORT_LIBS
             "$ENV{LIB}"
             CACHE STRING
@@ -364,92 +352,47 @@ if(WIN32)
         set(FORTRAN_RUNTIME
             "$<IF:$<CONFIG:Debug>,libifcoremdd.lib,libifcoremd.lib>")
         add_compile_definitions(WIN_IFORT_NAME_MANGLING)
+      else()
+      message(FATAL_ERROR
+        "Unsupported Fortran compiler on Windows: ${CMAKE_Fortran_COMPILER_ID}"
+      )
       endif()
     else()
-      if(NOT DEFINED ENV{MINGW_BIN})
-        message(FATAL_ERROR "Environment variable \$MINGW_BIN not found.")
-      endif()
-
-      file(TO_CMAKE_PATH $ENV{MINGW_BIN} MINGW_PATH)
-      set(CMAKE_Fortran_COMPILER gfortran)
+      message(FATAL_ERROR
+        "Unsupported compiler on Windows: ${COMPILER_FAMILY}"
+      )
     endif()
   endif()
 
 else()
   if(BUILD_FORTRAN)
-    if(CMAKE_Fortran_COMPILER_ID MATCHES "Flang")
+    if(CMAKE_Fortran_COMPILER_ID STREQUAL "Flang") # AOCC 5.x
       set(FORTRAN_RUNTIME "flang")
-    else() # GNU
+    elseif(CMAKE_Fortran_COMPILER_ID STREQUAL "GNU")
       set(FORTRAN_RUNTIME "gfortran")
+    elseif(CMAKE_Fortran_COMPILER_ID STREQUAL "LLVMFlang")
+      IsAOCCFlang(IS_AOCC_FLANG)
+      if (IS_AOCC_FLANG)
+        set(FORTRAN_RUNTIME "flang") # AOCC AOF 6+
+      else()
+        set(FORTRAN_RUNTIME "FortranRuntime") # upstream LLVM 19+ Flang-new
+        endif()
+    else()
+        message(FATAL_ERROR "Unsupported Fortran compiler on GNU/Linux: ${CMAKE_Fortran_COMPILER_ID}")
     endif()
   endif()
+endif()
+if (BUILD_FORTRAN)
+    message(NOTICE "Fortran (${CMAKE_Fortran_COMPILER_ID}) runtime: ${FORTRAN_RUNTIME}")
 endif()
 
 # Look for linear algebra libraries dependencies
 include(AOCLDependencies)
+include(CompilerFlags)
 
 # If the user did not explicitly provide KT_PATH, default it to SPARSE_INCLUDE_DIR
 if(KT_PATH STREQUAL "")
   set(KT_PATH "${SPARSE_INCLUDE_DIR}")
-endif()
-
-if(CMAKE_CXX_COMPILER_ID MATCHES "MSVC"
-   OR (CMAKE_CXX_COMPILER_ID STREQUAL "Clang" AND CLANG_OPTIONS_STYLE STREQUAL
-                                                  "MSVC"))
-  # MSVC and clang-cl compiler flags
-  if(CMAKE_Fortran_COMPILER_ID MATCHES "Flang")
-    set(COMPILER_FLAGS_RELEASE "${COMPILER_FLAGS_RELEASE};-DNDEBUG")
-    set(COMPILER_FLAGS_DEBUG "${COMPILER_FLAGS_DEBUG};-Od")
-    set(COMPILER_FLAGS_CXX_DEBUG "${COMPILER_FLAGS_CXX_DEBUG};-W3;-DEBUG")
-    set(COMPILER_FLAGS_CXX "${COMPILER_FLAGS_CXX};/std:c++17;/EHsc")
-  else()
-    set(COMPILER_FLAGS_RELEASE "${COMPILER_FLAGS_RELEASE};/DNDEBUG;/O2;")
-    set(COMPILER_FLAGS_DEBUG "${COMPILER_FLAGS_DEBUG};/Od")
-    set(COMPILER_FLAGS_CXX_DEBUG "${COMPILER_FLAGS_CXX_DEBUG};/W3;/DEBUG")
-    set(COMPILER_FLAGS_CXX
-        "${COMPILER_FLAGS_CXX};/std:c++17;/EHsc;-Wno-nan-infinity-disabled;-Wno-macro-redefined"
-    )
-  endif()
-
-  if(VECTORIZATION_REPORTS)
-    set(COMPILER_FLAGS_CXX "${COMPILER_FLAGS_CXX};/Qvec-report:2")
-  endif()
-
-elseif(CMAKE_CXX_COMPILER_ID MATCHES "GNU"
-       OR (CMAKE_CXX_COMPILER_ID STREQUAL "Clang" AND CLANG_OPTIONS_STYLE
-                                                      STREQUAL "GNU"))
-  # GNU style compiler flags
-  set(COMPILER_FLAGS_CXX
-      "${COMPILER_FLAGS_CXX};-Wno-macro-redefined;-Wno-sign-conversion;-Wall;-Wextra;-Wpedantic;-Wunused;-Wunused-parameter;-Wunused-function;-Wunused-variable;-Wunused-but-set-variable;-Wno-gnu-zero-variadic-macro-arguments"
-  )
-  if(CMAKE_CXX_COMPILER_ID STREQUAL "Clang" AND CMAKE_CXX_COMPILER_VERSION
-                                                VERSION_GREATER_EQUAL "18.0.0")
-    set(COMPILER_FLAGS_CXX "${COMPILER_FLAGS_CXX};-Wno-nan-infinity-disabled")
-  endif()
-  if(NOT CMAKE_Fortran_COMPILER_ID MATCHES "Flang")
-    set(COMPILER_FLAGS_COMMON "${COMPILER_FLAGS_COMMON};-mavx2;-mfma;")
-  endif()
-
-  # Release flags
-  # -falign-loops=32 improves i-cache alignment for more stable benchmark performance
-  set(COMPILER_FLAGS_RELEASE
-      "${COMPILER_FLAGS_RELEASE};-DNDEBUG;-fopenmp-simd;-fno-fast-math;-falign-loops=32")
-  if(WIN32 AND CMAKE_CXX_COMPILER_ID STREQUAL "Clang")
-    set(COMPILER_FLAGS_DEBUG "${COMPILER_FLAGS_DEBUG};-O0")
-  else()
-    set(COMPILER_FLAGS_DEBUG "${COMPILER_FLAGS_DEBUG};-O0;-gdwarf-5;-g3;")
-  endif()
-
-  if(VECTORIZATION_REPORTS)
-    if(CMAKE_CXX_COMPILER_ID STREQUAL "Clang")
-      set(COMPILER_FLAGS_COMMON
-          "${COMPILER_FLAGS_COMMON};-Rpass=loop-vectorize;-Rpass-analysis=loop-vectorize;-Rpass-missed=loop-vectorize;-gline-tables-only;-gcolumn-info;"
-      )
-    elseif(CMAKE_CXX_COMPILER_ID MATCHES "GNU")
-      set(COMPILER_FLAGS_COMMON
-          "${COMPILER_FLAGS_COMMON};-fopt-info-vec-all=vectorization.txt")
-    endif()
-  endif()
 endif()
 
 # Add convenience cleaning add "add_dependencies(cleanall ...) to all custom
@@ -457,40 +400,10 @@ endif()
 # this needs to be before any `add_dependencies`
 add_custom_target(cleanall COMMAND ${CMAKE_MAKE_PROGRAM} clean)
 
-if(ASAN)
-  if(BUILD_FORTRAN AND CMAKE_Fortran_COMPILER_ID MATCHES "Flang")
-    message(WARNING
-      "Flang does not support -fsanitize=address; applying ASan to C/CXX only. "
-      "Fortran sources will be built without AddressSanitizer instrumentation.")
-    # Apply -fsanitize=address only to C and C++ compile lines
-    add_compile_options(
-      $<$<OR:$<COMPILE_LANGUAGE:C>,$<COMPILE_LANGUAGE:CXX>>:-fsanitize=address>)
-  else()
-    list(APPEND COMPILER_FLAGS_COMMON "-fsanitize=address")
-  endif()
-  # The ASan runtime must still be linked into final executables/shared libs
-  link_libraries("-fsanitize=address")
-endif()
-
 if(COVERAGE)
   # Include coverage flags and targets
   include(Coverage)
 endif()
-
-if((NOT WIN32) AND (NOT CMAKE_BUILD_TYPE MATCHES DEBUG))
-  # Avoid absolute file paths getting printed when using strings utility in
-  # linux
-  add_compile_options(
-    $<$<OR:$<COMPILE_LANGUAGE:C>,$<COMPILE_LANGUAGE:CXX>>:-fmacro-prefix-map=${CMAKE_SOURCE_DIR}=.>
-  )
-endif()
-
-add_compile_options(
-  "${COMPILER_FLAGS_COMMON};$<$<COMPILE_LANGUAGE:CXX>:${COMPILER_FLAGS_CXX}>")
-add_compile_options("$<$<CONFIG:Release>:${COMPILER_FLAGS_RELEASE}>")
-add_compile_options(
-  "$<$<CONFIG:Debug>:${COMPILER_FLAGS_DEBUG};$<$<OR:$<COMPILE_LANGUAGE:CXX>,$<COMPILE_LANGUAGE:C>>:${COMPILER_FLAGS_CXX_DEBUG}>>"
-)
 
 if(BUILD_DOC)
   add_subdirectory(doc)
@@ -579,25 +492,11 @@ endif()
 
 # Convenience banner, print relevant info
 message(STATUS "Building AOCL-DA ${AOCLDA_VERSION} (${CMAKE_BUILD_TYPE})")
-message(
-  NOTICE
-  "CXX Compiler ID         : ${CMAKE_CXX_COMPILER_ID} (${COMPILER_BASENAME}) platform id: ${CMAKE_CXX_PLATFORM_ID}"
-)
-
-if(CMAKE_BUILD_TYPE MATCHES "Debug")
-  message(
-    NOTICE
-    "COMPILER_FLAGS_COMMON   : ${COMPILER_FLAGS_COMMON}${COMPILER_FLAGS_DEBUG}")
-endif()
-
-if(CMAKE_BUILD_TYPE MATCHES "Release")
-  message(
-    NOTICE
-    "COMPILER_FLAGS_COMMON   : ${COMPILER_FLAGS_COMMON}${COMPILER_FLAGS_RELEASE}"
-  )
-endif()
-message(NOTICE "OpenMP flags          : ${OpenMP_CXX_FLAGS}")
-message(NOTICE "OpenMP linker flags   : ${OpenMP_EXE_LINKER_FLAGS}")
+message(NOTICE "CXX Compiler ID         : ${CMAKE_CXX_COMPILER_ID} platform id: ${CMAKE_CXX_PLATFORM_ID}")
+message(NOTICE "C Compiler ID           : ${CMAKE_C_COMPILER_ID}")
+message(NOTICE "Fortran Compiler ID     : ${CMAKE_Fortran_COMPILER_ID}")
+message(NOTICE "OpenMP flags            : ${OpenMP_CXX_FLAGS}")
+message(NOTICE "OpenMP linker flags     : ${OpenMP_EXE_LINKER_FLAGS}")
 message(NOTICE "\nOPTIONS")
 message(
   NOTICE
@@ -621,7 +520,6 @@ message(NOTICE
         "Shared library build      BUILD_SHARED_LIBS....: ${BUILD_SHARED_LIBS}")
 message(NOTICE "Building with Coverage    COVERAGE.............: ${COVERAGE}")
 message(NOTICE "Debug printing            DA_LOGGING...........: ${DA_LOGGING}")
-message(NOTICE "Building with MemSan      MEMSAN...............: ${MEMSAN}")
 message(NOTICE "Building with Valgrind    VALGRIND.............: ${VALGRIND}")
 if(${VALGRIND})
   message(
@@ -634,7 +532,6 @@ endif()
 message(
   NOTICE
   "Vectorization reports     VECTORIZATION_REPORTS: ${VECTORIZATION_REPORTS}")
-message(NOTICE "Building with LibMeM      USE_LIBMEM...........: ${USE_LIBMEM}")
 
 message(NOTICE "\nTARGETS")
 message(NOTICE
@@ -654,7 +551,10 @@ message(NOTICE "AOCL-Utils/CPUID UTILS_CPUID=${UTILS_CPUID}")
 message(STATUS "UTILS_INCLUDE_DIR     ${UTILS_INCLUDE_DIR}")
 
 message(NOTICE "Boost include path    Boost_INCLUDE_DIRS=${Boost_INCLUDE_DIRS}")
+if(NOT WIN32)
+  message(NOTICE "AOCL-DLP         DLP=${DLP}")
+  message(STATUS "DLP_INCLUDE_DIR       ${DLP_INCLUDE_DIR}")
+endif()
 if(USE_EXISTING_DA)
   message(NOTICE "Existing AOCL-DA DA=${DA}")
 endif()
-message(NOTICE "AOCL-LibMem      LIBMEM=${LIBMEM}")

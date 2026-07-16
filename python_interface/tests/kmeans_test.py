@@ -250,6 +250,11 @@ def test_kmeans_functionality(numpy_precision, numpy_order, mixed_precision):
 
     assert km.n_iter <= 1
 
+    if mixed_precision:
+        assert km.lp_n_iter >= 1
+    else:
+        assert km.lp_n_iter == 0
+
 
 @pytest.mark.parametrize("_da_precision, numpy_precision", [
     ("double", np.float64), ("single", np.float32),

@@ -1,4 +1,4 @@
-# Copyright (C) 2023-2024 Advanced Micro Devices, Inc. All rights reserved.
+# Copyright (C) 2026 Advanced Micro Devices, Inc. All rights reserved.
 #
 # Redistribution and use in source and binary forms, with or without modification,
 # are permitted provided that the following conditions are met:
@@ -23,20 +23,53 @@
 # POSSIBILITY OF SUCH DAMAGE.
 #
 
+# pylint: disable = missing-module-docstring, import-outside-toplevel, no-member
 
-# LBFGSB source code
-set_source_files_properties(
-  lbfgsb.F90 linpack.F90
-  PROPERTIES
-    COMPILE_FLAGS
-    "-Wno-unused-variable -Wno-compare-reals -Wno-unused-dummy-argument -Wno-maybe-uninitialized")
+import sys
+from aoclda.faiss import faiss_patch
 
-# RALFit source code
-set_source_files_properties(
-  ral_nlls_workspaces.F90 ral_nlls_fd.F90 ral_nlls_ciface.F90
-  ral_nlls_internal.F90 ral_nlls_workspaces.F90
-  ral_nlls_dtrs.F90 ral_nlls_bounds.F90 ral_nlls_fd.F90
-  PROPERTIES
-    COMPILE_FLAGS
-    "-Wno-compare-reals -Wno-unused-dummy-argument -Wno-unused-function -Wno-unused-label -Wno-character-truncation -Wno-unused-variable -Wno-maybe-uninitialized"
-)
+
+def main():
+    '''
+    Load the FAISS patch then execute the user's script
+    '''
+
+    import argparse
+    import runpy
+
+    parser = argparse.ArgumentParser(
+        description="AOCL-DA Extension for FAISS")
+
+    parser.add_argument(
+        "-m", action="store_true", dest="is_module")
+    parser.add_argument("name", help="Your Python script or module name")
+    parser.add_argument("args", nargs=argparse.REMAINDER,
+                        help="Command line arguments for your Python script")
+    group = parser.add_mutually_exclusive_group()
+    group.add_argument(
+        "--print-patch",
+        dest="print_patched",
+        action="store_true",
+        help="Print welcome message")
+    group.add_argument(
+        "--no-print-patch",
+        dest="print_patched",
+        action="store_false",
+        help="Suppress welcome message")
+    parser.set_defaults(print_patched=True)
+
+    args = parser.parse_args()
+
+    # Call patch to replace FAISS symbols with AOCL-DA
+    faiss_patch(print_patched=args.print_patched)
+
+    sys.argv = [args.name] + args.args
+
+    if args.is_module:
+        runpy.run_module(args.name, run_name="__main__")
+    else:
+        runpy.run_path(args.name, run_name="__main__")
+
+
+if __name__ == "__main__":
+    sys.exit(main())

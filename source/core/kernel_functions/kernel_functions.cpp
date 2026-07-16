@@ -32,6 +32,7 @@
 #include "da_error.hpp"
 #include "da_syrk.hpp"
 #include "da_utils.hpp"
+#include "fp16_helpers.hpp"
 #include "kernel_functions_simd.hpp"
 #include "kf_tuning_tables.hpp"
 #include "macros.h"
@@ -49,8 +50,13 @@ using namespace std::string_literals;
 
 // clang-format off
 // EXPONENTIAL KERNEL IMPLEMENTATIONS ==========================================
-inline const kernel_implementations<exp_kernel_func_t<float>, exp_kernel_func_t<double>>
-    kf_exp_implementations = {
+inline const kernel_implementations<exp_kernel_func_t<float>, exp_kernel_func_t<double>,
+                                    exp_kernel_func_t<_Float16>> &
+kf_exp_implementations() {
+    static const kernel_implementations<exp_kernel_func_t<float>,
+                                        exp_kernel_func_t<double>,
+                                        exp_kernel_func_t<_Float16>>
+        impls = {
 {{ // float map
             /* scalar    */ exp_kernel_scalar<float>,
             /* avx (sse) */ exp_kt<bsz::b128, float>,
@@ -62,11 +68,24 @@ ORL_AVX512F(/* avx512    */ exp_kt<bsz::b512, float>)
             /* avx (sse) */ exp_kt<bsz::b128, double>,
             /* avx2      */ exp_kt<bsz::b256, double>,
 ORL_AVX512F(/* avx512    */ exp_kt<bsz::b512, double>)
+}},
+{{ // _Float16 map
+ORL_AVXFP16(/* scalar    */ exp_kernel_scalar<_Float16>),
+ORL_AVXFP16(/* avx (sse) */ exp_kt<bsz::b128, _Float16>),
+ORL_AVXFP16(/* avx2      */ exp_kt<bsz::b256, _Float16>),
+ORL_AVXFP16(/* avx512    */ exp_kt<bsz::b512, _Float16>)
 }}
-};
+    };
+    return impls;
+}
 // POWER KERNEL IMPLEMENTATIONS ==========================================
-inline const kernel_implementations<pow_kernel_func_t<float>, pow_kernel_func_t<double>>
-    kf_pow_implementations = {
+inline const kernel_implementations<pow_kernel_func_t<float>, pow_kernel_func_t<double>,
+                                    pow_kernel_func_t<_Float16>> &
+kf_pow_implementations() {
+    static const kernel_implementations<pow_kernel_func_t<float>,
+                                        pow_kernel_func_t<double>,
+                                        pow_kernel_func_t<_Float16>>
+        impls = {
 {{ // float map
             /* scalar    */ pow_kernel_scalar<float>,
             /* avx (sse) */ pow_kt<bsz::b128, float>,
@@ -78,11 +97,24 @@ ORL_AVX512F(/* avx512    */ pow_kt<bsz::b512, float>)
             /* avx (sse) */ pow_kt<bsz::b128, double>,
             /* avx2      */ pow_kt<bsz::b256, double>,
 ORL_AVX512F(/* avx512    */ pow_kt<bsz::b512, double>)
+}},
+{{ // _Float16 map
+ORL_AVXFP16(/* scalar    */ pow_kernel_scalar<_Float16>),
+ORL_AVXFP16(/* avx (sse) */ pow_kt<bsz::b128, _Float16>),
+ORL_AVXFP16(/* avx2      */ pow_kt<bsz::b256, _Float16>),
+ORL_AVXFP16(/* avx512    */ pow_kt<bsz::b512, _Float16>)
 }}
-};
+    };
+    return impls;
+}
 // TANHKERNEL IMPLEMENTATIONS ==========================================
-inline const kernel_implementations<tanh_kernel_func_t<float>, tanh_kernel_func_t<double>>
-    kf_tanh_implementations = {
+inline const kernel_implementations<tanh_kernel_func_t<float>, tanh_kernel_func_t<double>,
+                                    tanh_kernel_func_t<_Float16>> &
+kf_tanh_implementations() {
+    static const kernel_implementations<tanh_kernel_func_t<float>,
+                                        tanh_kernel_func_t<double>,
+                                        tanh_kernel_func_t<_Float16>>
+        impls = {
 {{ // float map
             /* scalar    */ tanh_kernel_scalar<float>,
             /* avx (sse) */ tanh_kt<bsz::b128, float>,
@@ -94,35 +126,43 @@ ORL_AVX512F(/* avx512    */ tanh_kt<bsz::b512, float>)
             /* avx (sse) */ tanh_kt<bsz::b128, double>,
             /* avx2      */ tanh_kt<bsz::b256, double>,
 ORL_AVX512F(/* avx512    */ tanh_kt<bsz::b512, double>)
+}},
+{{ // _Float16 map
+ORL_AVXFP16(/* scalar    */ tanh_kernel_scalar<_Float16>),
+ORL_AVXFP16(/* avx (sse) */ tanh_kt<bsz::b128, _Float16>),
+ORL_AVXFP16(/* avx2      */ tanh_kt<bsz::b256, _Float16>),
+ORL_AVXFP16(/* avx512    */ tanh_kt<bsz::b512, _Float16>)
 }}
-};
+    };
+    return impls;
+}
 // =============================================================================
 // clang-format on
 
 template <typename T>
 exp_kernel_func_t<T> select_exp_kernel_function(vectorization_type isa) {
 #ifdef USE_SCALAR_MATH
-    return kf_exp_implementations.get<T>(vectorization_type::scalar);
+    return kf_exp_implementations().get<T>(vectorization_type::scalar);
 #else
-    return kf_exp_implementations.get<T>(isa);
+    return kf_exp_implementations().get<T>(isa);
 #endif
 }
 
 template <typename T>
 pow_kernel_func_t<T> select_pow_kernel_function(vectorization_type isa) {
 #ifdef USE_SCALAR_MATH
-    return kf_pow_implementations.get<T>(vectorization_type::scalar);
+    return kf_pow_implementations().get<T>(vectorization_type::scalar);
 #else
-    return kf_pow_implementations.get<T>(isa);
+    return kf_pow_implementations().get<T>(isa);
 #endif
 }
 
 template <typename T>
 tanh_kernel_func_t<T> select_tanh_kernel_function(vectorization_type isa) {
 #ifdef USE_SCALAR_MATH
-    return kf_tanh_implementations.get<T>(vectorization_type::scalar);
+    return kf_tanh_implementations().get<T>(vectorization_type::scalar);
 #else
-    return kf_tanh_implementations.get<T>(isa);
+    return kf_tanh_implementations().get<T>(isa);
 #endif
 }
 
@@ -386,8 +426,8 @@ inline void kernel_setup(da_order order, da_int m, da_int n, da_int k, const T *
                     da_int n_in = current_block_size_Y;
                     da_blas::cblas_gemm(cblas_order, CblasNoTrans, CblasTrans, m_in, n_in,
                                         k, gamma, X + X_block_offset, ldx,
-                                        Y + Y_block_offset, ldy, 0.0, D + D_block_offset,
-                                        ldd);
+                                        Y + Y_block_offset, ldy, (T)0.0,
+                                        D + D_block_offset, ldd);
                     switch (math_func) {
                     case math_type::power:
                         pow_kernel_func(n_in, m_in, D + D_block_offset, ldd, coef0,
@@ -423,8 +463,8 @@ inline void kernel_setup(da_order order, da_int m, da_int n, da_int k, const T *
                     da_int n_in = current_block_size_Y;
                     da_blas::cblas_gemm(cblas_order, CblasNoTrans, CblasTrans, m_in, n_in,
                                         k, gamma, X + X_block_offset, ldx,
-                                        Y + Y_block_offset, ldy, 0.0, D + D_block_offset,
-                                        ldd);
+                                        Y + Y_block_offset, ldy, (T)0.0,
+                                        D + D_block_offset, ldd);
                     switch (math_func) {
                     case math_type::power:
                         pow_kernel_func(m_in, n_in, D + D_block_offset, ldd, coef0,
@@ -450,7 +490,7 @@ inline void kernel_setup(da_order order, da_int m, da_int n, da_int k, const T *
             fill_upper_triangular(order, m, D, ldd);
         } else {
             da_blas::cblas_gemm(cblas_order, CblasNoTrans, CblasTrans, m, n, k, gamma, X,
-                                ldx, Y, ldy, 0.0, D, ldd);
+                                ldx, Y, ldy, (T)0.0, D, ldd);
         }
         da_int first_dim = (order == column_major) ? m : n;
         da_int second_dim = (order == column_major) ? n : m;
@@ -494,7 +534,7 @@ void rbf_kernel_internal(da_order order, da_int m, da_int n, da_int k, const T *
     // In general case we want to compute the Y matrix norms
     if (compute_X_norms == 2) {
         for (da_int i = 0; i < m; i++) {
-            X_norms[i] = 0.0;
+            X_norms[i] = (T)0.0;
         }
         if (order == column_major) {
             for (da_int j = 0; j < k; j++) {
@@ -514,7 +554,7 @@ void rbf_kernel_internal(da_order order, da_int m, da_int n, da_int k, const T *
         Y_norms = X_norms;
     } else if (compute_Y_norms == 2) {
         for (da_int i = 0; i < n; i++) {
-            Y_norms[i] = 0.0;
+            Y_norms[i] = (T)0.0;
         }
         if (order == column_major) {
             for (da_int j = 0; j < k; j++) {
@@ -774,6 +814,92 @@ template tanh_kernel_func_t<double>
 select_tanh_kernel_function<double>(vectorization_type vec_enum);
 template tanh_kernel_func_t<float>
 select_tanh_kernel_function<float>(vectorization_type vec_enum);
+
+// ============================================================================
+// _Float16 instantiations
+// ----------------------------------------------------------------------------
+// Provide the full _Float16 surface used by the half-precision SVM build:
+// public *_kernel APIs, *_kernel_internal helpers used by the SVM kernel
+// wrappers in base_svm.cpp, and the supporting check_input /
+// create_work_arrays / kernel_setup / fill_upper_triangular /
+// select_*_kernel_function templates. The kf_*_implementations tables above
+// carry the FP16 maps (scalar + ORL_AVXFP16-guarded SIMD entries) for the
+// dispatch helpers to return.
+// ============================================================================
+#ifdef __AVX512FP16__
+template da_status check_input<_Float16>(da_order order, da_int m, da_int n, da_int k,
+                                         const _Float16 *X, da_int ldx, const _Float16 *Y,
+                                         da_int ldy, _Float16 *D, da_int ldd);
+
+template da_status create_work_arrays<_Float16>(da_int m, da_int &n, const _Float16 *Y,
+                                                std::vector<_Float16> &x_work,
+                                                std::vector<_Float16> &y_work,
+                                                bool &X_is_Y);
+
+template da_status rbf_kernel<_Float16>(da_order order, da_int m, da_int n, da_int k,
+                                        const _Float16 *X, da_int ldx, const _Float16 *Y,
+                                        da_int ldy, _Float16 *D, da_int ldd,
+                                        _Float16 gamma);
+
+template da_status linear_kernel<_Float16>(da_order order, da_int m, da_int n, da_int k,
+                                           const _Float16 *X, da_int ldx,
+                                           const _Float16 *Y, da_int ldy, _Float16 *D,
+                                           da_int ldd);
+
+template da_status polynomial_kernel<_Float16>(da_order order, da_int m, da_int n,
+                                               da_int k, const _Float16 *X, da_int ldx,
+                                               const _Float16 *Y, da_int ldy, _Float16 *D,
+                                               da_int ldd, _Float16 gamma, da_int degree,
+                                               _Float16 coef0);
+
+template da_status sigmoid_kernel<_Float16>(da_order order, da_int m, da_int n, da_int k,
+                                            const _Float16 *X, da_int ldx,
+                                            const _Float16 *Y, da_int ldy, _Float16 *D,
+                                            da_int ldd, _Float16 gamma, _Float16 coef0);
+
+template void rbf_kernel_internal<_Float16>(da_order order, da_int m, da_int n, da_int k,
+                                            const _Float16 *X, _Float16 *X_norms,
+                                            da_int compute_X_norms, da_int ldx,
+                                            const _Float16 *Y, _Float16 *Y_norms,
+                                            da_int compute_Y_norms, da_int ldy,
+                                            _Float16 *D, da_int ldd, _Float16 gamma,
+                                            bool X_is_Y, da_int vectorisation);
+
+template void linear_kernel_internal<_Float16>(da_order order, da_int m, da_int n,
+                                               da_int k, const _Float16 *X, da_int ldx,
+                                               const _Float16 *Y, da_int ldy, _Float16 *D,
+                                               da_int ldd, bool X_is_Y);
+
+template void polynomial_kernel_internal<_Float16>(
+    da_order order, da_int m, da_int n, da_int k, const _Float16 *X, da_int ldx,
+    const _Float16 *Y, da_int ldy, _Float16 *D, da_int ldd, _Float16 gamma, da_int degree,
+    _Float16 coef0, bool X_is_Y, da_int vectorisation);
+
+template void sigmoid_kernel_internal<_Float16>(da_order order, da_int m, da_int n,
+                                                da_int k, const _Float16 *X, da_int ldx,
+                                                const _Float16 *Y, da_int ldy,
+                                                _Float16 *D, da_int ldd, _Float16 gamma,
+                                                _Float16 coef0, bool X_is_Y,
+                                                da_int vectorisation);
+
+template void fill_upper_triangular<_Float16>(da_order order, da_int m, _Float16 *D,
+                                              da_int ldd);
+
+template void kernel_setup<_Float16>(da_order order, da_int m, da_int n, da_int k,
+                                     const _Float16 *X, da_int ldx, const _Float16 *Y,
+                                     da_int ldy, _Float16 *D, da_int ldd, _Float16 gamma,
+                                     _Float16 coef0, da_int degree, bool X_is_Y,
+                                     math_type math_func, da_int vectorisation);
+
+template exp_kernel_func_t<_Float16>
+select_exp_kernel_function<_Float16>(vectorization_type vec_enum);
+
+template pow_kernel_func_t<_Float16>
+select_pow_kernel_function<_Float16>(vectorization_type vec_enum);
+
+template tanh_kernel_func_t<_Float16>
+select_tanh_kernel_function<_Float16>(vectorization_type vec_enum);
+#endif
 
 } // namespace da_kernel_functions
 

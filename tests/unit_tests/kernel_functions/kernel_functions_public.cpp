@@ -41,7 +41,7 @@ enum vectorization_type : da_int {
     avx = 2,
     avx2 = 3,
     avx512 = 4,
-    count = 5
+    count = 4
 };
 
 template <typename T> class KernelFunctionTest : public testing::Test {

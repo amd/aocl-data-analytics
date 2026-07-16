@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2024-2025 Advanced Micro Devices, Inc. All rights reserved.
+ * Copyright (C) 2024-2026 Advanced Micro Devices, Inc. All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without modification,
  * are permitted provided that the following conditions are met:
@@ -31,6 +31,7 @@
 #include "da_omp.hpp"
 #include "da_std.hpp"
 #include "da_utils.hpp"
+#include "fp16_helpers.hpp"
 #include "macros.h"
 #include "svm.hpp"
 #include <algorithm>
@@ -173,8 +174,11 @@ void csvm<T>::local_smo(
     this->prepare_kernel_matrix(ptr_kernel_col, ws_size, local_kernel_matrix_row_major,
                                 kernel_diagonal, real_indices);
     // i, j - indexes for update in the current iteration of SMO, domain = (0, ws_size)
-    da_int i, j;
-    da_int max_iter_inner = ws_size * 100;
+    da_int i, j, max_iter_inner;
+    if constexpr (std::is_same_v<T, _Float16>)
+        max_iter_inner = ws_size * 24;
+    else
+        max_iter_inner = ws_size * 100;
     T min_grad, max_grad, max_fun, delta, diff, epsilon = 1;
     // alpha_?_diff - Update values of alpha (we will pick minimum between alpha_i_diff and alpha_j_diff)
     T alpha_i_diff, alpha_j_diff;
@@ -194,7 +198,13 @@ void csvm<T>::local_smo(
         diff = max_grad - min_grad;
         if (iter == 0 && !is_custom_epsilon) {
             first_diff = diff;
-            epsilon = std::max(this->tol, T(0.1) * diff);
+            if constexpr (std::is_same_v<T, _Float16>) {
+                const T eps16 = std::numeric_limits<T>::epsilon();
+                epsilon = std::max(std::max(T(4.0) * this->tol, T(16.0) * eps16),
+                                   T(0.2) * diff);
+            } else {
+                epsilon = std::max(this->tol, T(0.1) * diff);
+            }
         }
         if (diff < epsilon || i == -1 || j == -1)
             break;
@@ -259,7 +269,7 @@ da_status svc<T>::initialisation(da_int &size, std::vector<T> &gradient,
                                  [[maybe_unused]] da_cache::LRUCache<T> &cache) {
     // Initialise response
     for (da_int i = 0; i < size; i++) {
-        response[i] = this->y[i] == 0 ? -1.0 : this->y[i];
+        response[i] = this->y[i] == 0 ? (T)-1.0 : this->y[i];
     }
 
     // For warm start, only response is needed
@@ -279,8 +289,8 @@ da_status svr<T>::initialisation(da_int &size, std::vector<T> &gradient,
                                  [[maybe_unused]] da_cache::LRUCache<T> &cache) {
     // Initialise response
     for (da_int i = 0; i < size; i++) {
-        response[i] = 1.0;
-        response[i + size] = -1.0;
+        response[i] = (T)1.0;
+        response[i + size] = (T)-1.0;
     }
 
     // For warm start, only response is needed
@@ -303,7 +313,7 @@ template <typename T> da_status svc<T>::set_sv(std::vector<T> &alpha, da_int &n_
     for (da_int i = 0; i < this->n; i++) {
         // There could be a better way to find if alpha is different than 0
         // Possibly one that would look if it is within the tolerance around 0.
-        if (std::abs(alpha[i]) > epsilon) {
+        if (da_std::abs(alpha[i]) > epsilon) {
             n_support++;
             alpha[i] *= this->response[i];
             // n_support_per_class will hold n_support of negative class at index 0, and positive at index 1
@@ -325,7 +335,7 @@ template <typename T> da_status svc<T>::set_sv(std::vector<T> &alpha, da_int &n_
     da_int position = 0;
     if (!this->ismulticlass) {
         for (da_int i = 0; i < this->n; i++) {
-            if (std::abs(alpha[i]) > epsilon) {
+            if (da_std::abs(alpha[i]) > epsilon) {
                 this->support_indexes[position] = i;
                 this->support_coefficients[position++] = alpha[i];
             }
@@ -333,7 +343,7 @@ template <typename T> da_status svc<T>::set_sv(std::vector<T> &alpha, da_int &n_
     } else {
         da_int position_pos = 0, position_neg = 0;
         for (da_int i = 0; i < this->n; i++) {
-            if (std::abs(alpha[i]) > epsilon) {
+            if (da_std::abs(alpha[i]) > epsilon) {
                 if (this->idx_is_positive[i]) {
                     this->support_indexes_pos[position_pos++] = i;
                 } else {
@@ -355,7 +365,7 @@ template <typename T> da_status svr<T>::set_sv(std::vector<T> &alpha, da_int &n_
         alpha[i] = alpha[i] - alpha[i + this->n];
         // There could be a better way to find if alpha is different than 0
         // Possibly one that would look if it is within the tolerance around 0.
-        if (std::abs(alpha[i]) > epsilon)
+        if (da_std::abs(alpha[i]) > epsilon)
             n_support++;
     }
     try {
@@ -367,7 +377,7 @@ template <typename T> da_status svr<T>::set_sv(std::vector<T> &alpha, da_int &n_
     }
     da_int position = 0;
     for (da_int i = 0; i < this->n; i++) {
-        if (std::abs(alpha[i]) > epsilon) {
+        if (da_std::abs(alpha[i]) > epsilon) {
             this->support_indexes[position] = i;
             this->support_coefficients[position] = alpha[i];
             position++;
@@ -382,11 +392,20 @@ template class svc<float>;
 template class svc<double>;
 template class svr<float>;
 template class svr<double>;
+#ifdef __AVX512FP16__
+template class csvm<_Float16>;
+template class svc<_Float16>;
+template class svr<_Float16>;
+#endif
 
 } // namespace da_svm
 
 template da_int is_upper<double>(const double &alpha, const double &y, const double &C);
 template da_int is_upper<float>(const float &alpha, const float &y, const float &C);
+#ifdef __AVX512FP16__
+template da_int is_upper<_Float16>(const _Float16 &alpha, const _Float16 &y,
+                                   const _Float16 &C);
+#endif
 template da_int is_lower<double>(const double &alpha, const double &y, const double &C);
 template da_int is_lower<float>(const float &alpha, const float &y, const float &C);
 

@@ -130,7 +130,7 @@ template <typename T> class tsne : public basic_handle<T> {
 
     // Lower precision type (int16_t is a proxy for bfloat16, though we don't use it yet)
     using lp_type =
-        typename std::conditional<std::is_same_v<T, double>, float, int16_t>::type;
+        typename std::conditional<std::is_same_v<T, double>, float, _Float16>::type;
 
     const T *X = nullptr;  // contiguous row-major view of input data
     std::vector<T> X_copy; // owned storage (used when copy/transpose is needed)
@@ -231,10 +231,11 @@ da_status symmetrize_to_csr(da_int n, da_int k, const da_int *neighbor_indices,
 // Kernel function pointer type aliases
 using KFS = attractive_forces_kernel_fn<float>;
 using KFD = attractive_forces_kernel_fn<double>;
+using KFH = attractive_forces_kernel_fn<_Float16>;
 
 namespace testing {
 // accessors for unit tests
-const std::array<const kernel_implementations<KFS, KFD> *, 2> &
+const std::array<const kernel_implementations<KFS, KFD, KFH> *, 2> &
 get_attractive_forces_implementations();
 } // namespace testing
 

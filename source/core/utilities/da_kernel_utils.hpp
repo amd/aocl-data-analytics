@@ -60,7 +60,7 @@ enum vectorization_type : da_int {
 //
 //  3. tblRow / TBL            A tblRow<ROW> binds {arch, dtype} to a small array
 //                             of KernelSelection breakpoints. TBL<ROW>::type is a
-//                             flat array of 14 tblRows (2 dtypes × 7 archs) that
+//                             flat array of 21 tblRows (3 dtypes × 7 archs) that
 //                             callers define as a constexpr table and ALL must be
 //                             defined.
 //                             Note that the array of KernelSelection breakpoints
@@ -90,24 +90,38 @@ enum vectorization_type : da_int {
 #define ORL_AVX512F(...) nullptr
 #endif
 
+// Ringfence macro for AVX512_FP16 entries in the Kernel Implementations Table (KIT)
+#ifdef __AVX512FP16__
+#define ORL_AVXFP16(...) __VA_ARGS__
+#else
+#define ORL_AVXFP16(...) nullptr
+#endif
+
+// clang-format off
+
 // Kernel Implementations Table (KIT), one for each vectorization type (isa).
 // Maps ISA -> kernel function pointer
-template <typename KS, typename KD> struct kernel_implementations {
+template <typename KS, typename KD, typename KH = KS> struct kernel_implementations {
     std::array<KS, vectorization_type::count> kernels_s;
     std::array<KD, vectorization_type::count> kernels_d;
+    std::array<KH, vectorization_type::count> kernels_h = {};
     template <typename T> constexpr auto get(vectorization_type v) const {
-        static_assert(std::is_same_v<T, float> || std::is_same_v<T, double>);
+        static_assert(std::is_same_v<T, float> || std::is_same_v<T, double> || std::is_same_v<T, _Float16>, "Type not supported in kernel implementations");
         if constexpr (std::is_same_v<T, float>) {
             if (v >= vectorization_type::scalar && v <= vectorization_type::count)
-                return kernels_s[static_cast<size_t>(v) -
-                                 (size_t)1]; // -1 to adjust for scalar=1
+                return kernels_s[static_cast<size_t>(v) - (size_t)1]; // -1 to adjust for scalar=1
             else
                 return KS{}; // empty std::function
-        } else {
+        } else if constexpr (std::is_same_v<T, double>) {
             if (v >= vectorization_type::scalar && v <= vectorization_type::count)
-                return kernels_d[static_cast<size_t>(v) - 1]; // -1 to adjust for scalar=1
+                return kernels_d[static_cast<size_t>(v) - (size_t)1]; // -1 to adjust for scalar=1
             else
                 return KD{}; // empty std::function
+        } else if constexpr (std::is_same_v<T, _Float16>) {
+            if (v >= vectorization_type::scalar && v <= vectorization_type::count)
+                return kernels_h[static_cast<size_t>(v) - (size_t)1]; // -1 to adjust for scalar=1
+            else
+                return KH{}; // empty std::function
         }
     }
 };
@@ -121,8 +135,9 @@ template <typename KS, typename KD> struct kernel_implementations {
 //             /* avx2      */  k_iteration_kt<bsz::b256, double>,
 // ORL_AVX512F(/* avx512    */  k_iteration_kt<bsz::b512, double>)
 // }}; // repeat for type float
-// Note that AVX512 implementations MUST be ring-fenced using ORL macro that
+// Note that AVX512 implementations MUST be ring-fenced using ORL_AVX512F macro that
 // takes care of the cases where these are not built or available.
+// Similarly AVX512_FP16 implementations must be ring-fenced using ORL_AVXFP16 macro.
 //
 // To query the table use the .get<typename>() operator with the vectorization
 // type, for example:
@@ -144,8 +159,9 @@ struct KernelSelection {
     da_int threshold{-1};
     vectorization_type kernel{vectorization_type::undefined};
     KernelSelection() = default; // allow default initialization
-    constexpr KernelSelection(vectorization_type k) : threshold(DA_INT_MAX), kernel(k){};
-    constexpr KernelSelection(da_int t, vectorization_type k) : threshold(t), kernel(k){};
+    constexpr KernelSelection(vectorization_type k) : threshold(DA_INT_MAX), kernel(k) {};
+    constexpr KernelSelection(da_int t, vectorization_type k)
+        : threshold(t), kernel(k) {};
 };
 
 // Default auxiliary oracle function returns
@@ -161,7 +177,7 @@ template <typename T> bool oracle_lt(T param, T threshold) {
 // Helper for building tables. Size of array must match with
 // double the context::dispatch_architecture size!
 template <typename ROW> struct TBL {
-    static constexpr size_t nrows{/*dtypes*/ 2 * 7 /*archs*/};
+    static constexpr size_t nrows{/*dtypes*/ 3 * 7 /*archs*/};
     using type = std::array<tblRow<ROW>, nrows>;
 };
 
@@ -178,10 +194,10 @@ template <typename ROW> struct TBL {
 //            Default predicate (oracle_default): param <= threshold.
 //
 // Arguments:
-//   tbl      - flat array of tblRow<ROW>; size = 2 dtypes × 7 architectures = 14 rows.
+//   tbl      - flat array of tblRow<ROW>; size = 3 dtypes × 7 architectures = 21 rows.
 //              Each row carries {arch, dtype, table[]}, where table[] is a sorted list of
 //              {threshold, kernel} breakpoints (ascending, last entry has DA_INT_MAX).
-//   dtype    - da_type of the operand (float / double), used to select the right row.
+//   dtype    - da_type of the operand (float / double / _Float16), used to select the right row.
 //   param    - the parametrized tuning parameter used in the thresholding auxiliary oracle.
 //   oracle   - predicate that decides membership in a bucket (default is oracle_default).
 //   override - optional hidden-settings key (e.g. "kmeans.isa"); if present and set,
@@ -190,33 +206,64 @@ template <typename ROW> struct TBL {
 //
 // Returns the "optimal" vectorization_type (ISA); falls back to scalar if no row/bucket matches.
 #define FORCE_INLINE __attribute__((always_inline)) inline
-template <typename ROW, typename P, typename O>
-FORCE_INLINE vectorization_type
-Oracle(const std::array<tblRow<ROW>, TBL<ROW>::nrows> &tbl, da_type dtype, P param,
-       O oracle, const char *override = nullptr) {
+
+FORCE_INLINE bool get_overridden_isa(const char *override, vectorization_type &isa,
+                                     da_type dtype = da_type::undefined) {
     using namespace std::string_literals;
     using v = vectorization_type;
     auto *ctx = context::get_context();
 
-    // Check to see if there is an override
-    if (override && ctx->hidden_settings.find(override) != ctx->hidden_settings.end()) {
-        std::string kernel = ctx->hidden_settings[override];
-        if (kernel == "avx"s) {
-            return v::avx;
-        } else if (kernel == "avx2"s) {
-            return v::avx2;
-        } else if (kernel == "avx512"s) {
-#ifdef __AVX512F__
-            return (ctx->has_avx512) ? v::avx512 : v::avx2;
-#else
-            // This build does not have AVX512 kernels
-            return v::avx2;
-#endif
-        }
-        return v::scalar;
+    if (!(override && ctx->hidden_settings.find(override) != ctx->hidden_settings.end())) {
+        return false;
     }
 
+    const std::string &kernel = ctx->hidden_settings[override];
+    v requested_kernel{scalar};
+    if (kernel == "avx"s) {
+        requested_kernel = v::avx;
+    } else if (kernel == "avx2"s) {
+        requested_kernel = v::avx2;
+    } else if (kernel == "avx512"s) {
+        requested_kernel = v::avx512;
+    }
+
+    // For half precision, all non-scalar kernels require AVX512_FP16.
+    if (dtype == da_type::_Float16_t) {
+#ifdef __AVX512FP16__
+        isa = (ctx->has_avx512_fp16) ? requested_kernel : v::scalar;
+#else
+        // This build does not have AVX512_FP16 kernels, override cannot be applied.
+        isa = v::scalar;
+#endif
+        return true;
+    }
+
+    if (requested_kernel < v::avx512) {
+        isa = requested_kernel;
+    } else {
+#ifdef __AVX512F__
+        isa = (ctx->has_avx512) ? v::avx512 : v::avx2;
+#else
+        // This build does not have AVX512 kernels.
+        isa = v::avx2;
+#endif
+    }
+
+    return true;
+}
+
+template <typename ROW, typename P, typename O>
+FORCE_INLINE
+    vectorization_type Oracle(const std::array<tblRow<ROW>, TBL<ROW>::nrows> &tbl,
+                              da_type dtype, P param, O oracle,
+                              const char *override = nullptr) {
+    using v = vectorization_type;
+    auto *ctx = context::get_context();
+
     v isa{undefined};
+    if (get_overridden_isa(override, isa, dtype)) {
+        return isa;
+    }
 
     // Get optimal vector length
     const dispatch_architecture arch{ctx->arch};
@@ -227,14 +274,26 @@ Oracle(const std::array<tblRow<ROW>, TBL<ROW>::nrows> &tbl, da_type dtype, P par
             if (oracle(param, t.threshold)) {
                 isa = t.kernel;
                 // Downgrade if ISA not supported
-                if (isa == v::avx512) {
-#ifdef __AVX512F__
-                    if (!ctx->has_avx512)
-                        isa = v::avx2;
+
+                // Special case of half precision kernels where we require separate AVX512_FP16 ISA for all non-scalar kernels
+                if (dtype == da_type::_Float16_t) {
+#ifdef __AVX512FP16__
+                    isa = ((ctx->has_avx512_fp16) ? isa : v::scalar);
 #else
-                    // This build does not have AVX512 kernels
-                    isa = v::avx2;
+                    // This build does not have AVX512_FP16 kernels, downgrade to scalar
+                    isa = v::scalar;
 #endif
+                } else {
+
+                    if (isa == v::avx512) {
+#ifdef __AVX512F__
+                        if (!ctx->has_avx512)
+                            isa = v::avx2;
+#else
+                        // This build does not have AVX512 kernels
+                        isa = v::avx2;
+#endif
+                    }
                 }
                 // Assume minimum ISA is AVX2
                 return isa;
@@ -254,35 +313,33 @@ Oracle(const std::array<tblRow<ROW>, TBL<ROW>::nrows> &tbl, da_type dtype, P par
 
 // Convenience overload for simple ISA selection
 // Returns the highest vectorization ISA
-FORCE_INLINE vectorization_type Oracle(const char *override = nullptr) {
-    using namespace std::string_literals;
+FORCE_INLINE vectorization_type Oracle(const char *override = nullptr, da_type dtype = da_type::undefined) {
     using v = vectorization_type;
-    auto *ctx = context::get_context();
+    [[maybe_unused]] auto *ctx = context::get_context();
 
-    // Check to see if there is an override
-    if (override && ctx->hidden_settings.find(override) != ctx->hidden_settings.end()) {
-        std::string kernel = ctx->hidden_settings[override];
-        if (kernel == "avx"s) {
-            return v::avx;
-        } else if (kernel == "avx2"s) {
-            return v::avx2;
-        } else if (kernel == "avx512"s) {
-#ifdef __AVX512F__
-            return (ctx->has_avx512) ? v::avx512 : v::avx2;
-#else
-            // This build does not have AVX512 kernels
-            return v::avx2;
-#endif
-        }
-        return v::scalar;
+    v isa{undefined};
+    if (get_overridden_isa(override, isa, dtype)) {
+        return isa;
     }
 
-#ifdef __AVX512F__
-    return (ctx->has_avx512) ? v::avx512 : v::avx2;
+    // Special case of half precision kernels where we require separate AVX512_FP16 ISA for all non-scalar kernels
+    if (dtype == da_type::_Float16_t) {
+#ifdef __AVX512FP16__
+        isa = ((ctx->has_avx512_fp16) ? v::avx512 : v::scalar);
 #else
-    // This build does not have AVX512 kernels
-    return v::avx2;
+        // This build does not have AVX512_FP16 kernels, downgrade to scalar
+        isa = v::scalar;
 #endif
+        return isa;
+    } else {
+
+#ifdef __AVX512F__
+        return (ctx->has_avx512) ? v::avx512 : v::avx2;
+#else
+        // This build does not have AVX512 kernels
+        return v::avx2;
+#endif
+    }
 }
 
 // --------------------------- Generic Dispatchers -----------------------------
@@ -360,13 +417,19 @@ template <class T> FORCE_INLINE da_int get_padding(vectorization_type isa) {
 
     switch (isa) {
     case vectorization_type::avx:
-        value = std::is_same<T, float>::value ? 4 : 2;
+        value = std::is_same<T, _Float16>::value ? 8
+                : std::is_same<T, float>::value  ? 4
+                                                 : 2;
         break;
     case vectorization_type::avx2:
-        value = std::is_same<T, float>::value ? 8 : 4;
+        value = std::is_same<T, _Float16>::value ? 16
+                : std::is_same<T, float>::value  ? 8
+                                                 : 4;
         break;
     case vectorization_type::avx512:
-        value = std::is_same<T, float>::value ? 16 : 8;
+        value = std::is_same<T, _Float16>::value ? 32
+                : std::is_same<T, float>::value  ? 16
+                                                 : 8;
         break;
     default:
         value = 0;
@@ -378,6 +441,8 @@ template <class T> FORCE_INLINE da_int get_padding(vectorization_type isa) {
 
 #undef FORCE_INLINE
 // -----------------------------------------------------------------------------
+
+// clang-format on
 
 /*****************************
   * Internal types
@@ -393,6 +458,12 @@ typedef union {
     int64_t i;
     uint64_t u;
 } flt64_t;
+
+typedef union {
+    _Float16 h;
+    int16_t i;
+    uint16_t u;
+} flt16_t;
 
 /*****************************
   * Internal vector types
@@ -519,6 +590,34 @@ typedef union {
     double d[8] __attribute__((aligned(64)));
     __m512d v;
 } v8df_t;
+
+#endif
+
+#ifdef __AVX512FP16__
+
+/*
+  * float16 - 8 elements - 128 bits
+  */
+typedef union {
+    _Float16 h[8] __attribute__((aligned(16)));
+    __m128h v;
+} v8hf_t;
+
+/*
+  * float16 - 16 elements - 256 bits
+  */
+typedef union {
+    _Float16 h[16] __attribute__((aligned(32)));
+    __m256h v;
+} v16hf_t;
+
+/*
+  * float16 - 32 elements - 512 bits
+  */
+typedef union {
+    _Float16 h[32] __attribute__((aligned(64)));
+    __m512h v;
+} v32hf_t;
 
 #endif
 

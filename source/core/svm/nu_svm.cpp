@@ -31,6 +31,7 @@
 #include "da_omp.hpp"
 #include "da_std.hpp"
 #include "da_utils.hpp"
+#include "fp16_helpers.hpp"
 #include "kernel_functions.hpp"
 #include "kf_tuning_tables.hpp"
 #include "macros.h"
@@ -238,8 +239,11 @@ void nusvm<T>::local_smo(da_int &ws_size, std::vector<da_int> &idx,
                                 kernel_diagonal, real_indices);
 
     // i, j - indexes for update in the current iteration of SMO, domain = (0, ws_size)
-    da_int i, j, i_p, i_n, j_p, j_n;
-    da_int max_iter_inner = ws_size * 100;
+    da_int i, j, i_p, i_n, j_p, j_n, max_iter_inner;
+    if constexpr (std::is_same_v<T, _Float16>)
+        max_iter_inner = ws_size * 24;
+    else
+        max_iter_inner = ws_size * 100;
     T min_grad_p, min_grad_n, max_grad_p, max_grad_n, max_fun_p, max_fun_n, delta,
         delta_p, delta_n, diff, epsilon = 1;
     // alpha_?_diff - Update values of alpha (we will pick minimum between alpha_i_diff and alpha_j_diff)
@@ -261,7 +265,13 @@ void nusvm<T>::local_smo(da_int &ws_size, std::vector<da_int> &idx,
         diff = std::max(max_grad_p - min_grad_p, max_grad_n - min_grad_n);
         if (iter == 0 && !is_custom_epsilon) {
             first_diff = diff;
-            epsilon = std::max(this->tol, T(0.1) * diff);
+            if constexpr (std::is_same_v<T, _Float16>) {
+                const T eps16 = std::numeric_limits<T>::epsilon();
+                epsilon = std::max(std::max(T(4.0) * this->tol, T(16.0) * eps16),
+                                   T(0.2) * diff);
+            } else {
+                epsilon = std::max(this->tol, T(0.1) * diff);
+            }
         }
         if (diff < epsilon)
             break;
@@ -504,7 +514,7 @@ da_status nusvc<T>::initialisation(da_int &size, std::vector<T> &gradient,
 
     // Initialise response
     for (da_int i = 0; i < size; i++) {
-        response[i] = this->y[i] == 0 ? -1.0 : this->y[i];
+        response[i] = this->y[i] == 0 ? (T)-1.0 : this->y[i];
     }
 
     // For warm start, only response and C are needed
@@ -549,8 +559,8 @@ da_status nusvr<T>::initialisation(da_int &size, std::vector<T> &gradient,
                                    da_cache::LRUCache<T> &cache) {
     // Initialise response (needed for both cold and warm start)
     for (da_int i = 0; i < size; i++) {
-        response[i] = 1.0;
-        response[i + size] = -1.0;
+        response[i] = (T)1.0;
+        response[i + size] = (T)-1.0;
     }
 
     // For warm start, only response is needed; alpha and gradient
@@ -595,7 +605,7 @@ da_status nusvc<T>::set_sv(std::vector<T> &alpha, da_int &n_support) {
     for (da_int i = 0; i < this->n; i++) {
         // There could be a better way to find if alpha is different than 0
         // Possibly one that would look if it is within the tolerance around 0.
-        if (std::abs(alpha[i]) > epsilon) {
+        if (da_std::abs(alpha[i]) > epsilon) {
             n_support++;
             alpha[i] *= this->response[i];
             // n_support_per_class will hold n_support of negative class at index 0, and positive at index 1
@@ -617,7 +627,7 @@ da_status nusvc<T>::set_sv(std::vector<T> &alpha, da_int &n_support) {
     da_int position = 0;
     if (!this->ismulticlass) {
         for (da_int i = 0; i < this->n; i++) {
-            if (std::abs(alpha[i]) > epsilon) {
+            if (da_std::abs(alpha[i]) > epsilon) {
                 this->support_indexes[position] = i;
                 this->support_coefficients[position++] = alpha[i];
             }
@@ -625,7 +635,7 @@ da_status nusvc<T>::set_sv(std::vector<T> &alpha, da_int &n_support) {
     } else {
         da_int position_pos = 0, position_neg = 0;
         for (da_int i = 0; i < this->n; i++) {
-            if (std::abs(alpha[i]) > epsilon) {
+            if (da_std::abs(alpha[i]) > epsilon) {
                 if (this->idx_is_positive[i]) {
                     this->support_indexes_pos[position_pos++] = i;
                 } else {
@@ -648,7 +658,7 @@ da_status nusvr<T>::set_sv(std::vector<T> &alpha, da_int &n_support) {
         alpha[i] = alpha[i] - alpha[i + this->n];
         // There could be a better way to find if alpha is different than 0
         // Possibly one that would look if it is within the tolerance around 0.
-        if (std::abs(alpha[i]) > epsilon)
+        if (da_std::abs(alpha[i]) > epsilon)
             n_support++;
     }
     try {
@@ -660,7 +670,7 @@ da_status nusvr<T>::set_sv(std::vector<T> &alpha, da_int &n_support) {
     }
     da_int position = 0;
     for (da_int i = 0; i < this->n; i++) {
-        if (std::abs(alpha[i]) > epsilon) {
+        if (da_std::abs(alpha[i]) > epsilon) {
             this->support_indexes[position] = i;
             this->support_coefficients[position] = alpha[i];
             position++;
@@ -675,6 +685,11 @@ template class nusvc<float>;
 template class nusvc<double>;
 template class nusvr<float>;
 template class nusvr<double>;
+#ifdef __AVX512FP16__
+template class nusvm<_Float16>;
+template class nusvc<_Float16>;
+template class nusvr<_Float16>;
+#endif
 
 } // namespace da_svm
 
@@ -688,5 +703,13 @@ template da_int is_upper_neg<float>(const float &alpha, const float &y);
 template da_int is_lower_neg<double>(const double &alpha, const double &y,
                                      const double &C);
 template da_int is_lower_neg<float>(const float &alpha, const float &y, const float &C);
+#ifdef __AVX512FP16__
+template da_int is_upper_pos<_Float16>(const _Float16 &alpha, const _Float16 &y,
+                                       const _Float16 &C);
+template da_int is_lower_pos<_Float16>(const _Float16 &alpha, const _Float16 &y);
+template da_int is_upper_neg<_Float16>(const _Float16 &alpha, const _Float16 &y);
+template da_int is_lower_neg<_Float16>(const _Float16 &alpha, const _Float16 &y,
+                                       const _Float16 &C);
+#endif
 
 } // namespace ARCH

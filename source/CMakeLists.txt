@@ -74,6 +74,7 @@ set(DA_BASIC_STATISTICS_PUBLIC
 set(DA_FACTORIZATION_PUBLIC core/factorization/pca_public.cpp
                             core/factorization/kernel_pca_public.cpp)
 set(DA_UTILS_PUBLIC core/utilities/utils_public.cpp
+                    core/utilities/fp16_helpers.cpp
                     core/utilities/aoclda_c_wrapper.cpp)
 set(DA_OPTIONS_PUBLIC core/utilities/options_public.cpp)
 set(DA_DATA
@@ -381,8 +382,9 @@ if(NOT WIN32)
   include(Suppressions_core)
 endif()
 
-target_link_libraries(aocl-da PRIVATE ${SPARSE} ${LAPACK} ${BLAS} ${UTILS}
+target_link_libraries(aocl-da PRIVATE ${SPARSE} ${LAPACK} ${BLAS} ${DLP} ${UTILS}
                                       ${FORTRAN_RUNTIME})
+
 if(BUILD_SMP)
   target_link_libraries(aocl-da PRIVATE OpenMP::OpenMP_CXX)
   if(WIN32)
@@ -406,7 +408,8 @@ target_link_directories(aocl-da PRIVATE ${IFORT_LIBS})
 target_link_directories(aocl-da PRIVATE ${FLANG_LIBS})
 target_include_directories(
   aocl-da PRIVATE ${BLAS_INCLUDE_DIR} ${SPARSE_INCLUDE_DIR}
-                  ${LAPACK_INCLUDE_DIR} ${UTILS_INCLUDE_DIR})
+                  ${LAPACK_INCLUDE_DIR} ${UTILS_INCLUDE_DIR}
+                  ${DLP_INCLUDE_DIR})
 # Sets -fPIC flag
 if(BUILD_SHARED_LIBS)
   set_target_properties(aocl-da PROPERTIES POSITION_INDEPENDENT_CODE ON)

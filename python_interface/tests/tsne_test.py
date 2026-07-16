@@ -47,7 +47,8 @@ def test_tsne_all_dtypes(numpy_precision, numpy_order):
     Test it runs when supported/unsupported C-interface type is provided.
     """
     x = get_tsne_data(dtype=numpy_precision, order=numpy_order)
-    model = tsne(n_components=2, perplexity=30.0, max_iter=150, theta=0.5, seed=7)
+    model = tsne(n_components=2, perplexity=30.0,
+                 max_iter=150, theta=0.5, seed=7)
 
     model.fit(x)
 
@@ -60,6 +61,7 @@ def test_tsne_all_dtypes(numpy_precision, numpy_order):
     assert model.n_features == x.shape[1]
     assert model.n_components == 2
     assert model.n_iter == 150
+    assert model.lp_n_iter == 0
     assert np.isfinite(model.kl_divergence)
 
     # Exercise fit_transform() path as well.
@@ -77,7 +79,8 @@ def test_tsne_multiple_orders(numpy_precision, numpy_orders):
     """
     x1 = get_tsne_data(dtype=numpy_precision, order=numpy_orders[0])
     x2 = get_tsne_data(dtype=numpy_precision, order=numpy_orders[1])
-    model = tsne(n_components=2, perplexity=30.0, max_iter=150, theta=0.5, seed=7)
+    model = tsne(n_components=2, perplexity=30.0,
+                 max_iter=150, theta=0.5, seed=7)
     emb1 = model.fit_transform(x1)
     with pytest.warns(UserWarning):
         emb2 = model.fit_transform(x2)
@@ -97,7 +100,8 @@ def test_tsne_functionality(numpy_precision, numpy_order, tsne_method, theta):
     """
     x = get_tsne_data(dtype=numpy_precision, order=numpy_order)
 
-    model = tsne(n_components=2, perplexity=30.0, max_iter=300, theta=theta, seed=42)
+    model = tsne(n_components=2, perplexity=30.0,
+                 max_iter=300, theta=theta, seed=42)
     embedding = model.fit_transform(x)
 
     assert embedding.shape == (x.shape[0], 2)
@@ -216,18 +220,6 @@ def test_tsne_error_exits(numpy_precision):
              theta=0.0, seed=7).fit_transform(x)
 
 
-def test_tsne_mixed_precision_float_rejected():
-    """
-    Mixed precision on float32 data should fail (no lower precision type available).
-    """
-    x = np.array([[1, 2, 3], [4, 5, 6], [7, 8, 9], [10, 11, 12],
-                  [13, 14, 15], [16, 17, 18]], dtype=np.float32)
-    model = tsne(n_components=2, perplexity=2.0, max_iter=50, theta=0.0,
-                 seed=42, mixed_precision=True)
-    with pytest.raises(RuntimeError):
-        model.fit(x)
-
-
 def test_tsne_mixed_precision_double():
     """
     Mixed precision on float64 data should run and produce a valid embedding.
@@ -242,3 +234,4 @@ def test_tsne_mixed_precision_double():
     assert embedding.dtype == np.float64
     assert np.all(np.isfinite(embedding))
     assert np.isfinite(model.kl_divergence)
+    assert model.lp_n_iter >= 1
