@@ -1,0 +1,77 @@
+name: Require JIRA ticket in PR title or description
+
+on:
+  pull_request:
+    types: [opened, edited, reopened, ready_for_review, synchronize]
+
+jobs:
+  validate:
+    runs-on: ai-pr-platform-set
+    steps:
+      - name: Check PR for JIRA Key
+        continue-on-error: true
+        env:
+          PR_TITLE: ${{ github.event.pull_request.title }}
+          PR_BODY: ${{ github.event.pull_request.body }}
+          PR_NUMBER: ${{ github.event.pull_request.number }}
+          EVENT_ACTION: ${{ github.event.action }}
+        run: |
+          echo EVENT_ACTION=$EVENT_ACTION >> $GITHUB_ENV
+          echo "$PR_TITLE $PR_BODY" > pr_info.txt
+          REGEX="\\b[A-Z]{3,}-[0-9]{3,}\\b"
+          matches="$(grep -Eo "$REGEX" pr_info.txt || true)"
+          pr_type=$(grep -o "Peer\ Review\ Checklist\ for\ Pull-Request" pr_info.txt || true)
+          if [[ -z "$matches" ]]; then
+            if [[ ! -z "$pr_type" ]]; then
+              echo "STATUS=error" >> $GITHUB_ENV
+              echo "::error::PR title or body must contain a JIRA ticket (e.g. CPUPL-1234)."
+              exit 20
+            fi
+            echo "::warning::No JIRA ticket found in small PR title or body."
+            echo "STATUS=warning" >> $GITHUB_ENV
+          else
+              echo "::notice::Found JIRA ticket key(s) in PR: " `echo $matches`
+              echo "STATUS=ok" >> $GITHUB_ENV
+          fi
+      - name: Add label when JIRA ticket not found
+        if: env.STATUS != 'ok' && env.EVENT_ACTION != 'synchronize' 
+        uses: AMD-GH-Actions/ai-pr-platform-actions-lib/.github/actions/github-script@main
+        with:
+          github-token: ${{ secrets.ai_gh_token }}
+          script: |
+            const label = "NO JIRA TICKET";
+            const pullNumber = context.payload.pull_request.number;
+            try {
+              await github.rest.issues.addLabels({
+                owner: context.repo.owner,
+                repo: context.repo.repo,
+                issue_number: pullNumber,
+                labels: [label],
+              });
+            } catch (error) {
+              core.setFailed(`Failed to add label: ${error.message}`);
+            }
+      - name: Remove label when JIRA ticket found
+        if: env.STATUS == 'ok' && env.EVENT_ACTION != 'synchronize'
+        uses: AMD-GH-Actions/ai-pr-platform-actions-lib/.github/actions/github-script@main
+        with:
+          github-token: ${{ secrets.ai_gh_token }}
+          script: |
+            const label = "NO JIRA TICKET";
+            const pullNumber = context.payload.pull_request.number;
+            try {
+              await github.rest.issues.removeLabel({
+                owner: context.repo.owner,
+                repo: context.repo.repo,
+                issue_number: pullNumber,
+                name: label,
+              });
+            } catch (error) {
+              // Ignore error if the label was not present
+              if (error.status !== 404) {
+                core.setFailed(`Failed to remove label: ${error.message}`);
+              }
+            }
+      - name: Check status for errors
+        if: env.STATUS == 'error'
+        run: exit 20

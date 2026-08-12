@@ -24,17 +24,17 @@
 
 # Get a list of unrepaired wheel files using GLOB
 file(GLOB wheel_files
-     "${CMAKE_INSTALL_PREFIX}/python_package/unrepaired-wheels/*.whl")
+  "${CMAKE_INSTALL_PREFIX}/python_package/unrepaired-wheels/*.whl")
 
 foreach(file ${wheel_files})
   if(WIN32)
     execute_process(COMMAND delvewheel show ${file} --add-path
-                            ${CMAKE_INSTALL_PREFIX}/tmp)
+      ${CMAKE_INSTALL_PREFIX}/tmp)
     execute_process(
       COMMAND
-        delvewheel repair ${file} --wheel-dir
-        ${CMAKE_INSTALL_PREFIX}/python_package --add-path
-        ${CMAKE_INSTALL_PREFIX}/tmp)
+      delvewheel repair ${file} --wheel-dir
+      ${CMAKE_INSTALL_PREFIX}/python_package --add-path
+      ${CMAKE_INSTALL_PREFIX}/tmp)
   else()
 
     get_filename_component(SPARSE_DIR ${SPARSE} DIRECTORY)
@@ -44,7 +44,7 @@ foreach(file ${wheel_files})
     get_filename_component(DLP_DIR ${DLP} DIRECTORY)
 
     set(ENV{LD_LIBRARY_PATH}
-        "${SPARSE_DIR}:${LAPACK_DIR}:${BLAS_DIR}:${UTILS_DIR}:${DLP_DIR}:${CMAKE_INSTALL_PREFIX}/tmp:$ENV{LD_LIBRARY_PATH}"
+      "${SPARSE_DIR}:${LAPACK_DIR}:${BLAS_DIR}:${UTILS_DIR}:${DLP_DIR}:${CMAKE_INSTALL_PREFIX}/tmp:$ENV{LD_LIBRARY_PATH}"
     )
     message(NOTICE "LD_LIBRARY_PATH             $ENV{LD_LIBRARY_PATH}")
 
@@ -63,11 +63,11 @@ foreach(file ${wheel_files})
     # not change the platform tag
     execute_process(
       COMMAND
-        auditwheel repair ${file} --plat ${manylinux_platform} --only-plat
-        --wheel-dir ${CMAKE_INSTALL_PREFIX}/python_package --exclude "libc.so"
-        --exclude "libc.so.*" --exclude "libgcc_s.so.*" --exclude
-        "libstdc++.so.*" --exclude "libc.so.*" --exclude "librt.so.*" --exclude
-        "libdl.so.*" --exclude "libpthread.so.*" --exclude "libm.so.*"
+      auditwheel repair ${file} --plat ${manylinux_platform} --only-plat
+      --wheel-dir ${CMAKE_INSTALL_PREFIX}/python_package --exclude "libc.so"
+      --exclude "libc.so.*" --exclude "libgcc_s.so.*" --exclude
+      "libstdc++.so.*" --exclude "libc.so.*" --exclude "librt.so.*" --exclude
+      "libdl.so.*" --exclude "libpthread.so.*" --exclude "libm.so.*" --exclude "libmvec.so.*"
       RESULT_VARIABLE result)
 
     if(NOT result EQUAL 0)
@@ -75,19 +75,19 @@ foreach(file ${wheel_files})
       # specifying the platform tag, which will allow auditwheel to determine
       # the appropriate platform tag based on the contents of the wheel - most
       # useful for dev builds without a container.
-      message(WARNING "Audtwheel needs to change the platform tag.")
+      message(WARNING "Auditwheel needs to change the platform tag.")
       execute_process(
         COMMAND
-          auditwheel repair ${file} --wheel-dir
-          ${CMAKE_INSTALL_PREFIX}/python_package --exclude "libc.so" --exclude
-          "libc.so.*" --exclude "libgcc_s.so.*" --exclude "libstdc++.so.*"
-          --exclude "libc.so.*" --exclude "librt.so.*" --exclude "libdl.so.*"
-          --exclude "libpthread.so.*" --exclude "libm.so.*"
+        auditwheel repair ${file} --wheel-dir
+        ${CMAKE_INSTALL_PREFIX}/python_package --exclude "libc.so" --exclude
+        "libc.so.*" --exclude "libgcc_s.so.*" --exclude "libstdc++.so.*"
+        --exclude "libc.so.*" --exclude "librt.so.*" --exclude "libdl.so.*"
+        --exclude "libpthread.so.*" --exclude "libm.so.*" --exclude "libmvec.so.*"
         RESULT_VARIABLE fallback_result)
       if(NOT fallback_result EQUAL 0)
         message(
           STATUS
-            "Failed to repair the Python wheel. For local use, add ${CMAKE_INSTALL_PREFIX}/python_package to PYTHONPATH."
+          "Failed to repair the Python wheel. For local use, add ${CMAKE_INSTALL_PREFIX}/python_package to PYTHONPATH."
         )
       endif()
       # Remove the original unrepaired wheel

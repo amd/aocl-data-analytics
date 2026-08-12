@@ -122,8 +122,12 @@ function(AppendCXXFlags OUT_VAR)
     endif()
   endforeach()
 
+  # Return a space-separated string rather than a CMake list. Embedding a
+  # semicolon-separated list into a flag string would otherwise survive as a
+  # single quoted token (e.g. "-Wfoo;-Wbar") on the compiler command line.
+  list(JOIN _flags " " _flags)
   set(${OUT_VAR}
-      ${_flags}
+      "${_flags}"
       PARENT_SCOPE)
 endfunction()
 
@@ -170,8 +174,12 @@ function(AppendCFlags OUT_VAR)
     endif()
   endforeach()
 
+  # Return a space-separated string rather than a CMake list. Embedding a
+  # semicolon-separated list into a flag string would otherwise survive as a
+  # single quoted token (e.g. "-Wfoo;-Wbar") on the compiler command line.
+  list(JOIN _flags " " _flags)
   set(${OUT_VAR}
-      ${_flags}
+      "${_flags}"
       PARENT_SCOPE)
 endfunction()
 

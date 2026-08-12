@@ -24,19 +24,19 @@
 
 # Flags that are common for GNU and Clang (C, C++) and selectively tested for Flang / gfortran
 set(FLAGS_COMMON "
-    -Wall 
-    -Wextra 
-    -Wno-sign-conversion 
-    -Wpedantic 
-    -Wunused 
-    -Wunused-but-set-variable 
-    -Wunused-function 
-    -Wunused-parameter 
-    -Wunused-variable 
+    -Wall
+    -Wextra
+    -Wno-sign-conversion
+    -Wpedantic
+    -Wunused
+    -Wunused-but-set-variable
+    -Wunused-function
+    -Wunused-parameter
+    -Wunused-variable
     -fno-fast-math"
 )
 set(FLAGS_COMMON_TO_TEST "-Wno-macro-redefined -Wno-nan-infinity-disabled -Wno-variadic-macro-arguments-omitted -Wno-gnu-zero-variadic-macro-arguments")
-set(FLAGS_RELEASE "-falign-loops=32 -fmacro-prefix-map=${CMAKE_SOURCE_DIR}=. -fopenmp-simd")
+set(FLAGS_RELEASE "-falign-loops=32 -fmacro-prefix-map=${PROJECT_SOURCE_DIR}=. -fopenmp-simd")
 set(FLAGS_DEBUG "-O0 -gdwarf-5 -g3")
 
 # Flags that are common for Fortran but are selectively tested for Flang / gfortran
@@ -52,25 +52,25 @@ if(COMPILER_FAMILY STREQUAL "LLVM")
 # LLVM -------------------------------------------------------------------------
    # Check flang, flang-new, ... and add supported flags only
    # Tunning flags are added by the external packages
-        set(CXX_FLAGS_RELEASE "${CXX_FLAGS_COMMON} ${FLAGS_COMMON} ${FLAGS_RELEASE}")
-        set(C_FLAGS_RELEASE "${C_FLAGS_COMMON} ${FLAGS_COMMON} ${FLAGS_RELEASE}")
+        set(CXX_FLAGS_RELEASE "${FLAGS_COMMON} ${CXX_FLAGS_COMMON} ${FLAGS_RELEASE}")
+        set(C_FLAGS_RELEASE "${FLAGS_COMMON} ${C_FLAGS_COMMON} ${FLAGS_RELEASE}")
         AppendFortranFlags(Fortran_FLAGS_RELEASE "${FLAGS_COMMON_FORTRAN} ${FLAGS_RELEASE_FORTRAN}")
-        set(CXX_FLAGS_DEBUG "${CXX_FLAGS_COMMON} ${FLAGS_COMMON} ${FLAGS_DEBUG}")
-        set(C_FLAGS_DEBUG "${C_FLAGS_COMMON} ${FLAGS_COMMON} ${FLAGS_DEBUG}")
+        set(CXX_FLAGS_DEBUG "${FLAGS_COMMON} ${CXX_FLAGS_COMMON} ${FLAGS_DEBUG}")
+        set(C_FLAGS_DEBUG "${FLAGS_COMMON} ${C_FLAGS_COMMON} ${FLAGS_DEBUG}")
         AppendFortranFlags(Fortran_FLAGS_DEBUG "${FLAGS_COMMON_FORTRAN} -O0 -gdwarf-5 -g")
-        set(CXX_FLAGS_RELWITHDEBINFO "${C_FLAGS_COMMON}${FLAGS_COMMON} ${FLAGS_RELEASE}")
-        set(C_FLAGS_RELWITHDEBINFO "${CXX_FLAGS_COMMON}${FLAGS_COMMON} ${FLAGS_RELEASE}")
+        set(CXX_FLAGS_RELWITHDEBINFO "${FLAGS_COMMON} ${CXX_FLAGS_COMMON} ${FLAGS_RELEASE}")
+        set(C_FLAGS_RELWITHDEBINFO "${FLAGS_COMMON} ${C_FLAGS_COMMON} ${FLAGS_RELEASE}")
         AppendFortranFlags(Fortran_FLAGS_RELWITHDEBINFO "${FLAGS_COMMON_FORTRAN} -fopenmp-simd")
 elseif(COMPILER_FAMILY STREQUAL "GNU")
 # GNU --------------------------------------------------------------------------
-        set(CXX_FLAGS_RELEASE "${CXX_FLAGS_COMMON} ${FLAGS_COMMON} ${FLAGS_RELEASE}")
-        set(C_FLAGS_RELEASE "${C_FLAGS_COMMON} ${FLAGS_COMMON} ${FLAGS_RELEASE}")
+        set(CXX_FLAGS_RELEASE "${FLAGS_COMMON} ${CXX_FLAGS_COMMON} ${FLAGS_RELEASE}")
+        set(C_FLAGS_RELEASE "${FLAGS_COMMON} ${C_FLAGS_COMMON} ${FLAGS_RELEASE}")
         AppendFortranFlags(Fortran_FLAGS_RELEASE "${FLAGS_COMMON_FORTRAN} ${FLAGS_RELEASE_FORTRAN}")
-        set(CXX_FLAGS_DEBUG "${CXX_FLAGS_COMMON} ${FLAGS_COMMON} ${FLAGS_DEBUG}")
-        set(C_FLAGS_DEBUG "${C_FLAGS_COMMON} ${FLAGS_COMMON} ${FLAGS_DEBUG}")
+        set(CXX_FLAGS_DEBUG "${FLAGS_COMMON} ${CXX_FLAGS_COMMON} ${FLAGS_DEBUG}")
+        set(C_FLAGS_DEBUG "${FLAGS_COMMON} ${C_FLAGS_COMMON} ${FLAGS_DEBUG}")
         AppendFortranFlags(Fortran_FLAGS_DEBUG "${FLAGS_COMMON_FORTRAN} ${FLAGS_DEBUG_FORTRAN}")
-        set(CXX_FLAGS_RELWITHDEBINFO "${CXX_FLAGS_COMMON} ${FLAGS_COMMON} ${FLAGS_RELEASE}")
-        set(C_FLAGS_RELWITHDEBINFO "${C_FLAGS_COMMON} ${FLAGS_COMMON} ${FLAGS_RELEASE}")
+        set(CXX_FLAGS_RELWITHDEBINFO "${FLAGS_COMMON} ${CXX_FLAGS_COMMON} ${FLAGS_RELEASE}")
+        set(C_FLAGS_RELWITHDEBINFO "${FLAGS_COMMON} ${C_FLAGS_COMMON} ${FLAGS_RELEASE}")
         AppendFortranFlags(Fortran_FLAGS_RELWITHDEBINFO "${FLAGS_COMMON_FORTRAN} -fopenmp-simd")
 elseif(COMPILER_FAMILY STREQUAL "LLVM-CL")
 # Clang-cl (windows) -----------------------------------------------------------

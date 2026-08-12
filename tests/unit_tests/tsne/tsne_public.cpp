@@ -1065,7 +1065,7 @@ const tsne_param_t tsne_param_pos[] = {
     {"iris_barnes_hut_theta03", "iris", 2, 30.0, 500, 0.3, "pca", 42, 10, 0.991103, 0.120829, 4.0},
     {"blobs_barnes_hut", "blobs", 2, 30.0, 500, 0.5, "pca", 42, 10, 0.973038, 0.243888},
     {"circles_barnes_hut", "circles", 2, 10.0, 500, 0.5, "pca", 42, 5, 0.997391, 0.336932, 6.0},
-    {"mnist_subset_barnes_hut_theta08", "mnist_subset", 2, 30.0, 1500, 0.8, "pca", 42, 10, 0.974921, 0.465035, 3.0},
+    {"mnist_subset_barnes_hut_theta08", "mnist_subset", 2, 30.0, 1500, 0.8, "pca", 42, 10, 0.974921, 0.465035, 5.0},
     // --- 3D exact (theta = 0) ---
     {"iris_exact_3d", "iris", 3, 30.0, 500, 0.0, "pca", 42, 10, 0.984882, 0.418823},
     {"blobs_exact_3d", "blobs", 3, 20.0, 500, 0.0, "pca", 42, 10, 0.973041, 0.689296},

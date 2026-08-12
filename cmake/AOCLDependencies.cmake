@@ -248,3 +248,10 @@ set(DA)
 set(DLP)
 
 linalg_libs()
+
+# Static DLP needs to be linking with the --whole-archive flag
+if(NOT WIN32 AND NOT BUILD_SHARED_LIBS AND NOT "${DLP}" STREQUAL "")
+  set(DLP_LINK "$<LINK_LIBRARY:WHOLE_ARCHIVE,${DLP}>")
+else()
+  set(DLP_LINK "${DLP}")
+endif()

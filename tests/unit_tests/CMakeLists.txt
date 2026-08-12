@@ -198,7 +198,13 @@ target_link_libraries(da_syrk_internal PRIVATE aocl-da ${BLAS})
 # ############ FP16 ##################
 # ##############################################################################
 add_executable(fp16_syrk_internal fp16/fp16_syrk_internal.cpp)
-target_link_libraries(fp16_syrk_internal PRIVATE aocl-da ${BLAS} ${DLP})
+target_link_libraries(fp16_syrk_internal PRIVATE aocl-da ${BLAS})
+# Static aocl-da propagates its DLP dependency (whole-archived) transitively,
+# so DLP must NOT be repeated here. A shared aocl-da does not propagate its PRIVATE DLP
+# dependency, so link DLP explicitly in that case.
+if(NOT WIN32 AND BUILD_SHARED_LIBS)
+  target_link_libraries(fp16_syrk_internal PRIVATE ${DLP})
+endif()
 
 # C compatibility test - compile with C compiler and link with C++ compiler
 set_source_files_properties(da_utilities/c_compatibility_nog_public.c
@@ -285,6 +291,22 @@ add_executable(kernel_functions_public
 
 add_executable(kernel_functions_internal
   kernel_functions/kernel_functions_internal.cpp)
+
+# ##############################################################################
+# ############ KT L2 micro kernels used in Kernel functions #################
+# ##############################################################################
+add_executable(ktl2 kernel_functions/ktl2.cpp)
+add_executable(ktl2_fallback kernel_functions/ktl2.cpp)
+target_compile_definitions(ktl2_fallback PRIVATE DA_KT_TEST_FALLBACK)
+
+# ktl2 instantiates the AOCC vectorised kt_exp_p() (kt_l2_clang.hpp) directly in
+# the test object, so it calls amd_vr* symbols itself and must link amdlibm.
+if(COMPILER_FAMILY STREQUAL "LLVM")
+  IsAOCC(IS_AOCC)
+  if(IS_AOCC)
+    target_link_libraries(ktl2 PRIVATE amdlibm)
+  endif()
+endif()
 
 # ##############################################################################
 # ############## SVM #################
@@ -459,6 +481,8 @@ set(GTEST_INTERNAL
   tsne_internal
   train_test_split_internal
   kernel_functions_internal
+  ktl2
+  ktl2_fallback
   miscellaneous_internal
   da_vector_internal
   da_cache_internal
@@ -579,11 +603,14 @@ foreach(internal_test ${INTERNAL_UTESTS})
 endforeach()
 
 # Some compilers complain about gtest variadic macros, try to suppress
-AppendCXXFlags(SUPPRESSIONS "-Wno-gnu-zero-variadic-macro-arguments")
+AppendCXXFlags(SUPPRESSIONS -Wno-gnu-zero-variadic-macro-arguments -Wno-c++20-extensions)
+string(REGEX REPLACE "\ " ";" SUPPRESSIONS "${SUPPRESSIONS}")
 
 foreach(target ${UTESTS})
   target_compile_options(${target} PRIVATE -march=native)
-  target_compile_options(${target} PRIVATE ${SUPPRESSIONS})
+  foreach(flag_ ${SUPPRESSIONS})
+    target_compile_options(${target} PRIVATE ${flag_})
+  endforeach()
   target_link_libraries(${target} PRIVATE aocl-da gtest_main gmock_main)
   if(BUILD_SMP)
     target_link_libraries(${target} PRIVATE OpenMP::OpenMP_CXX)
@@ -634,7 +661,7 @@ endif()
 if(WIN32 AND BUILD_SHARED_LIBS)
   set(GTEST_DISCOVERY_MODE PRE_TEST)
 elseif(NOT (ARCH STREQUAL "native" OR ARCH STREQUAL "dynamic" OR ARCH STREQUAL
-            "generic"))
+     "generic"))
   set(GTEST_DISCOVERY_MODE PRE_TEST)
 else()
   set(GTEST_DISCOVERY_MODE POST_BUILD)

@@ -85,11 +85,11 @@ To compile and link to static AOCL libraries using ``g++``:
 
     g++ <your_source_code>.cpp -I /<path to aocl-da headers>/include_<INT_LIB>
         /<path to aocl-da>/lib_<INT_LIB>/libaocl-da.a
+        -Wl,--whole-archive /<path to aocl-dlp>/lib_<INT_LIB>/libaocl-dlp.a -Wl,--no-whole-archive
         /<path to amd-sparse>/lib_<INT_LIB>/libaoclsparse.a
         /<path to amd-libflame>/lib_<INT_LIB>/libflame.a
         /<path to amd-blis>/lib_<INT_LIB>/libblis-mt.a
-        /<path to libaoclutils>/lib_<INT_LIB>/libaoclutils.a
-        /<path to aocl-dlp>/lib_<INT_LIB>/libaocl-dlp.a -lgfortran -lgomp
+        /<path to libaoclutils>/lib_<INT_LIB>/libaoclutils.a -lgfortran -lgomp
 
 To compile and link to static AOCL libraries using ``clang++``:
 
@@ -97,11 +97,17 @@ To compile and link to static AOCL libraries using ``clang++``:
 
     clang++ <your_source_code>.cpp -I /<path to aocl-da headers>/include_<INT_LIB>
             /<path to aocl-da>/lib_<INT_LIB>/libaocl-da.a
+            -Wl,--whole-archive /<path to aocl-dlp>/lib_<INT_LIB>/libaocl-dlp.a -Wl,--no-whole-archive
             /<path to amd-sparse>/lib_<INT_LIB>/libaoclsparse.a
             /<path to amd-libflame>/lib_<INT_LIB>/libflame.a
             /<path to amd-blis>/lib_<INT_LIB>/libblis-mt.a
-            /<path to libaoclutils>/lib_<INT_LIB>/libaoclutils.a
-            /<path to aocl-dlp>/lib_<INT_LIB>/libaocl-dlp.a -lflang -lomp -lpgmath
+            /<path to libaoclutils>/lib_<INT_LIB>/libaoclutils.a -lflang -lomp -lpgmath
+
+.. note::
+   When linking the static ``libaocl-dlp.a``, wrap it in ``-Wl,--whole-archive`` /
+   ``-Wl,--no-whole-archive`` and list ``libaocl-dlp.a`` before the
+   libraries it depends on (BLIS and AOCL-Utils) so its symbols resolve. This is
+   not needed when linking the shared ``libaocl-dlp.so``.
 
 To compile and link to dynamic AOCL libraries using ``g++``:
 

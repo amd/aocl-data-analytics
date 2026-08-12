@@ -26,12 +26,16 @@
  */
 
 #include "../utest_utils.hpp"
+#include "da_std.hpp"
 #include "kernel_functions.hpp"
 #include "kernel_functions_utils.hpp"
+#include "kt.hpp"
 #include "gmock/gmock.h"
 #include "gtest/gtest.h"
 #include <cstring>
 #include <list>
+
+namespace {
 
 using namespace TEST_ARCH;
 using namespace da_kernel_functions;
@@ -46,6 +50,12 @@ template <typename T> class kernel_internal_test : public testing::Test {
 
 using FloatTypes = ::testing::Types<float, double>;
 TYPED_TEST_SUITE(kernel_internal_test, FloatTypes);
+
+#if (defined(__aocc__) && __has_include("amdlibm_vec.h")) || defined(__GNUC__)
+#define DA_HAS_KT_EXP_BACKEND 1
+#else
+#define DA_HAS_KT_EXP_BACKEND 0
+#endif
 
 // Helper function to test a kernel across different ISA implementations
 template <typename T, typename KernelSelector, typename KernelExecutor>
@@ -155,3 +165,4 @@ TYPED_TEST(kernel_internal_test, math_func) {
         count++;
     }
 }
+} // namespace

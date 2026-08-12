@@ -1,5 +1,5 @@
 /* ************************************************************************
- * Copyright (c) 2025-2026 Advanced Micro Devices, Inc. All rights reserved.
+ * Copyright (c) 2026 Advanced Micro Devices, Inc. All rights reserved.
  *
  * Permission is hereby granted, free of charge, to any person obtaining a copy
  * of this software and associated documentation files (the "Software"), to deal
@@ -22,21 +22,37 @@
  * ************************************************************************
  */
 
-// clang-format on
+#ifndef DA_KT_HPP
+#error "Never use ``kt_l2_fallback.hpp'' directly; include ``kt.hpp'' instead."
+#endif
 
-#ifndef _KT_EXP_
-#define _KT_EXP_
+#pragma message("Warning: Using fallback scalar implementation for kt_exp_p.")
 
-namespace kernel_templates {
+#ifndef _KT_L2_FALLBACK_
+#define _KT_L2_FALLBACK_
 
-template <typename> inline constexpr bool kt_always_false_v = false;
+#include "kt_exp.hpp"
+#include <immintrin.h>
 
-// -----------------------------------------------------------------------
-// Computes the exponential of the given AVX vector
-// using compiler specific intrinsic functions.
-template <bsz SZ, typename SUF>
-KT_FORCE_INLINE avxvector_t<SZ, SUF> kt_exp_p(const avxvector_t<SZ, SUF> a) noexcept;
+// Computes the exponential of the given AVX vector using fallback intrinsics.
+template <kernel_templates::bsz SZ, typename SUF>
+KT_FORCE_INLINE kernel_templates::avxvector_t<SZ, SUF>
+kernel_templates::kt_exp_p(const kernel_templates::avxvector_t<SZ, SUF> a) noexcept {
 
-} // namespace kernel_templates
+    using namespace kernel_templates;
+    SUF *v = new SUF[tsz_v<SZ, SUF>];
+    kt_storeu_p<SZ>(&v[0], a);
+    for (size_t i = 0; i < tsz_v<SZ, SUF>; ++i) {
+#ifdef __AVX512FP16__
+        if constexpr (std::is_same_v<SUF, _Float16>)
+            v[i] = static_cast<_Float16>(std::exp(static_cast<float>(v[i])));
+        else
+#endif
+            v[i] = std::exp(v[i]);
+    }
+    kernel_templates::avxvector_t<SZ, SUF> result = kt_loadu_p<SZ>(&v[0]);
+    delete[] v;
+    return result;
+}
 
-#endif // _KT_EXP_
+#endif // _KT_L2_FALLBACK_
