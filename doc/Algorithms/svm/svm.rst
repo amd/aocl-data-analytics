@@ -160,6 +160,8 @@ The standard way of computing SVM using AOCL-DA is as follows.
 
          * Number of iterations (:cpp:enumerator:`da_svm_n_iterations`). In this context it counts the number of SMO subproblems solved, for each classifier. Vector of size :math:`(n_{\mathrm{classifiers}},\,)`.
 
+         * Number of low precision iterations (:cpp:enumerator:`da_svm_lp_n_iterations`). When mixed precision iterative refinement is used, this counts the number of SMO subproblems solved during the low precision phase, for each classifier. Contains zeros when mixed precision is not used. Vector of size :math:`(n_{\mathrm{classifiers}},\,)`.
+
          * Some solvers provide extra information. :cpp:enumerator:`da_result_::da_rinfo`, when available, contains the
            info[100] array with the following values:
 
@@ -203,8 +205,15 @@ SVM options
          "max_iter", "integer", ":math:`i=100000`", "Sets the maximum number of iterations. Use 0 to specify no limit.", ":math:`0 \le i`"
          "c", "real", ":math:`r=1`", "Regularization parameter. Controls the trade-off between maximizing the margin between classes and minimizing classification errors. A larger value means higher penalty to the loss function on misclassified observations. Applies to SVC, SVR and NuSVR.", ":math:`0 < r`"
          "degree", "integer", ":math:`i=3`", "Parameter for 'polynomial' kernel.", ":math:`1 \le i`"
+         "mixed precision", "string", ":math:`s=` `no`", "Whether to use mixed precision iterative refinement, in which lower precision arithmetic is used before switching to the working precision for the final iterations.", ":math:`s=` `no`, or `yes`."
+         "low precision convergence tolerance", "real", ":math:`r=10^{-2}`", "If mixed precision iterative refinement is enabled, convergence tolerance for the low precision phase.", ":math:`0 \le r`"
+         "low precision max_iter", "integer", ":math:`i=80000`", "If mixed precision iterative refinement is enabled, maximum number of iterations for the low precision phase.", ":math:`0 \le i`"
          "check data", "string", ":math:`s=` `no`", "Check input data for NaNs prior to performing computation.", ":math:`s=` `no`, or `yes`."
          "storage order", "string", ":math:`s=` `column-major`", "Whether data is supplied and returned in row- or column-major order.", ":math:`s=` `c`, `column-major`, `f`, `fortran`, or `row-major`."
+
+      The option ``mixed precision`` switches on an experimental mode in which initial iterations are performed in lower precision before refining the result in the working precision.
+      The option ``low precision max_iter`` sets the maximum number of iterations for the low-precision phase, and ``low precision convergence tolerance`` sets the convergence tolerance for the low-precision phase.
+
 
 Examples
 ========
@@ -248,16 +257,16 @@ Support Vector Machine APIs
 
    .. tab-item:: Python
 
-      .. autoclass:: aoclda.svm.SVC(C=1.0, kernel="rbf", degree=3, gamma=-1.0, coef0=0.0, probability=False, tol=0.001, cache_size=200.0, max_iter=-1, tau=1.0e-12, check_data=False)
+      .. autoclass:: aoclda.svm.SVC(C=1.0, kernel="rbf", degree=3, gamma=-1.0, coef0=0.0, probability=False, tol=0.001, cache_size=200.0, max_iter=-1, tau=1.0e-12, mixed_precision=False, low_precision_max_iter=None, low_precision_tol=None, check_data=False)
          :members:
          :inherited-members:
-      .. autoclass:: aoclda.svm.SVR(C=1.0, epsilon=0.1, kernel="rbf", degree=3, gamma=-1.0, coef0=0.0, tol=0.001, cache_size=200.0, max_iter=-1, tau=1.0e-12, check_data=False)
+      .. autoclass:: aoclda.svm.SVR(C=1.0, epsilon=0.1, kernel="rbf", degree=3, gamma=-1.0, coef0=0.0, tol=0.001, cache_size=200.0, max_iter=-1, tau=1.0e-12, mixed_precision=False, low_precision_max_iter=None, low_precision_tol=None, check_data=False)
          :members:
          :inherited-members:
-      .. autoclass:: aoclda.svm.NuSVC(nu=0.5, kernel="rbf", degree=3, gamma=-1.0, coef0=0.0, probability=False, tol=0.001, cache_size=200.0, max_iter=-1, tau=1.0e-12, check_data=False)
+      .. autoclass:: aoclda.svm.NuSVC(nu=0.5, kernel="rbf", degree=3, gamma=-1.0, coef0=0.0, probability=False, tol=0.001, cache_size=200.0, max_iter=-1, tau=1.0e-12, mixed_precision=False, low_precision_max_iter=None, low_precision_tol=None, check_data=False)
          :members:
          :inherited-members:
-      .. autoclass:: aoclda.svm.NuSVR(nu=0.5, C=1.0, kernel="rbf", degree=3, gamma=-1.0, coef0=0.0, tol=0.001, cache_size=200.0, max_iter=-1, tau=1.0e-12, check_data=False)
+      .. autoclass:: aoclda.svm.NuSVR(nu=0.5, C=1.0, kernel="rbf", degree=3, gamma=-1.0, coef0=0.0, tol=0.001, cache_size=200.0, max_iter=-1, tau=1.0e-12, mixed_precision=False, low_precision_max_iter=None, low_precision_tol=None, check_data=False)
          :members:
          :inherited-members:
 

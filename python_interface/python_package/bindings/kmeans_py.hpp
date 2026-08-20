@@ -45,7 +45,10 @@ class kmeans : public pyda_handle {
   public:
     kmeans(da_int n_clusters = 1, std::string initialization_method = "k-means++",
            da_int n_init = 10, da_int max_iter = 300, da_int seed = -1,
-           std::string algorithm = "elkan", std::string prec = "double",
+           std::string algorithm = "lloyd", std::string distance = "euclidean",
+           bool normalize_data = false, std::string empty_clusters = "ignore",
+           da_int afk_mcmc_samples = 50, bool mixed_precision = false,
+           da_int low_precision_max_iter = 200, std::string prec = "double",
            bool check_data = false) {
         if (prec == "double")
             da_handle_init<double>(&handle, da_handle_kmeans);
@@ -54,22 +57,40 @@ class kmeans : public pyda_handle {
             precision = da_single;
         }
         da_status status;
+        std::string yes_str = "yes";
         status = da_options_set_int(handle, "n_clusters", n_clusters);
         exception_check(status);
         status = da_options_set_string(handle, "algorithm", algorithm.c_str());
+        exception_check(status);
+        status = da_options_set_string(handle, "distance", distance.c_str());
+        exception_check(status);
+        if (normalize_data == true) {
+            status = da_options_set(handle, "normalize data", yes_str.c_str());
+            exception_check(status);
+        }
+        status = da_options_set_string(handle, "empty clusters", empty_clusters.c_str());
+        exception_check(status);
+        status = da_options_set_int(handle, "afk-mc2 samples", afk_mcmc_samples);
         exception_check(status);
         status = da_options_set_string(handle, "initialization method",
                                        initialization_method.c_str());
         exception_check(status);
         status = da_options_set_int(handle, "max_iter", max_iter);
         exception_check(status);
+        status =
+            da_options_set_int(handle, "low precision max_iter", low_precision_max_iter);
+        exception_check(status);
         status = da_options_set_int(handle, "seed", seed);
         exception_check(status);
         status = da_options_set_int(handle, "n_init", n_init);
         exception_check(status);
+        if (mixed_precision == true) {
+            status = da_options_set(handle, "mixed precision", yes_str.c_str());
+            exception_check(status);
+        }
         if (check_data == true) {
-            std::string yes_str = "yes";
-            status = da_options_set(handle, "check data", yes_str.data());
+
+            status = da_options_set(handle, "check data", yes_str.c_str());
             exception_check(status);
         }
     }
@@ -79,10 +100,14 @@ class kmeans : public pyda_handle {
     ~kmeans() { da_handle_destroy(&handle); }
 
     template <typename T>
-    void fit(py::array_t<T> A, std::optional<py::array_t<T>> C, T tol = 1.0e-4) {
+    void fit(py::array_t<T> A, std::optional<py::array_t<T>> C, T tol = 1.0e-4,
+             T low_prec_tol = 1.0e-2) {
         // floating point optional parameters are defined here since we cannot define those in the constructor (no template param)
         da_status status;
         status = da_options_set(handle, "convergence tolerance", tol);
+        exception_check(status);
+        status =
+            da_options_set(handle, "low precision convergence tolerance", low_prec_tol);
         exception_check(status);
         da_int n_samples, n_features, lda, ldc, tmp1, tmp2;
 
@@ -114,8 +139,8 @@ class kmeans : public pyda_handle {
         da_int m_samples, m_features, ldx;
         get_numpy_array_properties(X, m_samples, m_features, ldx);
 
-        T result[5];
-        da_int dim = 5;
+        T result[6];
+        da_int dim = 6;
 
         status = da_handle_get_result(handle, da_rinfo, &dim, result);
         exception_check(status);
@@ -159,18 +184,20 @@ class kmeans : public pyda_handle {
 
     template <typename T>
     void get_rinfo(da_int *n_samples, da_int *n_features, da_int *n_clusters,
-                   da_int *n_iter, T *inertia) {
+                   da_int *n_iter, T *inertia, da_int *lp_n_iter = nullptr) {
         da_status status;
 
-        da_int dim = 5;
+        da_int dim = 6;
 
-        T rinfo[5];
+        T rinfo[6];
         status = da_handle_get_result(handle, da_rinfo, &dim, rinfo);
         *n_samples = (da_int)rinfo[0];
         *n_features = (da_int)rinfo[1];
         *n_clusters = (da_int)rinfo[2];
         *n_iter = (da_int)rinfo[3];
         *inertia = rinfo[4];
+        if (lp_n_iter)
+            *lp_n_iter = (da_int)rinfo[5];
 
         exception_check(status);
     }
@@ -311,6 +338,23 @@ class kmeans : public pyda_handle {
         }
 
         return n_iter;
+    }
+
+    auto get_lp_n_iter() {
+
+        da_int n_samples, n_features, n_clusters, n_iter, lp_n_iter;
+
+        if (precision == da_single) {
+            float inertia;
+            get_rinfo(&n_samples, &n_features, &n_clusters, &n_iter, &inertia,
+                      &lp_n_iter);
+        } else {
+            double inertia;
+            get_rinfo(&n_samples, &n_features, &n_clusters, &n_iter, &inertia,
+                      &lp_n_iter);
+        }
+
+        return lp_n_iter;
     }
 
     auto get_n_samples() {

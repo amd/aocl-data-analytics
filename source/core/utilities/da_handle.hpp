@@ -80,6 +80,13 @@ struct _da_handle {
     static da_status load_handle(da_handle &handle, const char *buffer_data,
                                  const size_t data_size);
     static da_status load_handle(da_handle &handle, const std::string &file_name);
+
+    // Prints saved AOCL-DA build and serialization versions of a loaded model.
+    da_status print_model_versions();
+
+    // Helper used to see if the supplied data type to the public API
+    // is of the same type as the handle.
+    template <typename T> da_status check_precision();
 };
 
 #endif

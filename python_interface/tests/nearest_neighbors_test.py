@@ -620,3 +620,99 @@ def test_nearest_neighbors_error_exits(numpy_precision):
         nn.classifier_predict(X=x_test, search_mode="radius_neighbors")
     with pytest.raises(ValueError):
         nn.classifier_predict_proba(X=x_test, search_mode="radius_neighbors")
+
+    # inner_product metric: radius_neighbors and weights='distance' are incompatible
+    ip_train = np.ones((5, 3), dtype=numpy_precision)
+    ip_test = np.ones((2, 3), dtype=numpy_precision)
+
+    nn_ip = nearest_neighbors(metric="inner_product")
+    nn_ip.fit(ip_train)
+    with pytest.raises((RuntimeError, ValueError)):
+        nn_ip.radius_neighbors(ip_test)
+
+    ip_y = np.array([0, 1, 0, 1, 0])
+    nn_ip2 = nearest_neighbors(metric="inner_product", weights="distance")
+    nn_ip2.fit(ip_train, ip_y)
+    for mode in ("knn", "radius_neighbors"):
+        with pytest.raises((RuntimeError, ValueError)):
+            nn_ip2.classifier_predict(ip_test, search_mode=mode)
+        with pytest.raises((RuntimeError, ValueError)):
+            nn_ip2.classifier_predict_proba(ip_test, search_mode=mode)
+
+    ip_reg = np.array([1., 2., 1., 2., 1.], dtype=numpy_precision)
+    nn_ip3 = nearest_neighbors(metric="inner_product", weights="distance")
+    nn_ip3.fit(ip_train, ip_reg)
+    for mode in ("knn", "radius_neighbors"):
+        with pytest.raises((RuntimeError, ValueError)):
+            nn_ip3.regressor_predict(ip_test, search_mode=mode)
+
+    # inner_product metric: tree-based algorithms are incompatible
+    for algo in ("kd_tree", "ball_tree"):
+        nn_ip_tree = nearest_neighbors(metric="inner_product", algorithm=algo)
+        with pytest.raises((RuntimeError, ValueError)):
+            nn_ip_tree.fit(ip_train)
+
+
+@pytest.mark.parametrize("numpy_precision", [np.float64, np.float32])
+@pytest.mark.parametrize("numpy_order", ["C", "F"])
+def test_inner_product_knn(numpy_precision, numpy_order):
+    """
+    Verify MIPS: kneighbors with metric='inner_product' returns the k training
+    vectors with the largest dot product, sorted descending.
+    Both string forms ('inner_product' and 'inner product') must be accepted.
+    """
+    tol = 1000 * np.finfo(numpy_precision).eps
+
+    x_train = np.array(
+        [[3.0, 1.0],
+         [1.0, 2.0],
+         [-1.0, 0.0],
+         [0.0, -2.0],
+         [2.0, 3.0],
+         [-2.0, -3.0],
+         [-1.0, -4.0]],
+        dtype=numpy_precision, order=numpy_order,
+    )
+    x_test = np.array(
+        [[1.0, 1.0],
+         [0.0, -1.0],
+         [-1.0, -2.0]],
+        dtype=numpy_precision, order=numpy_order,
+    )
+
+    expected_ind = np.array([[4, 0, 1], [6, 5, 3], [6, 5, 3]])
+    expected_dist = np.array([[5., 4., 3.], [4., 3., 2.], [9., 8., 4.]],
+                             dtype=numpy_precision)
+
+    for metric_str in ("inner_product", "inner product"):
+        nn = nearest_neighbors(n_neighbors=3, metric=metric_str, algorithm="brute")
+        nn.fit(x_train)
+        dist, ind = nn.kneighbors(x_test, return_distance=True)
+
+        assert np.array_equal(ind, expected_ind), \
+            f"[{metric_str}] Wrong indices: {ind}"
+        assert np.allclose(dist, expected_dist, atol=tol), \
+            f"[{metric_str}] Wrong distances: {dist}"
+
+        y_train = np.array([0, 1, 1, 0, 1, 0, 0])
+        expected_proba = np.array([[1 / 3, 2 / 3],
+                                   [1.0, 0.0],
+                                   [1.0, 0.0]], dtype=numpy_precision)
+        expected_labels = np.array([1, 0, 0])
+
+        nn.fit(x_train, y_train)
+        proba = nn.classifier_predict_proba(x_test, search_mode="knn")
+        assert np.allclose(proba, expected_proba, atol=tol), \
+            f"[{metric_str}] Wrong proba: {proba}"
+        labels = nn.classifier_predict(x_test, search_mode="knn")
+        assert np.array_equal(labels, expected_labels), \
+            f"[{metric_str}] Wrong labels: {labels}"
+
+        y_reg = np.array([3., 1., -1., 0., 2., -2., -1.], dtype=numpy_precision)
+        expected_targets = np.array([2.0, -1.0, -1.0], dtype=numpy_precision)
+
+        nn_reg = nearest_neighbors(n_neighbors=3, metric=metric_str, algorithm="brute")
+        nn_reg.fit(x_train, y_reg)
+        targets = nn_reg.regressor_predict(x_test, search_mode="knn")
+        assert np.allclose(targets, expected_targets, atol=tol), \
+            f"[{metric_str}] Wrong targets: {targets}"

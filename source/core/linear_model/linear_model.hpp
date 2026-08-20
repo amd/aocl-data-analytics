@@ -30,6 +30,8 @@
 #include "basic_handle.hpp"
 #include "da_cblas.hh"
 #include "da_error.hpp"
+#include "da_std.hpp"
+#include "fp16_helpers.hpp"
 #include "lapack_templates.hpp"
 #include "linmod_types.hpp"
 #include "macros.h"
@@ -133,8 +135,6 @@ template <typename T> class linear_model : public basic_handle<T> {
     linmod_method method_id = linmod_method::undefined;
     logistic_constraint logistic_constraint_model = logistic_constraint::no;
 
-    // True if the model has been successfully trained
-    bool model_trained = false;
     bool init_done = false;
     bool is_well_determined;
     bool copycoefs = false;
@@ -174,6 +174,21 @@ template <typename T> class linear_model : public basic_handle<T> {
     /* save state of options that the API can change */
     da_linmod_types::scaling_t user_scaling = da_linmod_types::scaling_t::automatic;
 
+    /* Options stored as member variables (populated by read_options()) */
+    bool read_public_options = true;
+    da_int optim_iteration_limit = 10000;
+    T optim_convergence_tol{T(1.e-4)};
+    T optim_progress_factor{0};
+    T optim_dual_gap_tol{T(1.e-4)};
+    T optim_time_limit{T(1000000)};
+    da_int optim_coord_skip_min = 2;
+    da_int optim_coord_skip_max = 100;
+    da_int debug_level = 0;
+    da_int print_level = 0;
+    da_int print_options_int = 0;
+    da_int lp_iteration_limit = 5000;
+    T lp_convergence_tol{T(1.e-3)};
+
     /* Parameters used during the standardization of the problem
      * these are only defined if "scaling" is not "none" and populated
      * on the call to ::preprocess_data(...)
@@ -181,14 +196,17 @@ template <typename T> class linear_model : public basic_handle<T> {
     scaling_t scaling = scaling_t::automatic; // What scaling was applied
     std::vector<T> std_shifts; // column-wise means [ X | y ], size nfeat + 1
     std::vector<T> std_scales; // column-wise scales stored as [ X | y ] size nfeat + 1
-    // column-wise X (variance) "proportions" of size nfeat (or norm squared of X)
-    std::vector<T> std_xv;
+    // column-wise X (variance) "proportions" of size nfeat (or norm squared of X).
+    // Stored in the wider type (float for T = _Float16) since `<X[j],X[j]>/N` can
+    // otherwise underflow for small X, giving NaN (0/0) in the coord update.
+    std::vector<da_fp16::wider_t<T>> std_xv;
     /* Training data
      * coef: vector containing the trained coefficients of the model
        dual_coef: vector containing the trained dual coefficients of the model
      */
     da_int ncoef = 0;
     da_int nrow_coef = 0, ncol_coef = 0; // dimensions of coef array, returned in rinfo
+    // coef when 2D then it is stored always in column-major order
     std::vector<T> coef;
     std::vector<T> dual_coef;
 
@@ -206,6 +224,8 @@ template <typename T> class linear_model : public basic_handle<T> {
     cg_data<T> *cg = nullptr;
     cholesky_data<T> *cholesky = nullptr;
 
+    std::string method_str, scaling_str, logistic_constraint_str;
+
     // Private methods to allocate memory
     da_status init_opt_method(linmod_method method);
 
@@ -214,6 +234,7 @@ template <typename T> class linear_model : public basic_handle<T> {
      *                to compute the model
      * validate_options: check that the options chosen by the user are compatible
      */
+    da_status read_options();
     da_status choose_method();
     da_status validate_options(linmod_method method);
 
@@ -223,9 +244,31 @@ template <typename T> class linear_model : public basic_handle<T> {
     bool requires_transpose(linmod_method method) const;
     bool do_preprocessing(linmod_method next_method, linmod_method previous_method);
 
+    // For use with mixed precision iterative refinement
+    bool use_mixed_precision = false;
+    da_int lp_n_iter = 0;
+    // Lower precision type: float for double; _Float16 for float (coord solver only).
+    using lp_type =
+        typename std::conditional<std::is_same_v<T, double>, float, _Float16>::type;
+    da_status lower_precision_init(da_int &ncoefs, const T *coefs_in, T *&coefs_out);
+    da_status convert_inputs_to_lower_precision(std::vector<lp_type> &XUSR_lp,
+                                                da_int &ldXUSR_lp,
+                                                std::vector<lp_type> &yusr_lp,
+                                                da_int ncoefs, const T *coefs,
+                                                std::vector<lp_type> &coefs_lp);
+
   public:
     linear_model(da_errors::da_error_t &err);
+    // Bypass constructor: sets member variables directly, skipping option reads
+    linear_model(da_errors::da_error_t &err, linmod_model mod, da_order order,
+                 bool intercept, linmod_method method_id, T alpha, T lambda,
+                 logistic_constraint logistic_constraint_model, scaling_t user_scaling,
+                 T optim_convergence_tol, T optim_progress_factor, T optim_dual_gap_tol,
+                 da_int optim_iteration_limit, da_int optim_coord_skip_min,
+                 da_int optim_coord_skip_max);
     ~linear_model();
+
+    template <class> friend class linear_model;
 
     /* This function is called when data in the handle has changed, e.g. options
      * changed. We mark the model untrained and prepare the handle in a way that
@@ -259,11 +302,11 @@ template <typename T> class linear_model : public basic_handle<T> {
     da_status fit_logreg_lbfgs();
     da_status get_coef(da_int &nx, T *coef, da_coef_type ctype);
     da_status evaluate_model(da_int nfeat, da_int nsamples, const T *Xeval,
-                             da_int ldXeval, T *predictions, T *observations, T *loss);
+                             da_int ldXeval, T *predictions, const T *observations,
+                             T *loss);
 
     da_status get_result(da_result query, da_int *dim, T *result) override;
-    da_status get_result([[maybe_unused]] da_result query, [[maybe_unused]] da_int *dim,
-                         [[maybe_unused]] da_int *result) override;
+    da_status get_result(da_result query, da_int *dim, da_int *result) override;
 
     // Testing getters
     bool get_model_trained();

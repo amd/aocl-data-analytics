@@ -79,6 +79,9 @@ def model_persistence_decision_tree_example():
         os.remove('decision_tree_model.pkl')
         sys.exit(1)
 
+    print("")
+    tree_loaded.print_model_versions()
+
     # Clean up created files
     os.remove('decision_tree_model.pkl')
 

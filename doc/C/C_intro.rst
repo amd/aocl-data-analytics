@@ -85,6 +85,7 @@ To compile and link to static AOCL libraries using ``g++``:
 
     g++ <your_source_code>.cpp -I /<path to aocl-da headers>/include_<INT_LIB>
         /<path to aocl-da>/lib_<INT_LIB>/libaocl-da.a
+        -Wl,--whole-archive /<path to aocl-dlp>/lib_<INT_LIB>/libaocl-dlp.a -Wl,--no-whole-archive
         /<path to amd-sparse>/lib_<INT_LIB>/libaoclsparse.a
         /<path to amd-libflame>/lib_<INT_LIB>/libflame.a
         /<path to amd-blis>/lib_<INT_LIB>/libblis-mt.a
@@ -96,10 +97,17 @@ To compile and link to static AOCL libraries using ``clang++``:
 
     clang++ <your_source_code>.cpp -I /<path to aocl-da headers>/include_<INT_LIB>
             /<path to aocl-da>/lib_<INT_LIB>/libaocl-da.a
+            -Wl,--whole-archive /<path to aocl-dlp>/lib_<INT_LIB>/libaocl-dlp.a -Wl,--no-whole-archive
             /<path to amd-sparse>/lib_<INT_LIB>/libaoclsparse.a
             /<path to amd-libflame>/lib_<INT_LIB>/libflame.a
             /<path to amd-blis>/lib_<INT_LIB>/libblis-mt.a
             /<path to libaoclutils>/lib_<INT_LIB>/libaoclutils.a -lflang -lomp -lpgmath
+
+.. note::
+   When linking the static ``libaocl-dlp.a``, wrap it in ``-Wl,--whole-archive`` /
+   ``-Wl,--no-whole-archive`` and list ``libaocl-dlp.a`` before the
+   libraries it depends on (BLIS and AOCL-Utils) so its symbols resolve. This is
+   not needed when linking the shared ``libaocl-dlp.so``.
 
 To compile and link to dynamic AOCL libraries using ``g++``:
 
@@ -108,7 +116,8 @@ To compile and link to dynamic AOCL libraries using ``g++``:
     g++ <your_source_code>.cpp -I /<path to aocl-da headers>/include_<INT_LIB>
         -L /<path to aocl-da>/lib_<INT_LIB> -L /<path to amd-sparse>/lib_<INT_LIB>
         -L /<path to amd-libflame>/lib_<INT_LIB> -L /<path to amd-blis>/lib_<INT_LIB>
-        -L /<path to amd-utils>/lib -laocl-da -laoclsparse -lflame -lblis-mt -laoclutils
+        -L /<path to amd-utils>/lib -L /<path to aocl-dlp>/lib_<INT_LIB>
+        -laocl-da -laoclsparse -lflame -lblis-mt -laoclutils -laocl-dlp
         -lgfortran -lgomp
 
 To compile and link to dynamic AOCL libraries using ``clang++``:
@@ -118,7 +127,8 @@ To compile and link to dynamic AOCL libraries using ``clang++``:
     clang++ <your_source_code>.cpp -I /<path to aocl-da headers>/include_<INT_LIB>
             -L /<path to aocl-da>/lib_<INT_LIB> -L /<path to amd-sparse>/lib_<INT_LIB>
             -L /<path to amd-libflame>/lib_<INT_LIB> -L /<path to amd-blis>/lib_<INT_LIB>
-            -L /<path to amd-utils>/lib -laocl-da -laoclsparse -lflame -lblis-mt -laoclutils
+            -L /<path to amd-utils>/lib -L /<path to aocl-dlp>/lib_<INT_LIB>
+            -laocl-da -laoclsparse -lflame -lblis-mt -laoclutils -laocl-dlp
             -lflang -lomp -lpgmath
 
 Note that for dynamic linking you will need to update your ``LD_LIBRARY_PATH`` environment
@@ -236,10 +246,10 @@ Your C++ compiler will instead call the correct function based on the floating p
 For some functions, overloading is not possible (for example, functions such as :cpp:func:`da_handle_init_s` and :cpp:func:`da_handle_init_d` do not use ``double`` or ``float`` arguments).
 In these cases, templated functions are available (e.g. ``da_handle_init<T>``, where ``T`` can be ``double`` or ``float``).
 
-The complete list of available C++ functions is found in ``aoclda_cpp_overloads.hpp`` in the include folder of your installation (and reproduced below).
+The complete list of available C++ functions is found in ``aoclda.hpp`` in the include folder of your installation (and reproduced below).
 
 .. dropdown:: AOCL-DA C++ overloads
 
-    .. literalinclude:: ../../source/include/aoclda_cpp_overloads.hpp
+    .. literalinclude:: ../../source/include/aoclda.hpp
       :language: C++
       :linenos:

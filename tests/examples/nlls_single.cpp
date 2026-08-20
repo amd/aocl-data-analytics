@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2024 Advanced Micro Devices, Inc. All rights reserved.
+ * Copyright (C) 2024-2026 Advanced Micro Devices, Inc. All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without modification,
  * are permitted provided that the following conditions are met:
@@ -56,11 +56,11 @@ da_int eval_r(da_int n_coef, da_int n_res, void *udata, float const *x, float *r
 }
 
 int main(void) {
-    std::cout << "--------------------------------------------------------------------"
+    std::cout << " --------------------------------------------------------------------"
               << std::endl;
-    std::cout << " Nonlinear Least-Squares basic (reduced precision) example"
+    std::cout << "  Nonlinear Least-Squares basic (reduced precision) example"
               << std::endl;
-    std::cout << "--------------------------------------------------------------------"
+    std::cout << " --------------------------------------------------------------------"
               << std::endl;
 
     float coef[n_coef]{0.f, 1.f};
@@ -91,6 +91,7 @@ int main(void) {
             da_status_success;
     pass &= da_options_set_real_s(handle, "ralfit convergence abs tol grd", 1e-5f) ==
             da_status_success;
+    pass &= da_options_set_real_s(handle, "time limit", 15.0f) == da_status_success;
     pass &= da_options_set_real_s(handle, "ralfit convergence rel tol grd", 1e-8f) ==
             da_status_success;
     if (!pass) {

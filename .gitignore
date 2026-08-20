@@ -13,3 +13,6 @@ tags
 # Compiled Python
 *.pyc
 
+AI_plans/
+paper
+

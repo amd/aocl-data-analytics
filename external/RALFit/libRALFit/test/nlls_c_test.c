@@ -73,16 +73,22 @@ ral_int eval_HF(ral_int n, ral_int m, void *params, ral_real const *x,
   return 0; // Success
 }
 
-ral_int generic_test(ral_int model, ral_int method) {
-  // Data to be fitted
-  ral_int m = 5;
+void generic_solve(struct ral_nlls_options *options, struct ral_nlls_inform *inform, ral_real *weights, ral_real *lower_bounds, ral_real *upper_bounds) {
+  const ral_int m = 5;
+  const struct params_type params = {.t = (ral_real[]){1.0, 2.0, 4.0, 5.0, 8.0},
+                                      .y = (ral_real[]){3.0, 4.0, 6.0, 11.0, 20.0}};
+  // Call fitting routine
+  ral_real x[2] = {2.5, 0.25}; // Initial guess
+  nlls_solve(2, m, x, eval_r, eval_J, eval_HF, &params, options, inform, weights,
+             NULL, lower_bounds, upper_bounds);
+}
 
-  struct params_type params = {.t = (ral_real[]){1.0, 2.0, 4.0, 5.0, 8.0},
-                               .y = (ral_real[]){3.0, 4.0, 6.0, 11.0, 20.0}};
+ral_int generic_test(ral_int model, ral_int method) {
 
   // Initialize options values
   struct ral_nlls_options options;
   ral_nlls_default_options(&options);
+  struct ral_nlls_inform inform;
 
   options.model = model;
   options.nlls_method = method;
@@ -93,11 +99,9 @@ ral_int generic_test(ral_int model, ral_int method) {
   options.stop_s = 1.0e-6;
 #endif
 
-  // Call fitting routine
-  ral_real x[2] = {2.5, 0.25}; // Initial guess
-  struct ral_nlls_inform inform;
-  nlls_solve(2, m, x, eval_r, eval_J, eval_HF, &params, &options, &inform, NULL,
-             NULL, NULL, NULL);
+  // call solver
+  generic_solve(&options, &inform, NULL, NULL, NULL);
+
   if (model == 0) {
     printf("%s \n", inform.error_message);
     if (inform.status != -3) {
@@ -115,14 +119,11 @@ ral_int generic_test(ral_int model, ral_int method) {
   // If model is expected to pass,
   // call fitting routine with weights and bounds
   if (model > 0) {
-    x[0] = 2.5;
-    x[1] = 0.25; // Reset Initial guess
     ral_real weights[5] = {1.0, 2.0, 3.0, 4.0, 5.0};
     ral_real lower_bounds[2] = {0.0, 0.0};
     ral_real upper_bounds[2] = {10.0, 10.0};
+    generic_solve(&options, &inform, weights, lower_bounds, upper_bounds);
 
-    nlls_solve(2, m, x, eval_r, eval_J, eval_HF, &params, &options, &inform,
-               weights, NULL, lower_bounds, upper_bounds);
     if (inform.status != 0) {
       printf("nlls_solve() returned with flag %d\n", inform.status);
       return inform.status; // Error
@@ -156,6 +157,22 @@ ral_int main(void) {
                model_array[i], method);
       }
     }
+  }
+
+  // Test options (time limit)
+  ++cnt;
+  printf("\n [Test: #%i.......] options\n", cnt);
+  struct ral_nlls_inform inform;
+  struct ral_nlls_options options;
+  ral_nlls_default_options(&options);
+  options.maxtime = 1.0e-9; // very small time limit
+  generic_solve(&options, &inform, NULL, NULL, NULL);
+  if (inform.status != -21) {
+      printf(" [Test: #%i...FAIL] options\n", cnt);
+      printf("nlls_solve() returned with error flag %d (expected -21)\n", inform.status);
+      ++no_errors;
+  } else {
+        printf(" [Test: #%i...PASS] options\n", cnt);
   }
 
   if (no_errors > 0) {

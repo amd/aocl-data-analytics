@@ -44,6 +44,7 @@ struct PREC(ral_nlls_options) {
   bool print_options; /* print all options? */
   ral_int print_header; /*=k; print one-liner header every k-th iteration */
   ral_int maxit; /* maximum number of iterations */
+  ral_real maxtime; /* maximum time allowance */
   ral_int model; /* what model to use? */
   ral_int type_of_method; /* what method to use? */
   ral_int nlls_method; /* what nlls method to use? */

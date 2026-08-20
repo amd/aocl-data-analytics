@@ -1,4 +1,4 @@
-# Copyright (C) 2025 Advanced Micro Devices, Inc. All rights reserved.
+# Copyright (C) 2025-2026 Advanced Micro Devices, Inc. All rights reserved.
 #
 # Redistribution and use in source and binary forms, with or without
 # modification, are permitted provided that the following conditions are met: 1.
@@ -71,6 +71,9 @@ function(linalg_libs)
     if(UTILS_INCLUDE_DIR STREQUAL "")
       set(UTILS_INCLUDE_DIR ${CMAKE_AOCL_ROOT}/include_${INT_LIB})
     endif()
+    if(DLP_INCLUDE_DIR STREQUAL "")
+      set(DLP_INCLUDE_DIR ${CMAKE_AOCL_ROOT}/include_${INT_LIB})
+    endif()
     if(BLAS_LIB STREQUAL "")
       set(BLAS_LIB_DIR ${CMAKE_AOCL_ROOT}/lib_${INT_LIB})
     endif()
@@ -83,12 +86,12 @@ function(linalg_libs)
     if(UTILS_LIB STREQUAL "")
       set(UTILS_LIB_DIR ${CMAKE_AOCL_ROOT}/lib_${INT_LIB})
     endif()
+    if(DLP_LIB STREQUAL "")
+      set(DLP_LIB_DIR ${CMAKE_AOCL_ROOT}/lib_${INT_LIB})
+    endif()
     if(DA_LIB STREQUAL "")
       # Only used if we are building Python with an existing DA build
       set(DA_LIB_DIR ${CMAKE_AOCL_ROOT}/lib_${INT_LIB})
-    endif()
-    if(LIBMEM_LIB STREQUAL "")
-      set(LIBMEM_LIB_DIR ${CMAKE_AOCL_ROOT}/lib_${INT_LIB})
     endif()
   endif()
 
@@ -127,7 +130,7 @@ function(linalg_libs)
     set(UTILS_CPUID_NAME "au_cpuid")
     set(DA_NAME "aocl-da") # Only used if we are building Python with an
                            # existing DA build
-    set(LIBMEM_NAME "aocl-libmem")
+    set(DLP_NAME "aocl-dlp")
   endif()
 
   if(BLAS_LIB STREQUAL "")
@@ -198,15 +201,15 @@ function(linalg_libs)
     endif()
   endif()
 
-  if(USE_LIBMEM)
-    if(LIBMEM_LIB STREQUAL "")
+  if(NOT WIN32)
+    if(DLP_LIB STREQUAL "")
       find_library(
-        LIBMEM name ${LIBMEM_NAME}
-        PATHS ${LIBMEM_LIB_DIR} REQUIRED
+        DLP name ${DLP_NAME}
+        PATHS ${DLP_LIB_DIR} REQUIRED
         NO_DEFAULT_PATH)
     else()
-      set(LIBMEM
-          ${LIBMEM_LIB}
+      set(DLP
+          ${DLP_LIB}
           PARENT_SCOPE)
     endif()
   endif()
@@ -215,6 +218,7 @@ function(linalg_libs)
   include_directories(${BLAS_INCLUDE_DIR})
   include_directories(${SPARSE_INCLUDE_DIR})
   include_directories(${UTILS_INCLUDE_DIR})
+  include_directories(${DLP_INCLUDE_DIR})
 
   set(BLAS_INCLUDE_DIR
       ${BLAS_INCLUDE_DIR}
@@ -228,6 +232,9 @@ function(linalg_libs)
   set(UTILS_INCLUDE_DIR
       ${UTILS_INCLUDE_DIR}
       PARENT_SCOPE)
+  set(DLP_INCLUDE_DIR
+      ${DLP_INCLUDE_DIR}
+      PARENT_SCOPE)
 
 endfunction(linalg_libs)
 
@@ -238,6 +245,13 @@ set(SPARSE)
 set(UTILS)
 set(UTILS_CPUID)
 set(DA)
-set(LIBMEM)
+set(DLP)
 
 linalg_libs()
+
+# Static DLP needs to be linking with the --whole-archive flag
+if(NOT WIN32 AND NOT BUILD_SHARED_LIBS AND NOT "${DLP}" STREQUAL "")
+  set(DLP_LINK "$<LINK_LIBRARY:WHOLE_ARCHIVE,${DLP}>")
+else()
+  set(DLP_LINK "${DLP}")
+endif()

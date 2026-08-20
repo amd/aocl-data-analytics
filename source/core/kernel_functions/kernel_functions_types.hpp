@@ -1,5 +1,5 @@
 /* ************************************************************************
- * Copyright (c) 2024-2025 Advanced Micro Devices, Inc.
+ * Copyright (c) 2024-2026 Advanced Micro Devices, Inc.
  *
  * Permission is hereby granted, free of charge, to any person obtaining a copy
  * of this software and associated documentation files (the "Software"), to deal
@@ -29,13 +29,15 @@
 
 namespace da_kernel_functions_types {
 
+enum kernel_type { rbf = 0, linear, polynomial, sigmoid, precomputed };
+
 enum class math_type { none = 0, tanh, power };
 
 template <typename T>
 using exp_kernel_func_t = void (*)(da_int, da_int, T *, da_int, T, const T *, const T *);
 
 template <typename T>
-using pow_kernel_func_t = void (*)(da_int, da_int, T *, da_int, T, const T *, da_int);
+using pow_kernel_func_t = void (*)(da_int, da_int, T *, da_int, T, da_int);
 
 template <typename T> using tanh_kernel_func_t = void (*)(da_int, da_int, T *, da_int, T);
 } // namespace da_kernel_functions_types

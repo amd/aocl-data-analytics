@@ -7,3 +7,4 @@ setuptools>=70.1
 auditwheel
 delvewheel
 pandas
+faiss-cpu

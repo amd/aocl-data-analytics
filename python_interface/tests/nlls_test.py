@@ -1,4 +1,4 @@
-# Copyright (C) 2024-2025 Advanced Micro Devices, Inc. All rights reserved.
+# Copyright (C) 2024-2026 Advanced Micro Devices, Inc. All rights reserved.
 #
 # Redistribution and use in source and binary forms, with or without modification,
 # are permitted provided that the following conditions are met:
@@ -27,6 +27,7 @@
 # pylint: disable = too-many-locals
 
 
+import time as tm
 import numpy as np
 import pytest
 from aoclda.nonlinear_model import nlls
@@ -49,6 +50,15 @@ def exp_r(x, r, data) -> int:
     x1 = x[0]
     x2 = x[1]
     r[:] = x1 * np.exp(x2 * t) - y
+    return 0
+
+def exp_r_delay(x, r, data) -> int:
+    t = data['t']
+    y = data['y']
+    x1 = x[0]
+    x2 = x[1]
+    r[:] = x1 * np.exp(x2 * t) - y
+    tm.sleep(1e-3)
     return 0
 
 # Calculate:
@@ -182,6 +192,35 @@ def test_functionality_order(no_fortran, numpy_order, use_fd):
 # Interface checks
 
 
+def test_iface_bad_time(no_fortran):
+    """Time is invalid"""
+    if no_fortran:
+        pytest.skip("Skipping test due to no_fortran flag")
+
+    n_coef = 2
+    n_res = 5
+    x = np.array([2.5, 0.25])
+    max_time = 0.0
+    ndf = nlls(n_coef, n_res, verbose=0)
+    try:
+        ndf.fit(x, exp_r, exp_J, data=exp_data, maxtime=max_time)
+
+    # check expected results
+    except RuntimeError as e:
+        ok = "time limit" in str(e).lower()
+        if ok:
+            print('Ok')
+        else:
+            raise AssertionError(
+                "Did not catch the expected exception for invalid time test") from e
+    except Exception as e:
+        raise AssertionError(
+            "Did not catch the expected exception for invalid time test") from e
+    else:
+        raise AssertionError(
+            "Did not catch the expected exception for invalid time test")
+
+
 def test_iface_too_tight(no_fortran):
     """Finite difference test tolerance too tight"""
     if no_fortran:
@@ -274,6 +313,28 @@ def test_iface_x(no_fortran):
     else:
         raise AssertionError(
             "Did not catch the expected exception")
+
+
+def test_warning_time(no_fortran):
+    if no_fortran:
+        pytest.skip("Skipping test due to no_fortran flag")
+
+    n_coef = 2
+    n_res = 5
+    x = np.array([2.5, 0.25])
+    ndf = nlls(n_coef, n_res)
+
+    with pytest.warns(RuntimeWarning, match='Time limit exceeded'):
+        ndf.fit(
+            x,
+            exp_r_delay,
+            exp_J,
+            exp_Hr,
+            data=exp_data,
+            abs_gtol=1e-7,
+            gtol=1.0e-9,
+            maxtime=1e-3,
+        )
 
 
 def test_warning(no_fortran):

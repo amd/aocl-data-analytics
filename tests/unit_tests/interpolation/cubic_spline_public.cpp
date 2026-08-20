@@ -346,9 +346,9 @@ TYPED_TEST(cubic_spline_public, set_boundary_conditions_errors) {
               da_status_invalid_input);
 
     // Test null pointers
-    EXPECT_EQ(da_interpolation_set_boundary_conditions(h, 1, 1, nullptr, 1, right_bc),
+    EXPECT_EQ(da_interpolation_set_boundary_conditions<T>(h, 1, 1, nullptr, 1, right_bc),
               da_status_invalid_pointer);
-    EXPECT_EQ(da_interpolation_set_boundary_conditions(h, 1, 1, left_bc, 1, nullptr),
+    EXPECT_EQ(da_interpolation_set_boundary_conditions<T>(h, 1, 1, left_bc, 1, nullptr),
               da_status_invalid_pointer);
 
     // Test invalid dim
@@ -489,13 +489,13 @@ TYPED_TEST(cubic_spline_public, evaluate_error) {
         da_interpolation_evaluate(h, 0, x_eval.data(), y_eval.data(), n_orders, orders),
         da_status_invalid_input);
     EXPECT_EQ(
-        da_interpolation_evaluate(h, n_eval, nullptr, y_eval.data(), n_orders, orders),
+        da_interpolation_evaluate<T>(h, n_eval, nullptr, y_eval.data(), n_orders, orders),
         da_status_invalid_pointer);
     EXPECT_EQ(
-        da_interpolation_evaluate(h, n_eval, x_eval.data(), nullptr, n_orders, orders),
+        da_interpolation_evaluate<T>(h, n_eval, x_eval.data(), nullptr, n_orders, orders),
         da_status_invalid_pointer);
-    EXPECT_EQ(da_interpolation_evaluate(h, n_eval, x_eval.data(), y_eval.data(), n_orders,
-                                        nullptr),
+    EXPECT_EQ(da_interpolation_evaluate<T>(h, n_eval, x_eval.data(), y_eval.data(),
+                                           n_orders, nullptr),
               da_status_invalid_pointer);
     EXPECT_EQ(
         da_interpolation_evaluate(h, n_eval, x_eval.data(), y_eval.data(), 0, orders),
@@ -658,7 +658,16 @@ TYPED_TEST(cubic_spline_public, interpolate_natural) {
               da_status_success);
     EXPECT_EQ(da_options_set_string(handle, "cubic spline type", "natural"),
               da_status_success);
+    // Check da_trained before interpolation
+    da_int tr_dim = 1, tr_val = -1;
+    EXPECT_EQ(da_handle_get_result(handle, da_result::da_trained, &tr_dim, &tr_val),
+              da_status_success);
+    EXPECT_EQ(tr_val, 0);
     EXPECT_EQ(da_interpolation_interpolate<T>(handle), da_status_success);
+    // Check da_trained after interpolation
+    EXPECT_EQ(da_handle_get_result(handle, da_result::da_trained, &tr_dim, &tr_val),
+              da_status_success);
+    EXPECT_EQ(tr_val, 1);
     da_int dim = 4 * (n_sites - 1);
     std::vector<T> coeffs(dim);
     EXPECT_EQ(da_handle_get_result(handle, da_result::da_cubic_spline_coefficients, &dim,

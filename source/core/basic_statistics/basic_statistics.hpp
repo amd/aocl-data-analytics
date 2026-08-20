@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2025 Advanced Micro Devices, Inc. All rights reserved.
+ * Copyright (C) 2025-2026 Advanced Micro Devices, Inc. All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without modification,
  * are permitted provided that the following conditions are met:
@@ -84,22 +84,17 @@ template <typename T>
 da_status correlation_matrix(da_order order, da_int n, da_int p, const T *x, da_int ldx,
                              T *corr, da_int ldcorr);
 
-/* This routine uses the partial sort routine std::nth_element to correctly place the kth element of x.
-   It uses the index array to do the sorting, so x is not itself reordered. */
-template <typename T>
-da_status indexed_partial_sort(const T *x, da_int length, da_int stride, da_int *xindex,
-                               da_int k, da_int dim1, bool two_d, T &stat);
-
 /* Compute the qth quantile of x along the specified axis */
 template <typename T>
 da_status quantile(da_order order, da_axis axis_in, da_int n_in, da_int p_in, const T *x,
-                   da_int ldx, T q, T *quant, da_quantile_type quantile_type);
+                   da_int ldx, const T *q, da_int n_q, T *quantiles,
+                   da_quantile_type quantile_type);
 
 /* Compute min/max, hinges and median along specified axis */
 template <typename T>
-da_status five_point_summary(da_order order, da_axis axis_in, da_int n_in, da_int p_in,
-                             const T *x, da_int ldx, T *minimum, T *lower_hinge,
-                             T *median, T *upper_hinge, T *maximum);
+da_status five_point_summary(da_order order, da_axis axis, da_int n, da_int p, const T *x,
+                             da_int ldx, T *minimum, T *lower_hinge, T *median,
+                             T *upper_hinge, T *maximum);
 
 template <typename T> bool is_zero(T *arr, da_int len);
 

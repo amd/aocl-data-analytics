@@ -52,6 +52,14 @@ from aoclda.sklearn import skpatch, undo_skpatch
 @pytest.mark.parametrize("radius_compute", [6.0, None])
 @pytest.mark.parametrize("algorithm", ['auto', 'kd_tree', 'ball_tree', 'brute'])
 @pytest.mark.parametrize("sorted", [True, False])
+# Some parameter combinations exercise small radii where one or more query
+# points have no neighbours; both AOCL-DA and sklearn correctly warn and fill
+# with NaN in that case. The behaviour is intentional, so silence the warnings
+# here rather than clutter the test log.
+@pytest.mark.filterwarnings(
+    "ignore:One or more samples have no neighbors within.*:RuntimeWarning")
+@pytest.mark.filterwarnings(
+    "ignore:One or more samples have no neighbors within.*:UserWarning")
 def test_radius_neighbors_regressor(
         precision,
         weights,

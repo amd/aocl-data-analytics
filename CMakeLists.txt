@@ -23,24 +23,24 @@
 #
 cmake_minimum_required(VERSION 3.26 FATAL_ERROR)
 if(POLICY CMP0167)
-    cmake_policy(SET CMP0167 OLD) # FindBoost
+  cmake_policy(SET CMP0167 OLD) # FindBoost
 endif()
 
-project(AOCL-DA VERSION 5.3.0)
+project(AOCL-DA VERSION 5.3.2)
 
 set(AOCLDA_VERSION
-    "${CMAKE_PROJECT_VERSION_MAJOR}.${CMAKE_PROJECT_VERSION_MINOR}.${CMAKE_PROJECT_VERSION_PATCH}"
+  "${PROJECT_VERSION_MAJOR}.${PROJECT_VERSION_MINOR}.${PROJECT_VERSION_PATCH}"
 )
 
 # Capture git commit date and tag if available, otherwise fallback to commit hash, if unavailable then "unknown"
 set(GIT_COMMIT "unknown")
 set(GIT_COMMIT_DATE "")
 find_package(Git QUIET)
-if(GIT_FOUND AND EXISTS "${CMAKE_SOURCE_DIR}/.git")
+if(GIT_FOUND AND EXISTS "${PROJECT_SOURCE_DIR}/.git")
   # Try to get the current tag
   execute_process(
     COMMAND ${GIT_EXECUTABLE} describe --tags --exact-match
-    WORKING_DIRECTORY ${CMAKE_SOURCE_DIR}
+    WORKING_DIRECTORY ${PROJECT_SOURCE_DIR}
     OUTPUT_VARIABLE GIT_COMMIT_TAG
     OUTPUT_STRIP_TRAILING_WHITESPACE
     ERROR_QUIET
@@ -49,7 +49,7 @@ if(GIT_FOUND AND EXISTS "${CMAKE_SOURCE_DIR}/.git")
     # No tag found, get commit hash
     execute_process(
       COMMAND ${GIT_EXECUTABLE} rev-parse HEAD
-      WORKING_DIRECTORY ${CMAKE_SOURCE_DIR}
+      WORKING_DIRECTORY ${PROJECT_SOURCE_DIR}
       OUTPUT_VARIABLE GIT_COMMIT_HASH
       OUTPUT_STRIP_TRAILING_WHITESPACE
     )
@@ -60,7 +60,7 @@ if(GIT_FOUND AND EXISTS "${CMAKE_SOURCE_DIR}/.git")
   # Try to get the commit date in YYYY-MM-DD hh:mm:ss format
   execute_process(
     COMMAND ${GIT_EXECUTABLE} show -s "--date=format:%Y-%m-%d %H:%M:%S" --format=%cd HEAD
-    WORKING_DIRECTORY ${CMAKE_SOURCE_DIR}
+    WORKING_DIRECTORY ${PROJECT_SOURCE_DIR}
     OUTPUT_VARIABLE GIT_COMMIT_DATE_OUT
     OUTPUT_STRIP_TRAILING_WHITESPACE
     ERROR_QUIET
@@ -84,12 +84,6 @@ set(VERS_DEF -DAOCLDA_VERSION_STRING="${AOCLDA_VERSION_STR}")
 # build da_core.
 list(APPEND AOCLDA_DEFS ${VERS_DEF})
 
-math(EXPR AOCLDA_VERSION_INT
-    "${CMAKE_PROJECT_VERSION_MAJOR} * 10000 + \
-     ${CMAKE_PROJECT_VERSION_MINOR} * 100 + \
-     ${CMAKE_PROJECT_VERSION_PATCH}")
-list(APPEND AOCLDA_DEFS -DAOCLDA_VERSION_INT=${AOCLDA_VERSION_INT})
-
 # Export Release Information automatically
 set(CMAKE_EXPORT_COMPILE_COMMANDS ON)
 
@@ -100,10 +94,10 @@ set(CMAKE_WINDOWS_EXPORT_ALL_SYMBOLS ON)
 if(NOT CMAKE_BUILD_TYPE AND NOT CMAKE_CONFIGURATION_TYPES)
   message(STATUS "Setting build type to 'Debug' as none was specified")
   set(CMAKE_BUILD_TYPE
-      "Debug"
-      CACHE STRING "Choose the type of build" FORCE)
+    "Debug"
+    CACHE STRING "Choose the type of build" FORCE)
   set_property(CACHE CMAKE_BUILD_TYPE PROPERTY STRINGS "" "Debug" "Release"
-                                               "RelWithDebInfo")
+    "RelWithDebInfo")
 endif()
 
 set(CMAKE_CXX_STANDARD 17)
@@ -115,11 +109,10 @@ option(BUILD_EXAMPLES "Build the example programs" ON)
 option(BUILD_GTEST "Build Gtest unit-tests" ON)
 option(COVERAGE "Builds coverage of Gtests and examples (Debug/GCC)" OFF)
 option(BUILD_FORTRAN
-       "Builds aocl-da with the Fortran dependencies, RALFit and lbfgsb" ON)
+  "Builds aocl-da with the Fortran dependencies, RALFit and lbfgsb" ON)
 option(BUILD_ILP64 "ILP64 Support" OFF)
 if(NOT WIN32) # Linux options only
   option(ASAN "Enable Address SANitizer tool (GNU/Linux)" OFF)
-  option(MEMSAN "Enable MEMory SANitizer tool (GNU/Linux)" OFF)
   option(VALGRIND "Enable memory leak detection tool (GNU/Linux)" OFF)
 endif()
 option(BUILD_DOC "Build HTML documentation" OFF)
@@ -132,80 +125,87 @@ option(BUILD_SMP "Build using OpenMP and link to threaded BLAS and LAPACK" ON)
 option(VECTORIZATION_REPORTS "Generate vectorization reports" OFF)
 option(DA_LOGGING "Compile with debug printing" OFF)
 option(BUILD_SHARED_LIBS "Shared library build" OFF)
-option(USE_LIBMEM "Link with AOCL LibMem" OFF)
 # ARCH can be set as shown below, with default "native". If "dynamic" is set,
 # then a list of target architectures will be built and returned in BUILD_ARCHS.
 # If "native" is set, then the native architecture will be built, and the
 # internal namespace will be set to NATIVE_NAMESPACE to ensure appropriate
 # performant kernels are called.
 set(ARCH
-    "native"
-    CACHE
-      STRING
-      "Architecture(s) to build: generic, generic_avx512, dynamic, native, znver2, znver3, ... (default: native)"
+  "native"
+  CACHE
+  STRING
+  "Architecture(s) to build: generic, generic_avx512, dynamic, native, znver2, znver3, ... (default: native)"
 )
 set(ARCH_LIST
-    "generic"
-    "generic_avx512"
-    "dynamic"
-    "native"
-    "znver2"
-    "znver3"
-    "znver4"
-    "znver5")
+  "generic"
+  "generic_avx512"
+  "dynamic"
+  "native"
+  "znver2"
+  "znver3"
+  "znver4"
+  "znver5"
+  "znver6")
 if(NOT ARCH IN_LIST ARCH_LIST)
   message(FATAL_ERROR "Invalid ARCH value: \"${ARCH}\"\n"
-                      "Valid values are: ${ARCH_LIST}")
+    "Valid values are: ${ARCH_LIST}")
 endif()
 option(BUILD_PYTHON "Python bindings" OFF)
 # Set paths to AOCL-Utils, BLAS, LAPACK and AOCL-Sparse installations.
 set(CMAKE_AOCL_ROOT
-    $ENV{AOCL_ROOT}
-    CACHE
-      STRING
-      "AOCL_ROOT directory to be used to find BLAS/LAPACK/AOCLUTILS libraries")
+  $ENV{AOCL_ROOT}
+  CACHE
+  STRING
+  "AOCL_ROOT directory to be used to find BLAS/LAPACK/AOCLUTILS libraries")
 # Override the above path using the variables below.
 set(BLAS_INCLUDE_DIR
-    ""
-    CACHE STRING "Path to BLAS include directory")
+  ""
+  CACHE STRING "Path to BLAS include directory")
 set(LAPACK_INCLUDE_DIR
-    ""
-    CACHE STRING "Path to LAPACK include directory")
+  ""
+  CACHE STRING "Path to LAPACK include directory")
 set(SPARSE_INCLUDE_DIR
-    ""
-    CACHE STRING "Path to SPARSE include directory")
+  ""
+  CACHE STRING "Path to SPARSE include directory")
 set(UTILS_INCLUDE_DIR
+  ""
+  CACHE STRING "Path to UTILS include directory")
+if(NOT WIN32)
+  set(DLP_INCLUDE_DIR
     ""
-    CACHE STRING "Path to UTILS include directory")
+    CACHE STRING "Path to DLP include directory")
+endif()
 set(KT_PATH
   ""
   CACHE PATH "Path to kernel templates (defaults to SPARSE_INCLUDE_DIR if unset)")
 set(BLAS_LIB
-    ""
-    CACHE STRING "Path to BLAS library")
+  ""
+  CACHE STRING "Path to BLAS library")
 set(LAPACK_LIB
-    ""
-    CACHE STRING "Path to LAPACK library")
+  ""
+  CACHE STRING "Path to LAPACK library")
 set(SPARSE_LIB
-    ""
-    CACHE STRING "Path to SPARSE library")
+  ""
+  CACHE STRING "Path to SPARSE library")
 set(UTILS_LIB
+  ""
+  CACHE STRING "Path to AOCL-UTILS library")
+if(NOT WIN32)
+  set(DLP_LIB
     ""
-    CACHE STRING "Path to AOCL-UTILS library")
+    CACHE STRING "Path to DLP library")
+endif()
 set(UTILS_CPUID_LIB
-    ""
-    CACHE STRING "Path to AU-CPUID library")
+  ""
+  CACHE STRING "Path to AU-CPUID library")
 set(UTILS_CORE_LIB
-    ""
-    CACHE STRING "Path to AU_CORE library")
+  ""
+  CACHE STRING "Path to AU_CORE library")
 if(USE_EXISTING_DA)
   set(DA_LIB
-      ""
-      CACHE STRING "Path to existing DA library")
-endif()
-set(LIBMEM_LIB
     ""
-    CACHE STRING "Path to LIBMEM library")
+    CACHE STRING "Path to existing DA library")
+endif()
 
 # Even serial builds need an OpenMP runtime to enable correct LAPACK linking
 if(BUILD_SMP)
@@ -219,16 +219,12 @@ if(BUILD_SMP)
   set(CMAKE_C_FLAGS "${CMAKE_C_FLAGS} ${OpenMP_C_FLAGS}")
   set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} ${OpenMP_CXX_FLAGS}")
   set(CMAKE_EXE_LINKER_FLAGS
-      "${CMAKE_EXE_LINKER_FLAGS} ${OpenMP_EXE_LINKER_FLAGS}")
+    "${CMAKE_EXE_LINKER_FLAGS} ${OpenMP_EXE_LINKER_FLAGS}")
 else()
   message(
     WARNING
-      "Building without OpenMP may cause linking issues with threaded BLAS/LAPACK/Sparse libraries"
+    "Building without OpenMP may cause linking issues with threaded BLAS/LAPACK/Sparse libraries"
   )
-  # Suppress warnings about unrecognized #pragma omp directives in serial builds
-  if(CMAKE_CXX_COMPILER_ID MATCHES "GNU|Clang")
-    add_compile_options(-Wno-unknown-pragmas)
-  endif()
 endif()
 
 # Quick checks to disable requested features Disable *SAN & VALGRIND if running
@@ -238,11 +234,6 @@ if(ASAN AND NOT UNIX)
   set(ASAN OFF)
 endif()
 
-if(MEMSAN AND NOT UNIX)
-  message(WARNING "MEMory SANitizer is only supported in GNU/Linux")
-  set(MEMSAN OFF)
-endif()
-
 if(VALGRIND AND NOT UNIX)
   message(WARNING "Memory leak detector tool is only supported in GNU/Linux")
   set(VALGRIND OFF)
@@ -250,16 +241,11 @@ endif()
 
 # Coverage is only valid with GNU/Linux GCC Debug builds
 if(COVERAGE
-   AND (NOT ${CMAKE_CXX_COMPILER_ID} MATCHES "GNU"
-        OR NOT ${CMAKE_BUILD_TYPE} MATCHES "Debug"
-        OR NOT UNIX))
+  AND (NOT ${CMAKE_CXX_COMPILER_ID} MATCHES "GNU"
+     OR NOT ${CMAKE_BUILD_TYPE} MATCHES "Debug"
+     OR NOT UNIX))
   message(WARNING "Coverage is only supported for  GNU/Linux GCC Debug build")
   set(COVERAGE OFF)
-endif()
-
-if(USE_LIBMEM AND NOT UNIX)
-  message(WARNING "LibMem is only supported on Linux")
-  set(USE_LIBMEM OFF)
 endif()
 
 if(${CMAKE_BUILD_TYPE} MATCHES "Debug")
@@ -272,7 +258,7 @@ if(DA_LOGGING)
 endif()
 
 # modules directory for easy include
-set(CMAKE_MODULE_PATH ${CMAKE_SOURCE_DIR}/cmake)
+set(CMAKE_MODULE_PATH ${PROJECT_SOURCE_DIR}/cmake)
 
 if(BUILD_ILP64)
   set(INT_LIB "ILP64")
@@ -284,28 +270,19 @@ endif()
 # Use -fPIC always
 set(CMAKE_POSITION_INDEPENDENT_CODE ON)
 
-# Check for CL compatibility layer of clang
-cmake_path(GET CMAKE_CXX_COMPILER FILENAME COMPILER_BASENAME)
-if(COMPILER_BASENAME MATCHES
-   "^(.+-)?(clang-cl)(-[0-9]+(\\.[0-9]+)*)?(-[^.]+)?(\\.exe)?$")
-  set(CLANG_OPTIONS_STYLE "MSVC")
-else()
-  set(CLANG_OPTIONS_STYLE "GNU")
-endif()
-
 # Check we can find AOCL installation
 if(CMAKE_AOCL_ROOT STREQUAL ""
-   AND (BLAS_INCLUDE_DIR STREQUAL ""
-        OR LAPACK_INCLUDE_DIR STREQUAL ""
-        OR SPARSE_INCLUDE_DIR STREQUAL ""
-        OR BLAS_LIB STREQUAL ""
-        OR LAPACK_LIB STREQUAL ""
-        OR SPARSE_LIB STREQUAL ""
-        OR UTILS_LIB STREQUAL ""
-       ))
+  AND (BLAS_INCLUDE_DIR STREQUAL ""
+     OR LAPACK_INCLUDE_DIR STREQUAL ""
+     OR SPARSE_INCLUDE_DIR STREQUAL ""
+     OR BLAS_LIB STREQUAL ""
+     OR LAPACK_LIB STREQUAL ""
+     OR SPARSE_LIB STREQUAL ""
+     OR UTILS_LIB STREQUAL ""
+  ))
   message(
     FATAL_ERROR
-      "Environment variable \$AOCL_ROOT not found.\n - Perhaps source AOCL config script, or\n - Define \$AOCL_ROOT to point to AOCL install dir, and try again, or set -DCMAKE_AOCL_ROOT.\n - Alternatively, specify BLAS/LAPACK/SPARSE/UTILS_LIB and BLAS/LAPACK/SPARSE_INCLUDE_DIR."
+    "Environment variable \$AOCL_ROOT not found.\n - Perhaps source AOCL config script, or\n - Define \$AOCL_ROOT to point to AOCL install dir, and try again, or set -DCMAKE_AOCL_ROOT.\n - Alternatively, specify BLAS/LAPACK/SPARSE/UTILS_LIB and BLAS/LAPACK/SPARSE_INCLUDE_DIR."
   )
 endif()
 
@@ -314,6 +291,10 @@ if(BUILD_FORTRAN)
 else()
   add_compile_definitions(NO_FORTRAN)
 endif()
+
+include(CompilerFlagsSupport)
+GetCompilerFamily(COMPILER_FAMILY)
+
 
 if(WIN32)
   # MSVC has warnings about deprecated CRT functions; these definitions overload
@@ -328,12 +309,18 @@ if(WIN32)
 
   # Clang-cl on Windows: ensure we are linking against the correct MSVC runtime
   # libraries
-  if(CMAKE_CXX_COMPILER_ID STREQUAL "Clang" AND CLANG_OPTIONS_STYLE STREQUAL
-                                                "MSVC")
+  if(COMPILER_FAMILY MATCHES "LLVM-CL")
     if(BUILD_SHARED_LIBS)
       set(CMAKE_MSVC_RUNTIME_LIBRARY "MultiThreaded$<$<CONFIG:Debug>:Debug>DLL")
     else()
       set(CMAKE_MSVC_RUNTIME_LIBRARY "MultiThreaded$<$<CONFIG:Debug>:Debug>")
+    endif()
+    if(BUILD_FORTRAN AND CMAKE_Fortran_COMPILER_ID MATCHES "Flang")
+      # Blank out the Fortran expansions so they aren't passed to AOCC flang.
+      foreach(_rt MultiThreaded MultiThreadedDLL
+        MultiThreadedDebug MultiThreadedDebugDLL)
+        set(CMAKE_Fortran_COMPILE_OPTIONS_MSVC_RUNTIME_LIBRARY_${_rt} "")
+      endforeach()
     endif()
   endif()
 
@@ -341,9 +328,7 @@ if(WIN32)
   set(CMAKE_FIND_LIBRARY_SUFFIXES ".lib" ".dll")
 
   if(BUILD_FORTRAN)
-    # Clang-cl or MSVC require ifort for the Fortran compilation
-    if(CLANG_OPTIONS_STYLE STREQUAL "MSVC" OR CMAKE_CXX_COMPILER_ID STREQUAL
-                                              "MSVC")
+    if(COMPILER_FAMILY MATCHES "LLVM-CL")
       if(CMAKE_Fortran_COMPILER_ID MATCHES "Flang")
         if(NOT DEFINED ENV{FLANG_COMPILER})
           message(
@@ -354,131 +339,69 @@ if(WIN32)
         set(CMAKE_Fortran_COMPILER "${FLANG_PATH}/bin/flang.exe")
         set(FLANG_LIBS "${FLANG_PATH}/lib")
         set(FORTRAN_RUNTIME "${FLANG_LIBS}/flang.lib"
-                            "${FLANG_LIBS}/libpgmath.lib")
-      else()
+          "${FLANG_LIBS}/libpgmath.lib")
+      elseif(CMAKE_Fortran_COMPILER_ID MATCHES "Intel")
         set(IFORT_LIBS
-            "$ENV{LIB}"
-            CACHE STRING
-                  "Setting path to Intel Fortran runtime libraries on Windows")
+          "$ENV{LIB}"
+          CACHE STRING
+          "Setting path to Intel Fortran runtime libraries on Windows")
         set(FORTRAN_RUNTIME
-            "$<IF:$<CONFIG:Debug>,libifcoremdd.lib,libifcoremd.lib>")
+          "$<IF:$<CONFIG:Debug>,libifcoremdd.lib,libifcoremd.lib>")
         add_compile_definitions(WIN_IFORT_NAME_MANGLING)
+      else()
+        message(FATAL_ERROR
+          "Unsupported Fortran compiler on Windows: ${CMAKE_Fortran_COMPILER_ID}"
+        )
       endif()
     else()
-      if(NOT DEFINED ENV{MINGW_BIN})
-        message(FATAL_ERROR "Environment variable \$MINGW_BIN not found.")
-      endif()
-
-      file(TO_CMAKE_PATH $ENV{MINGW_BIN} MINGW_PATH)
-      set(CMAKE_Fortran_COMPILER gfortran)
+      message(FATAL_ERROR
+        "Unsupported compiler on Windows: ${COMPILER_FAMILY}"
+      )
     endif()
   endif()
 
 else()
   if(BUILD_FORTRAN)
-    if(CMAKE_Fortran_COMPILER_ID MATCHES "Flang")
+    if(CMAKE_Fortran_COMPILER_ID STREQUAL "Flang") # AOCC 5.x
       set(FORTRAN_RUNTIME "flang")
-    else() # GNU
+    elseif(CMAKE_Fortran_COMPILER_ID STREQUAL "GNU")
       set(FORTRAN_RUNTIME "gfortran")
+    elseif(CMAKE_Fortran_COMPILER_ID STREQUAL "LLVMFlang")
+      IsAOCCFlang(IS_AOCC_FLANG)
+      if(IS_AOCC_FLANG)
+        set(FORTRAN_RUNTIME "flang") # AOCC AOF 6+
+      else()
+        set(FORTRAN_RUNTIME "FortranRuntime") # upstream LLVM 19+ Flang-new
+      endif()
+    else()
+      message(FATAL_ERROR "Unsupported Fortran compiler on GNU/Linux: ${CMAKE_Fortran_COMPILER_ID}")
     endif()
   endif()
+endif()
+if(BUILD_FORTRAN)
+  message(NOTICE "Fortran (${CMAKE_Fortran_COMPILER_ID}) runtime: ${FORTRAN_RUNTIME}")
 endif()
 
 # Look for linear algebra libraries dependencies
 include(AOCLDependencies)
+include(CompilerFlags)
 
 # If the user did not explicitly provide KT_PATH, default it to SPARSE_INCLUDE_DIR
 if(KT_PATH STREQUAL "")
   set(KT_PATH "${SPARSE_INCLUDE_DIR}")
 endif()
 
-if(CMAKE_CXX_COMPILER_ID MATCHES "MSVC"
-   OR (CMAKE_CXX_COMPILER_ID STREQUAL "Clang" AND CLANG_OPTIONS_STYLE STREQUAL
-                                                  "MSVC"))
-  # MSVC and clang-cl compiler flags
-  if(CMAKE_Fortran_COMPILER_ID MATCHES "Flang")
-    set(COMPILER_FLAGS_RELEASE "${COMPILER_FLAGS_RELEASE};-DNDEBUG")
-    set(COMPILER_FLAGS_DEBUG "${COMPILER_FLAGS_DEBUG};-Od")
-    set(COMPILER_FLAGS_CXX_DEBUG "${COMPILER_FLAGS_CXX_DEBUG};-W3;-DEBUG")
-    set(COMPILER_FLAGS_CXX "${COMPILER_FLAGS_CXX};/std:c++17;/EHsc")
-  else()
-    set(COMPILER_FLAGS_RELEASE "${COMPILER_FLAGS_RELEASE};/DNDEBUG;/O2;")
-    set(COMPILER_FLAGS_DEBUG "${COMPILER_FLAGS_DEBUG};/Od")
-    set(COMPILER_FLAGS_CXX_DEBUG "${COMPILER_FLAGS_CXX_DEBUG};/W3;/DEBUG")
-    set(COMPILER_FLAGS_CXX
-        "${COMPILER_FLAGS_CXX};/std:c++17;/EHsc;-Wno-nan-infinity-disabled;-Wno-macro-redefined"
-    )
-  endif()
-
-  if(VECTORIZATION_REPORTS)
-    set(COMPILER_FLAGS_CXX "${COMPILER_FLAGS_CXX};/Qvec-report:2")
-  endif()
-
-elseif(CMAKE_CXX_COMPILER_ID MATCHES "GNU"
-       OR (CMAKE_CXX_COMPILER_ID STREQUAL "Clang" AND CLANG_OPTIONS_STYLE
-                                                      STREQUAL "GNU"))
-  # GNU style compiler flags
-  set(COMPILER_FLAGS_CXX
-      "${COMPILER_FLAGS_CXX};-Wno-macro-redefined;-Wno-sign-conversion;-Wall;-Wextra;"
-  )
-  if(CMAKE_CXX_COMPILER_ID STREQUAL "Clang" AND CMAKE_CXX_COMPILER_VERSION
-                                                VERSION_GREATER_EQUAL "18.0.0")
-    set(COMPILER_FLAGS_CXX "${COMPILER_FLAGS_CXX};-Wno-nan-infinity-disabled")
-  endif()
-  if(NOT CMAKE_Fortran_COMPILER_ID MATCHES "Flang")
-    set(COMPILER_FLAGS_COMMON "${COMPILER_FLAGS_COMMON};-mavx2;-mfma;")
-  endif()
-
-  # Release flags
-  set(COMPILER_FLAGS_RELEASE
-      "${COMPILER_FLAGS_RELEASE};-DNDEBUG;-fopenmp-simd;-fno-fast-math")
-  if(WIN32 AND CMAKE_CXX_COMPILER_ID STREQUAL "Clang")
-    set(COMPILER_FLAGS_DEBUG "${COMPILER_FLAGS_DEBUG};-O0")
-  else()
-    set(COMPILER_FLAGS_DEBUG "${COMPILER_FLAGS_DEBUG};-O0;-gdwarf-5;-g3;")
-  endif()
-
-  if(VECTORIZATION_REPORTS)
-    if(CMAKE_CXX_COMPILER_ID STREQUAL "Clang")
-      set(COMPILER_FLAGS_COMMON
-          "${COMPILER_FLAGS_COMMON};-Rpass=loop-vectorize;-Rpass-analysis=loop-vectorize;-Rpass-missed=loop-vectorize;-gline-tables-only;-gcolumn-info;"
-      )
-    elseif(CMAKE_CXX_COMPILER_ID MATCHES "GNU")
-      set(COMPILER_FLAGS_COMMON
-          "${COMPILER_FLAGS_COMMON};-fopt-info-vec-all=vectorization.txt")
-    endif()
-  endif()
-endif()
-
 # Add convenience cleaning add "add_dependencies(cleanall ...) to all custom
 # cleans, e.g. clean-doc and clean-coverage is a dependency of cleanall Note:
 # this needs to be before any `add_dependencies`
-add_custom_target(cleanall COMMAND ${CMAKE_MAKE_PROGRAM} clean)
-
-if(ASAN)
-  list(APPEND COMPILER_FLAGS_COMMON "-fsanitize=address")
-  link_libraries("-fsanitize=address")
+if(NOT TARGET cleanall)
+  add_custom_target(cleanall COMMAND ${CMAKE_MAKE_PROGRAM} clean)
 endif()
 
 if(COVERAGE)
   # Include coverage flags and targets
   include(Coverage)
 endif()
-
-if((NOT WIN32) AND (NOT CMAKE_BUILD_TYPE MATCHES DEBUG))
-  # Avoid absolute file paths getting printed when using strings utility in
-  # linux
-  add_compile_options(
-    $<$<OR:$<COMPILE_LANGUAGE:C>,$<COMPILE_LANGUAGE:CXX>>:-fmacro-prefix-map=${CMAKE_SOURCE_DIR}=.>
-  )
-endif()
-
-add_compile_options(
-  "${COMPILER_FLAGS_COMMON};$<$<COMPILE_LANGUAGE:CXX>:${COMPILER_FLAGS_CXX}>")
-add_compile_options("$<$<CONFIG:Release>:${COMPILER_FLAGS_RELEASE}>")
-add_compile_options(
-  "$<$<CONFIG:Debug>:${COMPILER_FLAGS_DEBUG};$<$<OR:$<COMPILE_LANGUAGE:CXX>,$<COMPILE_LANGUAGE:C>>:${COMPILER_FLAGS_CXX_DEBUG}>>"
-)
 
 if(BUILD_DOC)
   add_subdirectory(doc)
@@ -487,7 +410,7 @@ endif()
 if(NOT BUILD_DOC AND INTERNAL_DOC)
   message(
     WARNING
-      "Turning off internal documentation since docs are not being built, set BUILD_DOC=On to enable also internal documentation"
+    "Turning off internal documentation since docs are not being built, set BUILD_DOC=On to enable also internal documentation"
   )
   set(INTERNAL_DOC Off)
 endif()
@@ -495,13 +418,13 @@ endif()
 if(NOT BUILD_DOC AND UPDATE_OPTIONS_DOC)
   message(
     WARNING
-      "Turning off update options in documentation since docs are not being built, set BUILD_DOC=On to enable option table updates"
+    "Turning off update options in documentation since docs are not being built, set BUILD_DOC=On to enable option table updates"
   )
   set(UPDATE_OPTIONS_DOC Off)
 endif()
 
-if (UPDATE_OPTIONS_DOC)
-    set(BUILD_GTEST On)
+if(UPDATE_OPTIONS_DOC)
+  set(BUILD_GTEST On)
 endif()
 
 if(NOT USE_EXISTING_DA)
@@ -521,14 +444,14 @@ if(NOT USE_EXISTING_DA)
   # Put all custom configuration BEFORE including "CTest"
   if(VALGRIND)
     set(MEMORYCHECK_COMMAND_OPTIONS
-        "--track-origins=yes --leak-check=full -s --show-leak-kinds=all" # --gen-suppressions=all
+      "--track-origins=yes --leak-check=full -s --show-leak-kinds=all" # --gen-suppressions=all
     )
     set(MEMORYCHECK_TYPE "valgrind")
     set(MEMORYCHECK_SUPPRESSIONS_FILE
-        "${PROJECT_SOURCE_DIR}/tools/valgrind_suppress.txt")
+      "${PROJECT_SOURCE_DIR}/tools/valgrind_suppress.txt")
   endif()
 
-  if (BUILD_EXAMPLES OR BUILD_GTEST)
+  if(BUILD_EXAMPLES OR BUILD_GTEST)
     # Build example and unit test programs
     include(CTest)
   endif()
@@ -536,10 +459,10 @@ if(NOT USE_EXISTING_DA)
   # Suppression list file needs to be defined AFTER including ctest
   if(VALGRIND)
     set(MEMORYCHECK_SUPPRESSIONS_FILE
-        "${PROJECT_SOURCE_DIR}/tools/valgrind_suppress.txt")
+      "${PROJECT_SOURCE_DIR}/tools/valgrind_suppress.txt")
   endif()
 
-  if (BUILD_EXAMPLES OR BUILD_GTEST)
+  if(BUILD_EXAMPLES OR BUILD_GTEST)
     add_subdirectory(tests)
   endif()
 endif()
@@ -567,25 +490,11 @@ endif()
 
 # Convenience banner, print relevant info
 message(STATUS "Building AOCL-DA ${AOCLDA_VERSION} (${CMAKE_BUILD_TYPE})")
-message(
-  NOTICE
-  "CXX Compiler ID         : ${CMAKE_CXX_COMPILER_ID} (${COMPILER_BASENAME}) platform id: ${CMAKE_CXX_PLATFORM_ID}"
-)
-
-if(CMAKE_BUILD_TYPE MATCHES "Debug")
-  message(
-    NOTICE
-    "COMPILER_FLAGS_COMMON   : ${COMPILER_FLAGS_COMMON}${COMPILER_FLAGS_DEBUG}")
-endif()
-
-if(CMAKE_BUILD_TYPE MATCHES "Release")
-  message(
-    NOTICE
-    "COMPILER_FLAGS_COMMON   : ${COMPILER_FLAGS_COMMON}${COMPILER_FLAGS_RELEASE}"
-  )
-endif()
-message(NOTICE "OpenMP flags          : ${OpenMP_CXX_FLAGS}")
-message(NOTICE "OpenMP linker flags   : ${OpenMP_EXE_LINKER_FLAGS}")
+message(NOTICE "CXX Compiler ID         : ${CMAKE_CXX_COMPILER_ID} platform id: ${CMAKE_CXX_PLATFORM_ID}")
+message(NOTICE "C Compiler ID           : ${CMAKE_C_COMPILER_ID}")
+message(NOTICE "Fortran Compiler ID     : ${CMAKE_Fortran_COMPILER_ID}")
+message(NOTICE "OpenMP flags            : ${OpenMP_CXX_FLAGS}")
+message(NOTICE "OpenMP linker flags     : ${OpenMP_EXE_LINKER_FLAGS}")
 message(NOTICE "\nOPTIONS")
 message(
   NOTICE
@@ -599,17 +508,16 @@ if(UPDATE_OPTIONS_DOC OR CMAKE_BUILD_TYPE MATCHES "Debug")
   message(NOTICE "Update options in docs    UPDATE_OPTIONS_DOC...: ${UPDATE_OPTIONS_DOC}")
 endif()
 message(NOTICE
-        "Building for ILP64        BUILD_ILP64..........: ${BUILD_ILP64}")
+  "Building for ILP64        BUILD_ILP64..........: ${BUILD_ILP64}")
 message(NOTICE
-        "Building Python bindings  BUILD_PYTHON.........: ${BUILD_PYTHON}")
+  "Building Python bindings  BUILD_PYTHON.........: ${BUILD_PYTHON}")
 message(NOTICE
-        "Building Fortran code     BUILD_FORTRAN........: ${BUILD_FORTRAN}")
+  "Building Fortran code     BUILD_FORTRAN........: ${BUILD_FORTRAN}")
 message(NOTICE "Building with OpenMP      BUILD_SMP............: ${BUILD_SMP}")
 message(NOTICE
-        "Shared library build      BUILD_SHARED_LIBS....: ${BUILD_SHARED_LIBS}")
+  "Shared library build      BUILD_SHARED_LIBS....: ${BUILD_SHARED_LIBS}")
 message(NOTICE "Building with Coverage    COVERAGE.............: ${COVERAGE}")
 message(NOTICE "Debug printing            DA_LOGGING...........: ${DA_LOGGING}")
-message(NOTICE "Building with MemSan      MEMSAN...............: ${MEMSAN}")
 message(NOTICE "Building with Valgrind    VALGRIND.............: ${VALGRIND}")
 if(${VALGRIND})
   message(
@@ -617,18 +525,17 @@ if(${VALGRIND})
     "         Valgrind flags : ${MEMORYCHECK_COMMAND_OPTIONS}. Use with `ctest -T MemCheck`"
   )
   message(NOTICE
-          "         Valgrind suppression: ${MEMORYCHECK_SUPPRESSIONS_FILE}")
+    "         Valgrind suppression: ${MEMORYCHECK_SUPPRESSIONS_FILE}")
 endif()
 message(
   NOTICE
   "Vectorization reports     VECTORIZATION_REPORTS: ${VECTORIZATION_REPORTS}")
-message(NOTICE "Building with LibMeM      USE_LIBMEM...........: ${USE_LIBMEM}")
 
 message(NOTICE "\nTARGETS")
 message(NOTICE
-        "Build the EXAMPLE programs  BUILD_EXAMPLES.....: ${BUILD_EXAMPLES}")
+  "Build the EXAMPLE programs  BUILD_EXAMPLES.....: ${BUILD_EXAMPLES}")
 message(NOTICE
-        "Build GTEST unit-tests      BUILD_GTEST........: ${BUILD_GTEST}")
+  "Build GTEST unit-tests      BUILD_GTEST........: ${BUILD_GTEST}")
 
 message(NOTICE "\nDEPENDENT LIBRARIES")
 message(NOTICE "BLAS             BLAS=${BLAS}")
@@ -642,7 +549,10 @@ message(NOTICE "AOCL-Utils/CPUID UTILS_CPUID=${UTILS_CPUID}")
 message(STATUS "UTILS_INCLUDE_DIR     ${UTILS_INCLUDE_DIR}")
 
 message(NOTICE "Boost include path    Boost_INCLUDE_DIRS=${Boost_INCLUDE_DIRS}")
+if(NOT WIN32)
+  message(NOTICE "AOCL-DLP         DLP=${DLP}")
+  message(STATUS "DLP_INCLUDE_DIR       ${DLP_INCLUDE_DIR}")
+endif()
 if(USE_EXISTING_DA)
   message(NOTICE "Existing AOCL-DA DA=${DA}")
 endif()
-message(NOTICE "AOCL-LibMem      LIBMEM=${LIBMEM}")

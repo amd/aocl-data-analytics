@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2025 Advanced Micro Devices, Inc. All rights reserved.
+ * Copyright (C) 2025-2026 Advanced Micro Devices, Inc. All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without modification,
  * are permitted provided that the following conditions are met:
@@ -26,8 +26,6 @@
  */
 
 #include "pairwise_distances.hpp"
-#include "aoclda.h"
-#include "aoclda_metrics.h"
 
 namespace ARCH {
 namespace da_metrics {
@@ -68,6 +66,9 @@ da_status pairwise_distance_kernel(da_order order, da_int m, da_int n, da_int k,
     case da_sqeuclidean_gemm:
         return da_metrics::pairwise_distances::euclidean_gemm(order, m, n, k, X, ldx, Y,
                                                               ldy, D, ldd, true);
+    case da_inner_product:
+        return da_metrics::pairwise_distances::inner_product(order, m, n, k, X, ldx, Y,
+                                                             ldy, D, ldd);
     default:
         return da_status_not_implemented; // LCOV_EXCL_LINE
     }

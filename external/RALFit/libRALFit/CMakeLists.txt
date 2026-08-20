@@ -1,6 +1,6 @@
 # Copyright (c) 2016, The Science and Technology Facilities Council (STFC)
 # All rights reserved.
-# Copyright (C) 2024 Advanced Micro Devices, Inc. All rights reserved.
+# Copyright (C) 2024-2026 Advanced Micro Devices, Inc. All rights reserved.
 # CMake project file for libral_nlls
 cmake_minimum_required (VERSION 3.25)
 
@@ -36,7 +36,7 @@ else()
 endif(SINGLE_PRECISION)
 
 # Set the location for cmake module files
-set(CMAKE_MODULE_PATH ${CMAKE_SOURCE_DIR}/cmake/modules)
+set(CMAKE_MODULE_PATH ${PROJECT_SOURCE_DIR}/cmake/modules)
 
 set(CMAKE_EXE_LINKER_FLAGS "-Wl,-export-dynamic")
 

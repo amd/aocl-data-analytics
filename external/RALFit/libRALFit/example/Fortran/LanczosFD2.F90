@@ -197,6 +197,7 @@ program lanczos_fd2
    options%reg_order = -1.0
    options%inner_method = 2
    options%maxit = 1000
+   options%maxtime = 10.0
 
    x = (/ 1.2, 0.3, 5.6, 5.5, 6.5, 7.6 /) ! SP 1
    options%fd_step = 1.0e-5

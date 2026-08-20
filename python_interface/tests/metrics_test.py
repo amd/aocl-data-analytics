@@ -1,4 +1,4 @@
-# Copyright (C) 2024-2025 Advanced Micro Devices, Inc. All rights reserved.
+# Copyright (C) 2024-2026 Advanced Micro Devices, Inc. All rights reserved.
 #
 # Redistribution and use in source and binary forms, with or without modification,
 # are permitted provided that the following conditions are met:
@@ -103,7 +103,8 @@ def test_metric_multiple_dtypes(numpy_precisions, numpy_order):
                           'cosine',
                           'minkowski',
                           'euclidean_gemm',
-                          'sqeuclidean_gemm'])
+                          'sqeuclidean_gemm',
+                          'inner_product'])
 def test_metrics_functionality(numpy_precision, numpy_order, metric):
     """
     Test the functionality of the Python wrapper
@@ -167,6 +168,14 @@ def test_metrics_functionality(numpy_precision, numpy_order, metric):
              [2.378414230005442, 0., 2.378414230005442],
              [4.756828460010884, 2.378414230005442, 0.]],
             dtype=numpy_precision)
+    elif metric == "inner_product":
+        # D[i,j] = dot(X[i], Y[j]) — raw inner products, can be negative
+        expected_XY = np.array([[23., 29.],
+                                [53., 67.],
+                                [83., 105.]], dtype=numpy_precision)
+        expected_XX = np.array([[5., 11., 17.],
+                                [11., 25., 39.],
+                                [17., 39., 61.]], dtype=numpy_precision)
 
     assert X.dtype == computed_distance_XY.dtype
 

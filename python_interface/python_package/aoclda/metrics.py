@@ -1,4 +1,4 @@
-# Copyright (C) 2024-2025 Advanced Micro Devices, Inc. All rights reserved.
+# Copyright (C) 2024-2026 Advanced Micro Devices, Inc. All rights reserved.
 #
 # Redistribution and use in source and binary forms, with or without modification,
 # are permitted provided that the following conditions are met:
@@ -45,17 +45,18 @@ def pairwise_distances(X, Y=None, metric="euclidean", p=2.0):
 
         metric (str, optional): The type of metric used to compute the distance matrix. It can take
             the values 'euclidean', 'l2', 'sqeuclidean', 'manhattan', 'l1', 'cityblock', 'cosine',
-            'minkowski', 'euclidean_gemm', or 'sqeuclidean_gemm'. Default: 'euclidean'.
+            'minkowski', 'euclidean_gemm', 'sqeuclidean_gemm', or 'inner_product'.
+            Default: 'euclidean'.
 
         p (float, optional): The power parameter used for the Minkowski metric. For p = 1.0,
             this defaults to 'manhattan' metric and for p = 2.0 this defaults to 'euclidean' metric.
-            p is only used for Miknowski distance and will be ignored otherwise. Will return an
+            p is only used for Minkowski distance and will be ignored otherwise. Will return an
             error when p is not positive. Default p = 2.0.
 
     Returns:
-        numpy.ndarray with shape (n_samples_X, n_samples_Y) if Y is provided, or shape
-        (n_samples_X, n_samples_X), if Y is None and the distance matrix for the rows
-        of X is required.
+        numpy.ndarray with shape (n_samples_X, n_samples_Y) if Y is provided, or
+        (n_samples_X, n_samples_X) if Y is None. For most metrics this is a distance
+        matrix. For 'inner_product' it is a similarity matrix whose entries can be negative.
     """
     X, order, dtype = check_convert_data(X, dtype='float', force_dtype=True)
     if Y is not None:

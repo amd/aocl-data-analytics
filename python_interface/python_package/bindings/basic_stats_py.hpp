@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2024-2025 Advanced Micro Devices, Inc. All rights reserved.
+ * Copyright (C) 2024-2026 Advanced Micro Devices, Inc. All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without modification,
  * are permitted provided that the following conditions are met:
@@ -266,8 +266,8 @@ py::array_t<T> py_da_moment(py::array_t<T> X, da_int k,
 }
 
 template <typename T>
-py::array_t<T> py_da_quantile(py::array_t<T> X, T q, std::string method = "linear",
-                              std::string axis = "col") {
+py::array_t<T> py_da_quantile(py::array_t<T> X, py::array_t<T> q,
+                              std::string method = "linear", std::string axis = "col") {
     da_status status;
     da_int m, n, ldx;
     da_order order;
@@ -276,42 +276,54 @@ py::array_t<T> py_da_quantile(py::array_t<T> X, T q, std::string method = "linea
 
     get_size_and_axis(axis, order, axis_enum, X, quantile_sz, m, n, ldx);
 
-    // Create the output quantile array as a numpy array
-    size_t shape[1]{quantile_sz};
-    size_t strides[1]{sizeof(T)};
-    auto quantiles = py::array_t<T>(shape, strides);
+    if (q.ndim() != 1) {
+        throw std::invalid_argument("q must be a 1D array.");
+    }
+    da_int n_q = q.shape(0);
 
+    // Create the output quantile array as a numpy array.
+    // For n_q == 1 or axis == all, return 1D array.
+    // Otherwise shape is (n_q, quantile_sz). Storage order matches input order.
+    py::array_t<T> quantiles;
+    if (n_q > 1 && quantile_sz > 1) {
+        if (order == row_major) {
+            quantiles = py::array_t<T>({(size_t)n_q, quantile_sz},
+                                       {quantile_sz * sizeof(T), sizeof(T)});
+        } else {
+            quantiles = py::array_t<T>({(size_t)n_q, quantile_sz},
+                                       {sizeof(T), (size_t)n_q * sizeof(T)});
+        }
+    } else if (n_q > 1) {
+        quantiles = py::array_t<T>({(size_t)n_q}, {sizeof(T)});
+    } else {
+        quantiles = py::array_t<T>({quantile_sz}, {sizeof(T)});
+    }
+
+    da_quantile_type quantile_type;
     if (method == "inverted_cdf") {
-        status = da_quantile(order, axis_enum, m, n, X.data(), ldx, q,
-                             quantiles.mutable_data(), da_quantile_type_1);
+        quantile_type = da_quantile_type_1;
     } else if (method == "averaged_inverted_cdf") {
-        status = da_quantile(order, axis_enum, m, n, X.data(), ldx, q,
-                             quantiles.mutable_data(), da_quantile_type_2);
+        quantile_type = da_quantile_type_2;
     } else if (method == "closest_observation") {
-        status = da_quantile(order, axis_enum, m, n, X.data(), ldx, q,
-                             quantiles.mutable_data(), da_quantile_type_3);
+        quantile_type = da_quantile_type_3;
     } else if (method == "interpolated_inverted_cdf") {
-        status = da_quantile(order, axis_enum, m, n, X.data(), ldx, q,
-                             quantiles.mutable_data(), da_quantile_type_4);
+        quantile_type = da_quantile_type_4;
     } else if (method == "hazen") {
-        status = da_quantile(order, axis_enum, m, n, X.data(), ldx, q,
-                             quantiles.mutable_data(), da_quantile_type_5);
+        quantile_type = da_quantile_type_5;
     } else if (method == "weibull") {
-        status = da_quantile(order, axis_enum, m, n, X.data(), ldx, q,
-                             quantiles.mutable_data(), da_quantile_type_6);
+        quantile_type = da_quantile_type_6;
     } else if (method == "linear") {
-        status = da_quantile(order, axis_enum, m, n, X.data(), ldx, q,
-                             quantiles.mutable_data(), da_quantile_type_7);
+        quantile_type = da_quantile_type_7;
     } else if (method == "median_unbiased") {
-        status = da_quantile(order, axis_enum, m, n, X.data(), ldx, q,
-                             quantiles.mutable_data(), da_quantile_type_8);
+        quantile_type = da_quantile_type_8;
     } else if (method == "normal_unbiased") {
-        status = da_quantile(order, axis_enum, m, n, X.data(), ldx, q,
-                             quantiles.mutable_data(), da_quantile_type_9);
+        quantile_type = da_quantile_type_9;
     } else {
         throw std::invalid_argument("Provided method does not exist.");
     }
 
+    status = da_quantile(order, axis_enum, m, n, X.data(), ldx, q.data(), n_q,
+                         quantiles.mutable_data(), quantile_type);
     status_to_exception(status);
 
     return quantiles;
@@ -359,129 +371,35 @@ py::array_t<T> py_da_standardize(py::array_t<T> X, std::optional<py::array_t<T>>
 
     get_size_and_axis(axis, order, axis_enum, X, standardize_sz, m, n, ldx);
 
-    da_int ldx_copy = (order == column_major) ? m : n;
-    T *dummy = nullptr;
-
-    if (shift.has_value() && scale.has_value()) {
-        if ((size_t)shift->shape()[0] != standardize_sz ||
-            (size_t)scale->shape()[0] != standardize_sz) {
-            throw std::length_error(
-                "The size of shift or scale array does not match the expected size.");
-        }
-        if (reverse) {
-            if (inplace) {
-                status =
-                    da_standardize(order, axis_enum, m, n, X.mutable_data(), ldx, dof, 1,
-                                   shift->mutable_data(), scale->mutable_data());
-                status_to_exception(status);
-                return X;
-            } else {
-                py::array_t<T> copy_X = copy_numpy_array(X);
-                status = da_standardize(order, axis_enum, m, n, copy_X.mutable_data(),
-                                        ldx_copy, dof, 1, shift->mutable_data(),
-                                        scale->mutable_data());
-                status_to_exception(status);
-                return copy_X;
-            }
-        } else {
-            if (inplace) {
-                status =
-                    da_standardize(order, axis_enum, m, n, X.mutable_data(), ldx, dof, 0,
-                                   shift->mutable_data(), scale->mutable_data());
-                status_to_exception(status);
-                return X;
-            } else {
-                py::array_t<T> copy_X = copy_numpy_array(X);
-                status = da_standardize(order, axis_enum, m, n, copy_X.mutable_data(),
-                                        ldx_copy, dof, 0, shift->mutable_data(),
-                                        scale->mutable_data());
-                status_to_exception(status);
-                return copy_X;
-            }
-        }
-    } else if (shift.has_value()) {
-        if ((size_t)shift->shape()[0] != standardize_sz) {
-            throw std::length_error(
-                "The size of shift array does not match the expected size.");
-        }
-        if (reverse) {
-            if (inplace) {
-                status = da_standardize(order, axis_enum, m, n, X.mutable_data(), ldx,
-                                        dof, 1, shift->mutable_data(), dummy);
-                status_to_exception(status);
-                return X;
-            } else {
-                py::array_t<T> copy_X = copy_numpy_array(X);
-                status = da_standardize(order, axis_enum, m, n, copy_X.mutable_data(),
-                                        ldx_copy, dof, 1, shift->mutable_data(), dummy);
-                status_to_exception(status);
-                return copy_X;
-            }
-        } else {
-            if (inplace) {
-                status = da_standardize(order, axis_enum, m, n, X.mutable_data(), ldx,
-                                        dof, 0, shift->mutable_data(), dummy);
-                status_to_exception(status);
-                return X;
-            } else {
-                py::array_t<T> copy_X = copy_numpy_array(X);
-                status = da_standardize(order, axis_enum, m, n, copy_X.mutable_data(),
-                                        ldx_copy, dof, 0, shift->mutable_data(), dummy);
-                status_to_exception(status);
-                return copy_X;
-            }
-        }
-    } else if (scale.has_value()) {
-        if ((size_t)scale->shape()[0] != standardize_sz) {
-            throw std::length_error(
-                "The size of scale array does not match the expected size.");
-        }
-        if (reverse) {
-            if (inplace) {
-                status = da_standardize(order, axis_enum, m, n, X.mutable_data(), m, dof,
-                                        1, dummy, scale->mutable_data());
-                status_to_exception(status);
-                return X;
-            } else {
-                py::array_t<T> copy_X = copy_numpy_array(X);
-                status = da_standardize(order, axis_enum, m, n, copy_X.mutable_data(),
-                                        ldx_copy, dof, 1, dummy, scale->mutable_data());
-                status_to_exception(status);
-                return copy_X;
-            }
-        } else {
-            if (inplace) {
-                status = da_standardize(order, axis_enum, m, n, X.mutable_data(), ldx,
-                                        dof, 0, dummy, scale->mutable_data());
-                status_to_exception(status);
-                return X;
-            } else {
-                py::array_t<T> copy_X = copy_numpy_array(X);
-                status = da_standardize(order, axis_enum, m, n, copy_X.mutable_data(),
-                                        ldx_copy, dof, 0, dummy, scale->mutable_data());
-                status_to_exception(status);
-                return copy_X;
-            }
-        }
+    T *output_ptr = nullptr;
+    da_int ldx_output;
+    py::array_t<T> copy_X;
+    if (!inplace) {
+        copy_X = copy_numpy_array(X);
+        output_ptr = copy_X.mutable_data();
+        ldx_output = (order == column_major) ? m : n;
     } else {
-        if (reverse) {
-            throw std::invalid_argument(
-                "Reverse standardization only works with supplied both shift and scale.");
-        } else {
-            if (inplace) {
-                status = da_standardize(order, axis_enum, m, n, X.mutable_data(), ldx,
-                                        dof, 0, dummy, dummy);
-                status_to_exception(status);
-                return X;
-            } else {
-                py::array_t<T> copy_X = copy_numpy_array(X);
-                status = da_standardize(order, axis_enum, m, n, copy_X.mutable_data(),
-                                        ldx_copy, dof, 0, dummy, dummy);
-                status_to_exception(status);
-                return copy_X;
-            }
-        }
+        output_ptr = X.mutable_data();
+        ldx_output = ldx;
     }
+
+    T *shift_ptr = shift.has_value() ? shift->mutable_data() : nullptr;
+    T *scale_ptr = scale.has_value() ? scale->mutable_data() : nullptr;
+
+    if ((shift_ptr != nullptr && (size_t)shift->shape()[0] != standardize_sz) ||
+        (scale_ptr != nullptr && (size_t)scale->shape()[0] != standardize_sz)) {
+        throw std::length_error(
+            "The size of shift or scale array does not match the expected size.");
+    } else if ((shift_ptr == nullptr && scale_ptr == nullptr) && reverse) {
+        throw std::invalid_argument("Reverse standardization only works if either shift "
+                                    "or scale (or both) is (are) supplied.");
+    }
+
+    status = da_standardize(order, axis_enum, m, n, output_ptr, ldx_output, dof,
+                            (da_int)reverse, shift_ptr, scale_ptr);
+    status_to_exception(status);
+
+    return inplace ? X : copy_X;
 }
 
 template <typename T>

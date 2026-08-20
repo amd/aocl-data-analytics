@@ -20,14 +20,14 @@ C++ example programs can be found in the `examples` folder of your installation.
 Full API documentation is available at https://docs.amd.com/r/en-US/68552-AOCL-api-guide/AOCL-Data-Analytics
 
 AOCL-DA is developed and maintained by [AMD](https://www.amd.com/). For support or queries, you can email us on
-[toolchainsupport@amd.com](toolchainsupport@amd.com).
+[toolchainsupport@amd.com](mailto:toolchainsupport@amd.com).
 
 Building the Library
 ====================
 
 AOCL-DA is built with CMake, with supported compilers GNU and AOCC on Linux and MSVC on MS Windows.
 
-AOCL-DA is dependent on AOCL-BLAS, AOCL-LAPACK, AOCL-Sparse and AOCL-Utils.
+AOCL-DA is dependent on AOCL-BLAS, AOCL-LAPACK, AOCL-Sparse, AOCL-DLP and AOCL-Utils.
 
 AOCL-DA is also dependent on the [Boost.Sort C++ Library](https://www.boost.org/doc/libs/1_86_0/libs/sort/doc/html/index.html).  Instructions for installing Boost on Linux can be found [here](https://www.boost.org/doc/libs/1_86_0/more/getting_started/unix-variants.html).  Instructions for installing Boost on Windows can be found [here](https://www.boost.org/doc/libs/1_86_0/more/getting_started/windows.html).  Documentation for Boost CMake support infrastructure can be found [here](https://github.com/boostorg/cmake) and [here](https://cmake.org/cmake/help/latest/module/FindBoost.html).
 
@@ -36,14 +36,12 @@ For example, one way of including a Boost download in your CMake build of AOCL-D
 Building on Linux
 -----------------
 
-1. You will need to have BLAS, LAPACK, AOCL-Sparse and AOCL-Utils installed.
+1. You will need to have BLAS, LAPACK, AOCL-Sparse, AOCL-DLP and AOCL-Utils installed.
 
 2. Make sure you have set the environment variable `$AOCL_ROOT` to where the AOCL libraries are
    installed e.g. `/home/username/amd/aocl/4.0`.
 
 3. Configure cmake with `-T ClangCL -DOpenMP_libomp_LIBRARY=\Path\to\libomp.lib` and any of the following options:
-
-   * `-DMEMSAN=On` for memory sanitization
 
    * `-DASAN=On` for address sanitization
 

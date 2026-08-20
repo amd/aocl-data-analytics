@@ -39,12 +39,22 @@ This chapter contains functions for performing clustering computations.
 *k*-means clustering aims to partition a set of :math:`n_{\mathrm{samples}}` data points :math:`\{x_1, x_2, \dots, x_{n_{\mathrm{samples}}}\}` into :math:`n_{\mathrm{clusters}}` groups. Each group is described by the mean of the data points assigned to it :math:`\{\mu_1, \mu_2, \dots, \mu_{n_{\mathrm{clusters}}}\}`.
 These means are commonly known as the *cluster centres* or *centroids* and are not generally points from the original data matrix.
 
-Various *k*-means algorithms are available, but each one proceeds by attempting to minimize a quantity known as the *inertia*, or the *within-cluster sum-of-squares*:
+Various *k*-means algorithms are available, but each one proceeds by attempting to minimize a quantity known as the *inertia*, or the *within-cluster sum-of-squares*, which is the sum of the squared distances of each sample to its closest cluster centre.
+In the case of standard *k*-means clustering, where the distance metric is the Euclidean distance, this can be expressed as
 
 .. math::
    \sum^{n_{\mathrm{samples}}}_{i=1}\min_{1\le j\le n_{\mathrm{clusters}}}\left(\|x_i-\mu_j\|^2\right).
 
-Since this is an NP-hard problem, algorithms are heuristic in nature and converge to local optima.
+In the case of *spherical* *k*-means clustering, where the distance metric is the cosine distance, the inertia is expressed as
+
+.. math::
+   \sum^{n_{\mathrm{samples}}}_{i=1}\min_{1\le j\le n_{\mathrm{clusters}}}\left(1-\frac{x_i\cdot\mu_j}{\|x_i\|\|\mu_j\|}\right).
+
+In spherical *k*-means clustering the cluster centres are normalized to have unit length.
+Data points are also typically normalized to have unit length before performing the clustering, though this can be disabled by setting the `normalize_data` option to `False` (for example, if the data is already normalized).
+Computing spherical *k*-means clustering with unnormalized data may lead to unexpected results.
+
+Since *k*-means clustering is an NP-hard problem, algorithms are heuristic in nature and converge to local optima.
 Therefore it is often desirable to run the algorithms several times and select the result with the smallest inertia.
 
 Outputs from *k*-means clustering
@@ -112,20 +122,35 @@ Options
 
          "convergence tolerance", "real", ":math:`r=10^{-4}`", "Convergence tolerance.", ":math:`0 \le r`"
          "algorithm", "string", ":math:`s=` `lloyd`", "Choice of underlying k-means algorithm.", ":math:`s=` `elkan`, `hartigan-wong`, `lloyd`, or `macqueen`."
-         "initialization method", "string", ":math:`s=` `random`", "How to determine the initial cluster centres.", ":math:`s=` `k-means++`, `random`, `random partitions`, or `supplied`."
+         "distance", "string", ":math:`s=` `euclidean`", "Distance metric used for clustering. Use 'euclidean' for standard k-means or 'cosine' for spherical k-means (not compatible with Hartigan-Wong).", ":math:`s=` `cosine`, or `euclidean`."
+         "normalize data", "string", ":math:`s=` `yes`", "Whether to normalize the input data before clustering. This option is only used if distance is set to cosine.", ":math:`s=` `no`, or `yes`."
+         "initialization method", "string", ":math:`s=` `k-means++`", "How to determine the initial cluster centres.", ":math:`s=` `afk-mc2`, `k-means++`, `random`, `random partitions`, or `supplied`."
          "seed", "integer", ":math:`i=0`", "Seed for random number generation; set to -1 for non-deterministic results.", ":math:`-1 \le i`"
          "max_iter", "integer", ":math:`i=300`", "Maximum number of iterations.", ":math:`1 \le i`"
          "n_init", "integer", ":math:`i=10`", "Number of runs with different random seeds (ignored if you have specified initial cluster centres).", ":math:`1 \le i`"
          "n_clusters", "integer", ":math:`i=1`", "Number of clusters required.", ":math:`1 \le i`"
+         "empty clusters", "string", ":math:`s=` `ignore`", "How to deal with empty clusters at the end of a k-means iteration.", ":math:`s=` `error`, `ignore`, or `split`."
+         "afk-mc2 samples", "integer", ":math:`i=50`", "Number of samples to take for the AFK-MC2 initialization method.", ":math:`1 \le i`"
          "check data", "string", ":math:`s=` `no`", "Check input data for NaNs prior to performing computation.", ":math:`s=` `no`, or `yes`."
          "storage order", "string", ":math:`s=` `column-major`", "Whether data is supplied and returned in row- or column-major order.", ":math:`s=` `c`, `column-major`, `f`, `fortran`, or `row-major`."
+         "mixed precision", "string", ":math:`s=` `no`", "Whether to use mixed precision iterative refinement, in which lower precision arithmetic is used before switching to the working precision for the final iterations.", ":math:`s=` `no`, or `yes`."
+         "low precision convergence tolerance", "real", ":math:`r=10^{-2}`", "If mixed precision iterative refinement is enabled, convergence tolerance for the low precision phase.", ":math:`0 \le r`"
+         "low precision max_iter", "integer", ":math:`i=200`", "If mixed precision iterative refinement is enabled, maximum number of iterations for the low precision phase.", ":math:`1 \le i`"
 
+      Note that if the initialization method is set to ``random`` then the initial cluster centres are chosen randomly from the sample points.
+      If it is set to ``random partitions`` then the sample points are assigned to a random cluster and the corresponding cluster centres are computed and used as the starting point.
+      If it is set to ``afk-mc2`` then the initial cluster centres are chosen using the AFK-MC\ :sup:`2` algorithm of Bachem et al. (2016) :cite:t:`da_bachem2016`, with the number of samples specified by the ``afk-mc2 samples`` option.
 
-Note that if the initialization method is set to ``random`` then the initial cluster centres are chosen randomly from the sample points.
-If it is set to ``random partitions`` then the sample points are assigned to a random cluster and the corresponding cluster centres are computed and used as the starting point.
+      The standard algorithm for solving *k*-means problems is Lloyd's algorithm. Elkan's algorithm can be faster on naturally clustered datasets but uses considerably more memory. For more information on the available algorithms see :cite:t:`da_elkan`, :cite:t:`da_hartigan1979algorithm`, :cite:t:`da_lloyd1982least` and :cite:t:`da_macqueen1967some`.
 
-The standard algorithm for solving *k*-means problems is Lloyd's algorithm. Elkan's algorithm can be faster on naturally clustered datasets but uses considerably more memory. For more information on the available algorithms see :cite:t:`da_elkan`, :cite:t:`da_hartigan1979algorithm`, :cite:t:`da_lloyd1982least` and :cite:t:`da_macqueen1967some`.
+      The option ``empty clusters`` determines behaviour in the case that all sample points have been assigned to fewer than *k* clusters.
+      If set to ``ignore`` then empty clusters are allowed and the algorithm proceeds as normal.
+      If set to ``error`` then an error is raised when an empty cluster is encountered (if ``n_init`` > 1 then the next initialization is attempted, so an error will only be returned to the calling program if all initializations led to empty clusters).
+      If set to ``split`` then the point farthest from its closest cluster centre is chosen and assigned to the empty cluster.
+      Note that if the Hartigan-Wong algorithm is used then ``empty clusters`` will be set to ``error`` internally.
 
+      The option ``mixed precision`` switches on an experimental mode in which an initial clustering is performed in lower precision before refining the result in the working precision.
+      The option ``low precision max_iter`` sets the maximum number of iterations for the low-precision phase, and ``low precision convergence tolerance`` sets the convergence tolerance for the low-precision phase.
 
 .. _dbscan_intro:
 
@@ -267,7 +292,7 @@ Clustering APIs
 
    .. tab-item:: Python
 
-      .. autoclass:: aoclda.clustering.kmeans(n_clusters=1, initialization_method='k-means++', C=None, n_init=10, max_iter=300, seed=-1, algorithm='elkan', tol=1.0e-4, check_data=false)
+      .. autoclass:: aoclda.clustering.kmeans(n_clusters=1, initialization_method='k-means++', C=None, n_init=10, max_iter=300, seed=-1, algorithm='elkan', tol=1.0e-4, mixed_precision=False, low_precision_max_iter=None, low_precision_tol=None, check_data=False)
          :members:
 
    .. tab-item:: C

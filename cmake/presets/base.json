@@ -141,17 +141,17 @@
       }
     },
     {
+      "name": "znver6",
+      "hidden": true,
+      "cacheVariables": {
+        "ARCH": "znver6"
+      }
+    },
+    {
       "name": "asan",
       "hidden": true,
       "cacheVariables": {
         "ASAN": "ON"
-      }
-    },
-    {
-      "name": "memsan",
-      "hidden": true,
-      "cacheVariables": {
-        "MEMSAN": "ON"
       }
     },
     {
@@ -201,13 +201,6 @@
       "hidden": true,
       "cacheVariables": {
         "BUILD_DOC": "ON"
-      }
-    },
-    {
-      "name": "libmem",
-      "hidden": true,
-      "cacheVariables": {
-        "USE_LIBMEM": "ON"
       }
     },
     {

@@ -1,4 +1,4 @@
-# Copyright (C) 2025 Advanced Micro Devices, Inc. All rights reserved.
+# Copyright (C) 2025-2026 Advanced Micro Devices, Inc. All rights reserved.
 #
 # Redistribution and use in source and binary forms, with or without modification,
 # are permitted provided that the following conditions are met:
@@ -61,10 +61,25 @@ y_test_reg = np.array([-175.52, -33.13, -116.49, -97.43, 162.99])
 @pytest.mark.parametrize("kernel", ["rbf", "linear", "poly", "sigmoid"])
 @pytest.mark.parametrize("gamma", [1, "scale", "auto"])
 @pytest.mark.parametrize("precision", [np.float64, np.float32])
-def test_svm(svm_problem, kernel, gamma, precision, X_train, X_test, y_train, y_test):
+@pytest.mark.parametrize("mixed_precision", [True, False])
+def test_svm(
+        svm_problem,
+        kernel,
+        gamma,
+        precision,
+        mixed_precision,
+        X_train,
+        X_test,
+        y_train,
+        y_test):
     """
     Basic datasets defined above
     """
+    # float32 mixed precision uses a _Float16 warm start, which requires Zen6
+    # hardware (AVX-512-FP16). Skip it where that cannot be guaranteed.
+    if mixed_precision and precision == np.float32:
+        pytest.skip("float32 mixed precision uses _Float16, which requires Zen6 hardware")
+
     X_train = X_train.astype(precision)
     y_train = y_train.astype(precision)
     X_test = X_test.astype(precision)
@@ -76,7 +91,8 @@ def test_svm(svm_problem, kernel, gamma, precision, X_train, X_test, y_train, y_
     skpatch()
     SVM_module = importlib.import_module('sklearn.svm')
     SVM_model = getattr(SVM_module, svm_problem)
-    svm_da = SVM_model(kernel=kernel, gamma=gamma, tol=1e-6)
+    svm_da = SVM_model(kernel=kernel, gamma=gamma, tol=1e-6,
+                       mixed_precision=mixed_precision)
     svm_da.fit(X_train, y_train)
     da_pred = svm_da.predict(X_test)
     da_score = svm_da.score(X_test, y_test)
@@ -126,6 +142,14 @@ def test_svm(svm_problem, kernel, gamma, precision, X_train, X_test, y_train, y_
     assert da_support_vectors == pytest.approx(sk_support_vectors, tol)
     assert da_n_support == pytest.approx(sk_n_support, 1e-10)
     assert da_n_features_in_ == sk_n_features_in_
+    # Drop params that differ purely due to upstream sklearn version changes:
+    # - 'probability' is deprecated in upstream sklearn >=1.8 for SVC/NuSVC
+    #   (value reported as 'deprecated'); the aocl-da patch keeps it as a
+    #   valid bool because its implementation is thread-safe.
+    # - 'cache_size' is reported as float in newer sklearn vs int in our patch.
+    for k in ('probability', 'cache_size'):
+        da_params.pop(k, None)
+        sk_params.pop(k, None)
     assert da_params == sk_params
     assert da_n_iter.all() > 0
 

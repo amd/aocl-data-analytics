@@ -1,5 +1,5 @@
 /* ************************************************************************
- * Copyright (c) 2025 Advanced Micro Devices, Inc. All rights reserved.
+ * Copyright (c) 2025-2026 Advanced Micro Devices, Inc. All rights reserved.
  *
  * Permission is hereby granted, free of charge, to any person obtaining a copy
  * of this software and associated documentation files (the "Software"), to deal
@@ -22,22 +22,14 @@
  * ************************************************************************
  */
 
-#include "aoclda.h"
-
-// Set the kt_int
-using kt_int_t = da_int;
-#include "kernel-templates/kernel_templates.hpp"
-// L2 micro kernels for different compilers
-#if defined(__aocc__) && __has_include("amdlibm_vec.h")
-    #include "kt_l2_clang.hpp"
-#elif defined(__GNUC__)
-    // When using GCC, we use the GCC vectorized functions
-    #include "kt_l2_gcc.hpp"
-#endif
 // clang-format on
 
-namespace kernel_templates
-{
+#ifndef _KT_EXP_
+#define _KT_EXP_
+
+namespace kernel_templates {
+
+template <typename> inline constexpr bool kt_always_false_v = false;
 
 // -----------------------------------------------------------------------
 // Computes the exponential of the given AVX vector
@@ -45,4 +37,6 @@ namespace kernel_templates
 template <bsz SZ, typename SUF>
 KT_FORCE_INLINE avxvector_t<SZ, SUF> kt_exp_p(const avxvector_t<SZ, SUF> a) noexcept;
 
-}
+} // namespace kernel_templates
+
+#endif // _KT_EXP_

@@ -46,9 +46,10 @@ y = numpy.array([3.0, 4.0, 6.0, 11.0, 20.0])
 
 # Starting guess
 x0 = numpy.array([2.5, 0.25])
+options = {"maxtime": 10.0, "print_options": True, "print_level": 2}
 
 # Call fitting routine
-(x, inform) = ral_nlls.solve(x0, r, J, Hr=Hr, params=(t,y))
+(x, inform) = ral_nlls.solve(x0, r, J, Hr=Hr, params=(t,y), options=options)
 
 # Print result
 print("Found a local optimum at x = [ {0:.8f}  {1:.8f} ]".format(x[0],x[1]))

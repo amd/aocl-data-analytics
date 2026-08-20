@@ -31,11 +31,8 @@
 #include "aoclda_types.h"
 #include "basic_handle_options.hpp"
 #include "da_error.hpp"
+#include "model_persistence.hpp"
 #include "options.hpp"
-
-#ifndef AOCLDA_VERSION_INT
-#define AOCLDA_VERSION_INT 0
-#endif
 
 /*
  * Base handle class (basic_handle) that contains members that
@@ -47,13 +44,15 @@
 
 template <typename T> basic_handle<T>::basic_handle(da_errors::da_error_t *err) {
     this->err = err;
-    this->min_library_version = (da_int)AOCLDA_VERSION_INT;
+    this->serialization_version =
+        (da_int)da_model_persistence::model_persistence_min_version;
 }
 
 template <typename T> basic_handle<T>::basic_handle(da_errors::da_error_t &err) {
     // Assumes that err is valid
     this->err = &err;
-    this->min_library_version = (da_int)AOCLDA_VERSION_INT;
+    this->serialization_version =
+        (da_int)da_model_persistence::model_persistence_min_version;
     // Initialize the options registry with common options to all handles
     register_common_options<T>(this->opts, *this->err);
 }
@@ -287,7 +286,7 @@ basic_handle<T>::save_model(da_model_persistence::serialization_buffer &buffer) 
 
     buffer.set_mode(da_model_persistence::buffer_mode::serialize);
 
-    status = buffer.serialize_metadata(sizeof(T), this->min_library_version);
+    status = buffer.serialize_metadata(sizeof(T), this->serialization_version);
     if (status != da_status_success)
         return da_error(this->err, status, "Failure serializing metadata.");
 
@@ -306,6 +305,13 @@ template <typename T>
 da_status
 basic_handle<T>::load_model(da_model_persistence::serialization_buffer &buffer) {
 
+    if (buffer.get_saved_serialization_version() != this->serialization_version)
+        return da_error(this->err, da_status_version_mismatch,
+                        "Saved model's version is incompatible with the current "
+                        "library version.");
+
+    this->saved_aoclda_version = buffer.get_saved_aoclda_version();
+
     da_status status = this->opts.load_registry(buffer);
     if (status != da_status_success)
         return da_error_trace(this->err, status, "Failure deserializing registry.");
@@ -319,5 +325,51 @@ basic_handle<T>::load_model(da_model_persistence::serialization_buffer &buffer) 
     return status;
 }
 
+template <typename T> da_status basic_handle<T>::print_model_versions() {
+    // serialization_version must match exactly saved_serialization version,
+    // thus current serialization version can be printed out instead.
+    if (serialization_version == 0 || saved_aoclda_version == "NA") {
+        return da_error(this->err, da_status_invalid_input,
+                        "The handle doesn't contain a valid loaded model.");
+    }
+
+    std::cout << "===== Loaded Model Versions =====\n";
+    std::cout << std::setw(30) << "Serialization version:" << this->serialization_version
+              << "\n";
+    std::cout << std::setw(30)
+              << "Saved AOCL-DA build version:" << this->saved_aoclda_version << "\n";
+    std::cout << "=================================\n";
+    std::cout << std::flush;
+    return da_status_success;
+};
+
+// Return data that is common across the handle types this function should
+// be called at the beginning of the get_result function of the derived classes
+// If the query is not handled by this function, it returns da_status_unknown_query
+template <typename T>
+da_status basic_handle<T>::get_result_common(da_result query, da_int *dim,
+                                             da_int *result) {
+    switch (query) {
+    case da_result::da_trained:
+        if (*dim < 1) {
+            *dim = 1;
+            return da_warn(
+                this->err, da_status_invalid_array_dimension,
+                "Size of the result array is too small, provide an array of at "
+                "least size: 1.");
+        }
+        result[0] = da_int(this->model_trained);
+        return da_status_success;
+    // case da_...
+    default:
+        // Inform the caller that the query was not handled by this function;
+        // it is expected that the caller fills in correctly the error stack
+        return da_status_unknown_query; // No error stack registry
+    }
+}
+
 template class basic_handle<double>;
 template class basic_handle<float>;
+#ifdef __AVX512FP16__
+template class basic_handle<_Float16>;
+#endif

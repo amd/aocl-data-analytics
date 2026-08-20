@@ -28,151 +28,101 @@
 
 using namespace approx_nn_public;
 
-da_status da_approx_nn_set_training_data_d(da_handle handle, da_int n_samples,
-                                           da_int n_features, const double *X_train,
-                                           da_int ldx_train) {
+template <typename T>
+da_status da_approx_nn_set_training_data(da_handle handle, da_int n_samples,
+                                         da_int n_features, const T *X_train,
+                                         da_int ldx_train) {
     if (!handle)
         return da_status_handle_not_initialized;
     handle->clear(); // Clean up handle logs
-    if (handle->precision != da_double)
-        return da_error(
-            handle->err, da_status_wrong_type,
-            "The handle was initialized with a different precision type than double.");
-    DISPATCHER(handle->err, return (approx_nn_set_training_data<
-                                    da_approx_nn::approximate_neighbors<double>, double>(
-                                handle, n_samples, n_features, X_train, ldx_train)));
-}
 
-da_status da_approx_nn_set_training_data_s(da_handle handle, da_int n_samples,
-                                           da_int n_features, const float *X_train,
-                                           da_int ldx_train) {
-    if (!handle)
-        return da_status_handle_not_initialized;
-    handle->clear(); // Clean up handle logs
-    if (handle->precision != da_single)
-        return da_error(
-            handle->err, da_status_wrong_type,
-            "The handle was initialized with a different precision type than single.");
-    DISPATCHER(handle->err, return (approx_nn_set_training_data<
-                                    da_approx_nn::approximate_neighbors<float>, float>(
-                                handle, n_samples, n_features, X_train, ldx_train)));
-}
+    da_status status = handle->check_precision<T>();
+    if (status != da_status_success)
+        return da_error_trace(handle->err, status, "Wrong precision type.");
 
-da_status da_approx_nn_train_d(da_handle handle) {
-    if (!handle)
-        return da_status_handle_not_initialized;
-    handle->clear(); // Clean up handle logs
-    if (handle->precision != da_double)
-        return da_error(
-            handle->err, da_status_wrong_type,
-            "The handle was initialized with a different precision type than double.");
     DISPATCHER(
         handle->err,
-        return (approx_nn_train<da_approx_nn::approximate_neighbors<double>, double>(
-            handle)));
+        return (approx_nn_set_training_data<da_approx_nn::approximate_neighbors<T>, T>(
+            handle, n_samples, n_features, X_train, ldx_train)));
 }
 
-da_status da_approx_nn_train_s(da_handle handle) {
+template <typename T> da_status da_approx_nn_train(da_handle handle) {
     if (!handle)
         return da_status_handle_not_initialized;
     handle->clear(); // Clean up handle logs
-    if (handle->precision != da_single)
-        return da_error(
-            handle->err, da_status_wrong_type,
-            "The handle was initialized with a different precision type than single.");
+
+    da_status status = handle->check_precision<T>();
+    if (status != da_status_success)
+        return da_error_trace(handle->err, status, "Wrong precision type.");
+
+    DISPATCHER(
+        handle->err,
+        return (approx_nn_train<da_approx_nn::approximate_neighbors<T>, T>(handle)));
+}
+
+template <typename T>
+da_status da_approx_nn_add(da_handle handle, da_int n_samples_add, da_int n_features,
+                           const T *X_add, da_int ldX_add) {
+    if (!handle)
+        return da_status_handle_not_initialized;
+    handle->clear(); // Clean up handle logs
+
+    da_status status = handle->check_precision<T>();
+    if (status != da_status_success)
+        return da_error_trace(handle->err, status, "Wrong precision type.");
+
     DISPATCHER(handle->err,
-               return (approx_nn_train<da_approx_nn::approximate_neighbors<float>, float>(
+               return (approx_nn_add<da_approx_nn::approximate_neighbors<T>, T>(
+                   handle, n_samples_add, n_features, X_add, ldX_add)));
+}
+
+template <typename T> da_status da_approx_nn_train_and_add(da_handle handle) {
+    if (!handle)
+        return da_status_handle_not_initialized;
+    handle->clear(); // Clean up handle logs
+
+    da_status status = handle->check_precision<T>();
+    if (status != da_status_success)
+        return da_error_trace(handle->err, status, "Wrong precision type.");
+
+    DISPATCHER(handle->err,
+               return (approx_nn_train_and_add<da_approx_nn::approximate_neighbors<T>, T>(
                    handle)));
 }
 
-da_status da_approx_nn_add_d(da_handle handle, da_int n_samples_add, da_int n_features,
-                             const double *X_add, da_int ldX_add) {
+template <typename T>
+da_status da_approx_nn_kneighbors(da_handle handle, da_int n_queries, da_int n_features,
+                                  const T *X_test, da_int ldx_test, da_int *n_ind,
+                                  T *n_dist, da_int k, bool return_distance) {
     if (!handle)
         return da_status_handle_not_initialized;
     handle->clear(); // Clean up handle logs
-    if (handle->precision != da_double)
-        return da_error(
-            handle->err, da_status_wrong_type,
-            "The handle was initialized with a different precision type than double.");
+
+    da_status status = handle->check_precision<T>();
+    if (status != da_status_success)
+        return da_error_trace(handle->err, status, "Wrong precision type.");
+
     DISPATCHER(handle->err,
-               return (approx_nn_add<da_approx_nn::approximate_neighbors<double>, double>(
-                   handle, n_samples_add, n_features, X_add, ldX_add)));
+               return (approx_nn_kneighbors<da_approx_nn::approximate_neighbors<T>, T>(
+                   handle, n_queries, n_features, X_test, ldx_test, n_ind, n_dist, k,
+                   return_distance)));
 }
 
-da_status da_approx_nn_add_s(da_handle handle, da_int n_samples_add, da_int n_features,
-                             const float *X_add, da_int ldX_add) {
-    if (!handle)
-        return da_status_handle_not_initialized;
-    handle->clear(); // Clean up handle logs
-    if (handle->precision != da_single)
-        return da_error(
-            handle->err, da_status_wrong_type,
-            "The handle was initialized with a different precision type than single.");
-    DISPATCHER(handle->err,
-               return (approx_nn_add<da_approx_nn::approximate_neighbors<float>, float>(
-                   handle, n_samples_add, n_features, X_add, ldX_add)));
-}
-
-da_status da_approx_nn_train_and_add_d(da_handle handle) {
-    if (!handle)
-        return da_status_handle_not_initialized;
-    handle->clear(); // Clean up handle logs
-    if (handle->precision != da_double)
-        return da_error(
-            handle->err, da_status_wrong_type,
-            "The handle was initialized with a different precision type than double.");
-    DISPATCHER(
-        handle->err,
-        return (
-            approx_nn_train_and_add<da_approx_nn::approximate_neighbors<double>, double>(
-                handle)));
-}
-
-da_status da_approx_nn_train_and_add_s(da_handle handle) {
-    if (!handle)
-        return da_status_handle_not_initialized;
-    handle->clear(); // Clean up handle logs
-    if (handle->precision != da_single)
-        return da_error(
-            handle->err, da_status_wrong_type,
-            "The handle was initialized with a different precision type than single.");
-    DISPATCHER(
-        handle->err,
-        return (
-            approx_nn_train_and_add<da_approx_nn::approximate_neighbors<float>, float>(
-                handle)));
-}
-
-da_status da_approx_nn_kneighbors_d(da_handle handle, da_int n_queries, da_int n_features,
-                                    const double *X_test, da_int ldx_test, da_int *n_ind,
-                                    double *n_dist, da_int k, da_int return_distance) {
-    if (!handle)
-        return da_status_handle_not_initialized;
-    handle->clear(); // Clean up handle logs
-    if (handle->precision != da_double)
-        return da_error(
-            handle->err, da_status_wrong_type,
-            "The handle was initialized with a different precision type than double.");
-    DISPATCHER(
-        handle->err,
-        return (approx_nn_kneighbors<da_approx_nn::approximate_neighbors<double>, double>(
-            handle, n_queries, n_features, X_test, ldx_test, n_ind, n_dist, k,
-            return_distance)));
-}
-
-da_status da_approx_nn_kneighbors_s(da_handle handle, da_int n_queries, da_int n_features,
-                                    const float *X_test, da_int ldx_test, da_int *n_ind,
-                                    float *n_dist, da_int k, da_int return_distance) {
-    if (!handle)
-        return da_status_handle_not_initialized;
-    handle->clear(); // Clean up handle logs
-    if (handle->precision != da_single)
-        return da_error(
-            handle->err, da_status_wrong_type,
-            "The handle was initialized with a different precision type than single.");
-    DISPATCHER(
-        handle->err,
-        return (approx_nn_kneighbors<da_approx_nn::approximate_neighbors<float>, float>(
-            handle, n_queries, n_features, X_test, ldx_test, n_ind, n_dist, k,
-            return_distance)));
-}
+template da_status da_approx_nn_set_training_data<float>(da_handle, da_int, da_int,
+                                                         const float *, da_int);
+template da_status da_approx_nn_set_training_data<double>(da_handle, da_int, da_int,
+                                                          const double *, da_int);
+template da_status da_approx_nn_train<float>(da_handle);
+template da_status da_approx_nn_train<double>(da_handle);
+template da_status da_approx_nn_add<float>(da_handle, da_int, da_int, const float *,
+                                           da_int);
+template da_status da_approx_nn_add<double>(da_handle, da_int, da_int, const double *,
+                                            da_int);
+template da_status da_approx_nn_train_and_add<float>(da_handle);
+template da_status da_approx_nn_train_and_add<double>(da_handle);
+template da_status da_approx_nn_kneighbors<float>(da_handle, da_int, da_int,
+                                                  const float *, da_int, da_int *,
+                                                  float *, da_int, bool);
+template da_status da_approx_nn_kneighbors<double>(da_handle, da_int, da_int,
+                                                   const double *, da_int, da_int *,
+                                                   double *, da_int, bool);

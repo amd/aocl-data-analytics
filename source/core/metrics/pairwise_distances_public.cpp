@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2024-2025 Advanced Micro Devices, Inc. All rights reserved.
+ * Copyright (C) 2024-2026 Advanced Micro Devices, Inc. All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without modification,
  * are permitted provided that the following conditions are met:
@@ -25,29 +25,27 @@
  *
  */
 
-#include "aoclda.h"
 #include "context.hpp"
 #include "da_error.hpp"
 #include "dynamic_dispatch.hpp"
-#include "macros.h"
 
 da_errors::error_bypass_t *nosave_metric(nullptr);
 
-da_status da_pairwise_distances_d(da_order order, da_int m, da_int n, da_int k,
-                                  const double *X, da_int ldx, const double *Y,
-                                  da_int ldy, double *D, da_int ldd, double p,
-                                  da_metric metric) {
+template <typename T>
+da_status da_pairwise_distances(da_order order, da_int m, da_int n, da_int k, const T *X,
+                                da_int ldx, const T *Y, da_int ldy, T *D, da_int ldd, T p,
+                                da_metric metric) {
     DISPATCHER(
         nosave_metric,
         return (da_metrics::pairwise_distances::pairwise_distance_error_check_kernel(
             order, m, n, k, X, ldx, Y, ldy, D, ldd, p, metric)));
 }
 
-da_status da_pairwise_distances_s(da_order order, da_int m, da_int n, da_int k,
-                                  const float *X, da_int ldx, const float *Y, da_int ldy,
-                                  float *D, da_int ldd, float p, da_metric metric) {
-    DISPATCHER(
-        nosave_metric,
-        return (da_metrics::pairwise_distances::pairwise_distance_error_check_kernel(
-            order, m, n, k, X, ldx, Y, ldy, D, ldd, p, metric)));
-}
+template da_status da_pairwise_distances<float>(da_order, da_int, da_int, da_int,
+                                                const float *, da_int, const float *,
+                                                da_int, float *, da_int, float,
+                                                da_metric);
+template da_status da_pairwise_distances<double>(da_order, da_int, da_int, da_int,
+                                                 const double *, da_int, const double *,
+                                                 da_int, double *, da_int, double,
+                                                 da_metric);

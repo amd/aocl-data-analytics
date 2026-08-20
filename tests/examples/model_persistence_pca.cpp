@@ -94,6 +94,16 @@ int main() {
         da_handle_destroy(&handle_orig);
     }
 
+    std::cout << "\n";
+    pass = pass && (da_print_model_metadata("pca_model.bin") == da_status_success);
+    std::cout << "\n";
+
+    if (!pass) {
+        std::cerr << "\nError: ";
+        std::cerr << "Failed to print serialization versions.";
+        return 1;
+    }
+
     // Load and verify the saved model
     {
         std::cout << "Loading model from 'pca_model.bin'..." << std::endl;

@@ -1,4 +1,4 @@
-# Copyright (C) 2024-2025 Advanced Micro Devices, Inc. All rights reserved.
+# Copyright (C) 2024-2026 Advanced Micro Devices, Inc. All rights reserved.
 #
 # Redistribution and use in source and binary forms, with or without modification,
 # are permitted provided that the following conditions are met:
@@ -25,8 +25,10 @@
 """
 Patching scikit-learn linear models: LinearRegression, Ridge, Lasso, ElasticNet, LogisticRegression
 """
-# pylint: disable = super-init-not-called, too-many-ancestors,
-# missing-function-docstring, useless-return
+
+# pylint: disable = super-init-not-called, too-many-ancestors, invalid-name
+# pylint: disable = missing-function-docstring, too-many-instance-attributes
+# pylint: disable = too-many-branches, too-many-arguments, too-many-locals
 
 import warnings
 import numpy as np
@@ -48,9 +50,13 @@ class LinearRegression(LinearRegression_sklearn):
                  fit_intercept=True,
                  solver='auto',
                  tol=0.0001,
+                 max_iter=None,
                  copy_X=True,
                  n_jobs=None,
-                 positive=False) -> None:
+                 positive=False,
+                 mixed_precision=False,
+                 low_precision_max_iter=None,
+                 low_precision_tol=None) -> None:
         # Supported attributes
         self.fit_intercept = fit_intercept
 
@@ -63,9 +69,19 @@ class LinearRegression(LinearRegression_sklearn):
         self.aocl = True
         self.solver = solver
         self.tol = tol
+        self.max_iter = max_iter
+        self.mixed_precision = mixed_precision
+        self.low_precision_max_iter = low_precision_max_iter
+        self.low_precision_tol = low_precision_tol
 
-        self.lmod = linmod_da("mse", solver=self.solver,
-                              tol=self.tol, intercept=self.fit_intercept)
+        self.lmod = linmod_da(
+            "mse", solver=self.solver,
+            tol=self.tol,
+            intercept=self.fit_intercept,
+            max_iter=self.max_iter,
+            mixed_precision=self.mixed_precision,
+            low_precision_max_iter=self.low_precision_max_iter,
+            low_precision_tol=self.low_precision_tol)
 
     def fit(self, X, y, sample_weight=None):
         if sample_weight is not None:
@@ -86,57 +102,59 @@ class LinearRegression(LinearRegression_sklearn):
                   'solver': self.solver,
                   'copy_X': self.copy_X,
                   'n_jobs': self.n_jobs,
-                  'positive': self.positive
+                  'positive': self.positive,
+                  'tol': self.tol,
+                  'max_iter': self.max_iter,
+                  'mixed_precision': self.mixed_precision,
+                  'low_precision_max_iter': self.low_precision_max_iter,
+                  'low_precision_tol': self.low_precision_tol
                   }
         return params
 
     def score(self, X, y, sample_weight=None):
         raise RuntimeError("This feature is not implemented")
 
-    def set_fit_request(self, sample_weight=None):
+    def set_fit_request(self, **kwargs):
         raise RuntimeError("This feature is not implemented")
 
     def set_params(self, **params):
         raise RuntimeError("This feature is not implemented")
 
-    def set_score_request(self, sample_weight=None):
+    def set_score_request(self, **kwargs):
         raise RuntimeError("This feature is not implemented")
+
+    def __sklearn_is_fitted__(self):
+        return self.lmod.trained
 
     @property
     def coef_(self):
         coef = self.lmod.coef
         if self.fit_intercept:
             return coef[:-1]
-        else:
-            return coef
+        return coef
 
     @property
     def rank_(self):
         print("This feature is not implemented")
-        return None
 
     @property
     def singular_(self):
         print("This feature is not implemented")
-        return None
 
     @property
     def intercept_(self):
         if self.fit_intercept:
             coef = self.lmod.coef
             return coef[-1]
-        else:
-            return 0.0
+        return 0.0
 
     @property
     def n_features_in_(self):
         print("This feature is not implemented")
-        return None
 
     @property
     def features_names_in_(self):
         print("This feature is not implemented")
-        return None
 
 
 class Ridge(Ridge_sklearn):
@@ -153,13 +171,19 @@ class Ridge(Ridge_sklearn):
                  tol=0.0001,
                  solver="auto",
                  positive=False,
-                 random_state=None) -> None:
+                 random_state=None,
+                 mixed_precision=False,
+                 low_precision_max_iter=None,
+                 low_precision_tol=None) -> None:
         # supported attributes
         self.alpha = alpha
         self.fit_intercept = fit_intercept
         self.solver = solver
         self.max_iter = max_iter
         self.tol = tol
+        self.mixed_precision = mixed_precision
+        self.low_precision_max_iter = low_precision_max_iter
+        self.low_precision_tol = low_precision_tol
 
         # currently ignored
         self.copy_X = copy_X
@@ -188,7 +212,10 @@ class Ridge(Ridge_sklearn):
             reg_lambda=self.alpha,
             reg_alpha=0.0,
             tol=self.tol,
-            max_iter=self.max_iter)
+            max_iter=self.max_iter,
+            mixed_precision=self.mixed_precision,
+            low_precision_max_iter=self.low_precision_max_iter,
+            low_precision_tol=self.low_precision_tol)
 
     def fit(self, X, y, sample_weight=None):
         if sample_weight is not None:
@@ -211,29 +238,34 @@ class Ridge(Ridge_sklearn):
                   'alpha': self.alpha,
                   'max_iter': self.max_iter,
                   'random_state': self.random_state,
-                  'tol': self.tol
+                  'tol': self.tol,
+                  'mixed_precision': self.mixed_precision,
+                  'low_precision_max_iter': self.low_precision_max_iter,
+                  'low_precision_tol': self.low_precision_tol,
                   }
         return params
 
     def score(self, X, y, sample_weight=None):
         raise RuntimeError("This feature is not implemented")
 
-    def set_fit_request(self, sample_weight=None):
+    def set_fit_request(self, **kwargs):
         raise RuntimeError("This feature is not implemented")
 
     def set_params(self, **params):
         raise RuntimeError("This feature is not implemented")
 
-    def set_score_request(self, sample_weight=None):
+    def set_score_request(self, **kwargs):
         raise RuntimeError("This feature is not implemented")
+
+    def __sklearn_is_fitted__(self):
+        return self.lmod.trained
 
     @property
     def coef_(self):
         coef = self.lmod.coef
         if self.fit_intercept:
             return coef[:-1]
-        else:
-            return coef
+        return coef
 
     @property
     def n_iter_(self):
@@ -243,20 +275,17 @@ class Ridge(Ridge_sklearn):
     @property
     def n_features_in_(self):
         print("This feature is not implemented")
-        return None
 
     @property
     def feature_names_in(self):
         print("This feature is not implemented")
-        return None
 
     @property
     def intercept_(self):
         if self.fit_intercept:
             coef = self.lmod.coef
             return coef[-1]
-        else:
-            return 0.0
+        return 0.0
 
     @property
     def solver_(self):
@@ -275,17 +304,23 @@ class Lasso(Lasso_sklearn):
                  precompute=False,
                  copy_X=True,
                  max_iter=1000,
-                 tol=0.0001,
+                 tol=1e-4,
                  warm_start=False,
                  positive=False,
                  random_state=None,
-                 selection='cyclic'):
+                 selection='cyclic',
+                 mixed_precision=False,
+                 low_precision_max_iter=500,
+                 low_precision_tol=1e-2):
         # supported attributes
         self.alpha = alpha
         self.fit_intercept = fit_intercept
         self.max_iter = max_iter
         self.tol = tol
         self.warm_start = warm_start
+        self.mixed_precision = mixed_precision
+        self.low_precision_max_iter = low_precision_max_iter
+        self.low_precision_tol = low_precision_tol
 
         # Currently ignored attributes
         self.precompute = precompute
@@ -307,138 +342,10 @@ class Lasso(Lasso_sklearn):
             reg_lambda=self.alpha,
             reg_alpha=1.0,
             warm_start=self.warm_start,
-            tol=self.tol)
-
-    def fit(self, X, y, sample_weight=None, check_input=True):
-        if sample_weight is not None:
-            raise ValueError("sample_weight is not supported")
-
-        self.lmod.fit(X, y)
-        return self
-
-    def predict(self, X) -> np.ndarray:
-        return self.lmod.predict(X)
-
-    def get_metadata_routing(self):
-        raise RuntimeError("This feature is not implemented")
-
-    def get_params(self, deep=True):
-        params = {'fit_intercept': self.fit_intercept,
-                  'precompute': self.precompute,
-                  'copy_X': self.copy_X,
-                  'positive': self.positive,
-                  'alpha': self.alpha,
-                  'max_iter': self.max_iter,
-                  'random_state': self.random_state,
-                  'tol': self.tol,
-                  'warm_start': self.warm_start,
-                  'selection': self.selection
-                  }
-        return params
-
-    def score(self, X, y, sample_weight=None):
-        raise RuntimeError("This feature is not implemented")
-
-    def set_fit_request(self, sample_weight=None):
-        raise RuntimeError("This feature is not implemented")
-
-    def set_params(self, **params):
-        raise RuntimeError("This feature is not implemented")
-
-    def set_score_request(self, sample_weight=None):
-        raise RuntimeError("This feature is not implemented")
-
-    @property
-    def coef_(self):
-        coef = self.lmod.coef
-        if self.fit_intercept:
-            return coef[:-1]
-        else:
-            return coef
-
-    @property
-    def n_iter_(self):
-        n_iter = self.lmod.n_iter
-        return n_iter
-
-    @property
-    def n_features_in_(self):
-        print("This feature is not implemented")
-        return None
-
-    @property
-    def feature_names_in(self):
-        print("This feature is not implemented")
-        return None
-
-    @property
-    def intercept_(self):
-        if self.fit_intercept:
-            coef = self.lmod.coef
-            return coef[-1]
-        else:
-            return 0.0
-
-    @property
-    def dual_gap_(self):
-        print("This feature is not implemented")
-        return None
-
-    @property
-    def sparse_coef_(self):
-        print("This feature is not implemented")
-        return None
-
-
-class ElasticNet(ElasticNet_sklearn):
-    """
-    Overwrite scikit-learn ElasticNet to call AOCL-DA library
-    """
-
-    def __init__(
-        self,
-        alpha=1.0,
-        *,
-        l1_ratio=0.5,
-        fit_intercept=True,
-        precompute=False,
-        max_iter=1000,
-        copy_X=True,
-        tol=1e-4,
-        warm_start=False,
-        positive=False,
-        random_state=None,
-        selection="cyclic",
-    ):
-        # supported attributes
-        self.alpha = alpha
-        self.l1_ratio = l1_ratio
-        self.fit_intercept = fit_intercept
-        self.max_iter = max_iter
-        self.tol = tol
-        self.warm_start = warm_start
-
-        # Currently ignored attributes
-        self.precompute = precompute
-        self.copy_X = copy_X
-
-        self.random_state = random_state
-        self.selection = selection
-
-        # not supported attributes
-        self.positive = positive
-
-        # New attributes used internally
-        self.aocl = True
-
-        self.lmod = linmod_da(
-            "mse",
-            intercept=self.fit_intercept,
-            max_iter=self.max_iter,
-            reg_lambda=self.alpha,
-            reg_alpha=self.l1_ratio,
-            warm_start=self.warm_start,
-            tol=self.tol)
+            tol=self.tol,
+            mixed_precision=self.mixed_precision,
+            low_precision_max_iter=self.low_precision_max_iter,
+            low_precision_tol=self.low_precision_tol)
 
     def fit(self, X, y, sample_weight=None, check_input=True):
         if sample_weight is not None:
@@ -464,29 +371,173 @@ class ElasticNet(ElasticNet_sklearn):
                   'tol': self.tol,
                   'warm_start': self.warm_start,
                   'selection': self.selection,
-                  'l1_ratio': self.l1_ratio
+                  'mixed_precision': self.mixed_precision,
+                  'low_precision_max_iter': self.low_precision_max_iter,
+                  'low_precision_tol': self.low_precision_tol
                   }
         return params
 
     def score(self, X, y, sample_weight=None):
         raise RuntimeError("This feature is not implemented")
 
-    def set_fit_request(self, sample_weight=None):
+    def set_fit_request(self, **kwargs):
         raise RuntimeError("This feature is not implemented")
 
     def set_params(self, **params):
         raise RuntimeError("This feature is not implemented")
 
-    def set_score_request(self, sample_weight=None):
+    def set_score_request(self, **kwargs):
         raise RuntimeError("This feature is not implemented")
+
+    def __sklearn_is_fitted__(self):
+        return self.lmod.trained
 
     @property
     def coef_(self):
         coef = self.lmod.coef
         if self.fit_intercept:
             return coef[:-1]
-        else:
-            return coef
+        return coef
+
+    @property
+    def n_iter_(self):
+        n_iter = self.lmod.n_iter
+        return n_iter
+
+    @property
+    def n_features_in_(self):
+        print("This feature is not implemented")
+
+    @property
+    def feature_names_in(self):
+        print("This feature is not implemented")
+
+    @property
+    def intercept_(self):
+        if self.fit_intercept:
+            coef = self.lmod.coef
+            return coef[-1]
+        return 0.0
+
+    @property
+    def dual_gap_(self):
+        print("This feature is not implemented")
+
+    @property
+    def sparse_coef_(self):
+        print("This feature is not implemented")
+
+
+class ElasticNet(ElasticNet_sklearn):
+    """
+    Overwrite scikit-learn ElasticNet to call AOCL-DA library
+    """
+
+    def __init__(
+            self,
+            alpha=1.0,
+            *,
+            l1_ratio=0.5,
+            fit_intercept=True,
+            precompute=False,
+            max_iter=1000,
+            copy_X=True,
+            tol=1e-4,
+            warm_start=False,
+            positive=False,
+            random_state=None,
+            selection="cyclic",
+            mixed_precision=False,
+            low_precision_max_iter=500,
+            low_precision_tol=1e-2):
+        # supported attributes
+        self.alpha = alpha
+        self.l1_ratio = l1_ratio
+        self.fit_intercept = fit_intercept
+        self.max_iter = max_iter
+        self.tol = tol
+        self.warm_start = warm_start
+        self.mixed_precision = mixed_precision
+        self.low_precision_max_iter = low_precision_max_iter
+        self.low_precision_tol = low_precision_tol
+
+        # Currently ignored attributes
+        self.precompute = precompute
+        self.copy_X = copy_X
+
+        self.random_state = random_state
+        self.selection = selection
+
+        # not supported attributes
+        self.positive = positive
+
+        # New attributes used internally
+        self.aocl = True
+
+        self.lmod = linmod_da(
+            "mse",
+            intercept=self.fit_intercept,
+            max_iter=self.max_iter,
+            reg_lambda=self.alpha,
+            reg_alpha=self.l1_ratio,
+            warm_start=self.warm_start,
+            tol=self.tol,
+            mixed_precision=self.mixed_precision,
+            low_precision_max_iter=self.low_precision_max_iter,
+            low_precision_tol=self.low_precision_tol)
+
+    def fit(self, X, y, sample_weight=None, check_input=True):
+        if sample_weight is not None:
+            raise ValueError("sample_weight is not supported")
+
+        self.lmod.fit(X, y)
+        return self
+
+    def predict(self, X) -> np.ndarray:
+        return self.lmod.predict(X)
+
+    def get_metadata_routing(self):
+        raise RuntimeError("This feature is not implemented")
+
+    def get_params(self, deep=True):
+        params = {'fit_intercept': self.fit_intercept,
+                  'precompute': self.precompute,
+                  'copy_X': self.copy_X,
+                  'positive': self.positive,
+                  'alpha': self.alpha,
+                  'max_iter': self.max_iter,
+                  'random_state': self.random_state,
+                  'tol': self.tol,
+                  'warm_start': self.warm_start,
+                  'selection': self.selection,
+                  'l1_ratio': self.l1_ratio,
+                  'mixed_precision': self.mixed_precision,
+                  'low_precision_max_iter': self.low_precision_max_iter,
+                  'low_precision_tol': self.low_precision_tol
+                  }
+        return params
+
+    def score(self, X, y, sample_weight=None):
+        raise RuntimeError("This feature is not implemented")
+
+    def set_fit_request(self, **kwargs):
+        raise RuntimeError("This feature is not implemented")
+
+    def set_params(self, **params):
+        raise RuntimeError("This feature is not implemented")
+
+    def set_score_request(self, **kwargs):
+        raise RuntimeError("This feature is not implemented")
+
+    def __sklearn_is_fitted__(self):
+        return self.lmod.trained
+
+    @property
+    def coef_(self):
+        coef = self.lmod.coef
+        if self.fit_intercept:
+            return coef[:-1]
+        return coef
 
     @property
     def n_iter_(self):
@@ -496,30 +547,25 @@ class ElasticNet(ElasticNet_sklearn):
     @property
     def dual_gap_(self):
         print("This feature is not implemented")
-        return None
 
     @property
     def sparse_coef_(self):
         print("This feature is not implemented")
-        return None
 
     @property
     def n_features_in_(self):
         print("This feature is not implemented")
-        return None
 
     @property
     def feature_names_in(self):
         print("This feature is not implemented")
-        return None
 
     @property
     def intercept_(self):
         if self.fit_intercept:
             coef = self.lmod.coef
             return coef[-1]
-        else:
-            return 0.0
+        return 0.0
 
 
 class LogisticRegression(LogisticRegression_sklearn):
@@ -546,7 +592,10 @@ class LogisticRegression(LogisticRegression_sklearn):
         n_jobs=None,
         l1_ratio=None,
         progress_factor=None,
-        constraint="ssc"
+        constraint="ssc",
+        mixed_precision=False,
+        low_precision_max_iter=50,
+        low_precision_tol=1e-2
     ):
         # supported attributes
         self.tol = tol
@@ -554,6 +603,9 @@ class LogisticRegression(LogisticRegression_sklearn):
         self.fit_intercept = fit_intercept
         self.max_iter = max_iter
         self.warm_start = warm_start
+        self.mixed_precision = mixed_precision
+        self.low_precision_max_iter = low_precision_max_iter
+        self.low_precision_tol = low_precision_tol
 
         # Currently ignored attributes
         self.penalty = penalty
@@ -626,9 +678,12 @@ class LogisticRegression(LogisticRegression_sklearn):
             reg_lambda=self.reg_lambda,
             warm_start=self.warm_start,
             tol=self.tol,
-            progress_factor=self.progress_factor)
+            progress_factor=self.progress_factor,
+            mixed_precision=self.mixed_precision,
+            low_precision_max_iter=self.low_precision_max_iter,
+            low_precision_tol=self.low_precision_tol)
 
-    def fit(self, X, y, sample_weight=None, check_input=True):
+    def fit(self, X, y, sample_weight=None):
         if sample_weight is not None:
             raise ValueError("sample_weight is not supported")
         self.n_class = len(np.unique(y))
@@ -660,48 +715,48 @@ class LogisticRegression(LogisticRegression_sklearn):
         raise RuntimeError("This feature is not implemented")
 
     def score(self, X, y, sample_weight=None):
-        raise RuntimeError("This feature is not implemented")
+        if sample_weight is not None:
+            raise ValueError("sample_weight is not supported")
+        return self.lmod.score(X, y)
 
-    def set_fit_request(self, sample_weight=None):
+    def set_fit_request(self, **kwargs):
         raise RuntimeError("This feature is not implemented")
 
     def set_params(self, **params):
         raise RuntimeError("This feature is not implemented")
 
-    def set_score_request(self, sample_weight=None):
+    def set_score_request(self, **kwargs):
         raise RuntimeError("This feature is not implemented")
 
     def sparsify(self):
         raise RuntimeError("This feature is not implemented")
+
+    def __sklearn_is_fitted__(self):
+        return self.lmod.trained
 
     @property
     def coef_(self):
         coef = self.lmod.coef
         if self.fit_intercept:
             return coef[:, :-1]
-        else:
-            return coef
+        return coef
 
     @property
     def intercept_(self):
         if self.fit_intercept:
             coef = self.lmod.coef
             return coef[:, -1]
-        else:
-            if self.constraint == 'rsc':
-                return np.zeros(self.n_class - 1)
-            else:
-                return np.zeros(self.n_class)
+        if self.constraint == 'rsc':
+            return np.zeros(self.n_class - 1)
+        return np.zeros(self.n_class)
 
     @property
     def n_features_in_(self):
         print("This feature is not implemented")
-        return None
 
     @property
     def feature_names_in(self):
         print("This feature is not implemented")
-        return None
 
     @property
     def n_iter_(self):

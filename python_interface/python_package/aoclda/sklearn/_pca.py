@@ -1,4 +1,4 @@
-# Copyright (C) 2024-2025 Advanced Micro Devices, Inc. All rights reserved.
+# Copyright (C) 2024-2026 Advanced Micro Devices, Inc. All rights reserved.
 #
 # Redistribution and use in source and binary forms, with or without modification,
 # are permitted provided that the following conditions are met:
@@ -66,31 +66,43 @@ class PCA(PCA_sklearn):
         if copy is False:
             raise ValueError("copy must be set to True or None")
 
-        if svd_solver in ('arpack', 'randomized'):
+        if svd_solver == 'arpack':
             raise ValueError(
-                "svd_solver must be set to auto, full, covariance_eigh or None")
+                "svd_solver must be set to auto, full, covariance_eigh, randomized or None")
 
-        if (tol != 0.0 or iterated_power != 'auto' or n_oversamples != 10 or
-                power_iteration_normalizer != 'auto' or random_state is not None):
+        if isinstance(random_state, np.random.RandomState):
+            raise ValueError("random_state must be an integer or None.")
+
+        if tol != 0.0:
             warnings.warn(
-                "The parameters tol, iterated_power, n_oversamples, power_iteration_normalizer and"
-                "random state are not supported and have been ignored.",
+                "The parameter tol is not supported and has been ignored.",
                 category=RuntimeWarning)
 
         # new internal attributes
         self.aocl = True
         self.precision = "double"
 
+        # Translate random_state to AOCL-DA seed
+        seed = -1 if random_state is None else random_state
+
         # Translate options to aocl-da ones
         solver = svd_solver
         if svd_solver == 'full':
             solver = 'gesdd'
-
-        if svd_solver == 'covariance_eigh':
+        elif svd_solver == 'covariance_eigh':
             solver = 'syevd'
+        # 'randomized' and 'auto' pass through as-is
+
+        _power_iterations = -1 if iterated_power == 'auto' else int(iterated_power)
+        _power_normalization = power_iteration_normalizer.upper(
+        ) if power_iteration_normalizer != 'auto' else 'QR'
 
         self.pca = PCA_da(n_components, method="covariance",
-                          solver=solver, bias='unbiased', whiten=whiten)
+                          solver=solver, bias='unbiased', whiten=whiten,
+                          n_oversamples=n_oversamples,
+                          power_iterations=_power_iterations,
+                          power_normalization=_power_normalization,
+                          seed=seed)
 
     def fit(self, X, y=None):
         self.pca.fit(X)

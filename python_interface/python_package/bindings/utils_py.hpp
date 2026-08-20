@@ -34,7 +34,7 @@
 #ifndef UTILS_PY_HPP
 #define UTILS_PY_HPP
 
-#include "aoclda.h"
+#include "aoclda.hpp"
 #include "aoclda_cpp_overloads.hpp"
 #include "internal_utilities_py.hpp"
 #include <iostream>
@@ -172,6 +172,14 @@ py::array_t<da_int> py_get_shuffled_indices(da_int size, da_int seed, da_int tra
     status_to_exception(status);
 
     return shuffled_indices;
+}
+
+void py_print_model_metadata(py::bytes data) {
+    std::string_view sv = data;
+    std::vector<char> vec(sv.begin(), sv.end());
+    da_status status = da_print_model_metadata(vec);
+    status_to_exception(status);
+    return;
 }
 
 #endif

@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2024-2025 Advanced Micro Devices, Inc. All rights reserved.
+ * Copyright (C) 2024-2026 Advanced Micro Devices, Inc. All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without modification,
  * are permitted provided that the following conditions are met:
@@ -110,10 +110,10 @@ void sigmoid_kernel_internal(da_order order, da_int m, da_int n, da_int k, const
                              da_int ldx, const T *Y, da_int ldy, T *D, da_int ldd,
                              T gamma, T coef0, bool X_is_Y, da_int vectorisation);
 /*
-Helper function to transpose upper trainagular matrix to a symmetric
+Helper function to transpose upper triangular matrix to a symmetric
 */
 template <typename T>
-inline void fill_upper_traingular(da_order order, da_int m, T *D, da_int ldd);
+inline void fill_upper_triangular(da_order order, da_int m, T *D, da_int ldd);
 
 /*
 Helper function to compute gemm/syrk
@@ -125,32 +125,15 @@ inline void kernel_setup(da_order order, da_int m, da_int n, da_int k, const T *
                          da_kernel_functions_types::math_type math_func =
                              da_kernel_functions_types::math_type::none);
 
-// Declare the kernel functions for the various SIMD implementations and a generic function for
-// choosing the SIMD size and associated padding requirement
-template <class T, vectorization_type U>
-void exp_kernel(da_int first_dim, da_int second_dim, T *data, da_int ldd, T multiplier,
-                const T *first_dim_norms, const T *second_dim_norms);
-template <class T, vectorization_type U>
-void pow_kernel(da_int first_dim, da_int second_dim, T *data, da_int ldd, T coef0,
-                da_int degree);
-template <class T, vectorization_type U>
-void tanh_kernel(da_int first_dim, da_int second_dim, T *data, da_int ldd, T coef0);
-
-template <class T> void select_simd_size(da_int size, vectorization_type &kernel_type);
-
-// Exposed here for internal unit test, to correctly dispatch vectorisation
 template <typename T>
-using exp_kernel_func_t = void (*)(da_int, da_int, T *, da_int, T, const T *, const T *);
+da_kernel_functions_types::exp_kernel_func_t<T>
+select_exp_kernel_function(vectorization_type vec_enum);
 template <typename T>
-using pow_kernel_func_t = void (*)(da_int, da_int, T *, da_int, T, da_int);
-template <typename T> using tanh_kernel_func_t = void (*)(da_int, da_int, T *, da_int, T);
-
+da_kernel_functions_types::pow_kernel_func_t<T>
+select_pow_kernel_function(vectorization_type vec_enum);
 template <typename T>
-exp_kernel_func_t<T> select_exp_kernel_function(vectorization_type vec_enum);
-template <typename T>
-pow_kernel_func_t<T> select_pow_kernel_function(vectorization_type vec_enum);
-template <typename T>
-tanh_kernel_func_t<T> select_tanh_kernel_function(vectorization_type vec_enum);
+da_kernel_functions_types::tanh_kernel_func_t<T>
+select_tanh_kernel_function(vectorization_type vec_enum);
 
 } // namespace da_kernel_functions
 

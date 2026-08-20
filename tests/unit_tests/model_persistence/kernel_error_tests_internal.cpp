@@ -26,9 +26,11 @@
  */
 
 #include "aoclda.h"
+#include "da_handle.hpp"
 #include "model_persistence.hpp"
 #include "gmock/gmock.h"
 #include "gtest/gtest.h"
+#include <cmath>
 #include <cstdint>
 #include <cstring>
 #include <limits>
@@ -93,15 +95,19 @@ TEST_F(SerializationKernelErrorTests, SetBufferDataWriteModeAndMetadataSize) {
     da_status status = buffer.set_buffer_data(&data);
     ASSERT_EQ(status, da_status_success);
     EXPECT_EQ(buffer.get_mode(), buffer_mode::reserve);
-    // Metadata size should be added: keyword length + 5 int64_t values
-    // header_keyword = "AOCLDA_STORED_MODEL" (19 chars)
-    // 1. string size (8 bytes)
-    // 2. 6 chars for keyword
+    // Metadata size should be added:
+    // 1. keyword string size stored (8 bytes)
+    // 2. keyword string (19 bytes)
     // 3. da_int_size (8 bytes)
-    // 4. min_lib_version (8 bytes)
+    // 4. serialization_version (8 bytes)
     // 5. handle_type (8 bytes)
     // 6. precision (8 bytes)
-    size_t expected_metadata_size = 8 + 19 + 8 + 8 + 8 + 8;
+    // 7. aoclda_version string size stored (8 bytes)
+    // 8. aoclda_version string (strlen(da_get_version()) bytes)
+    size_t expected_metadata_size = sizeof(int64_t) + header_keyword.size() +
+                                    sizeof(int64_t) + sizeof(int64_t) + sizeof(int64_t) +
+                                    sizeof(int64_t) + sizeof(int64_t) +
+                                    std::strlen(da_get_version());
     EXPECT_EQ(buffer.get_size(), expected_metadata_size);
 }
 
@@ -140,9 +146,10 @@ TEST_F(SerializationKernelErrorTests, AddSizeOverflow) {
     serialization_buffer buffer(da_handle_uninitialized);
     buffer.set_buffer_data(&data);
 
-    // Set size to near max
-    // Subtract enough to cover metadata size
-    size_t near_max = static_cast<size_t>(std::numeric_limits<da_int>::max()) - 70;
+    // Set size to near max, accounting for metadata size already in the buffer
+    size_t metadata_size = buffer.get_size();
+    size_t near_max =
+        static_cast<size_t>(std::numeric_limits<da_int>::max()) - metadata_size;
     da_status status = buffer.add_size(near_max);
     EXPECT_EQ(status, da_status_success);
 
@@ -420,11 +427,12 @@ TEST_F(SerializationKernelErrorTests, DeserializeNestedBufferOverflow) {
 // ============================================================================
 
 TEST_F(SerializationKernelErrorTests, De_SerializeMetadataSuccess) {
+    da_int serialization_version = model_persistence_min_version;
     std::vector<char> data;
     serialization_buffer buffer(da_handle_uninitialized);
     buffer.set_buffer_data(&data);
 
-    da_status status = buffer.serialize_metadata(sizeof(float), 100);
+    da_status status = buffer.serialize_metadata(sizeof(float), serialization_version);
     ASSERT_EQ(status, da_status_success);
     EXPECT_FALSE(data.empty());
 
@@ -436,4 +444,269 @@ TEST_F(SerializationKernelErrorTests, De_SerializeMetadataSuccess) {
     status = read_buffer.deserialize_metadata(precision);
     ASSERT_EQ(status, da_status_success);
     EXPECT_EQ(precision, da_int(sizeof(float)));
+    EXPECT_EQ(serialization_version, read_buffer.get_saved_serialization_version());
+}
+
+// ============================================================================
+// Version Check Tests
+// ============================================================================
+
+// Helper: serialize valid metadata with a given version into a buffer
+static std::vector<char> make_metadata_buffer(da_int version,
+                                              da_handle_type handle_type = da_handle_pca,
+                                              da_int precision = sizeof(double)) {
+    std::vector<char> data;
+    serialization_buffer buffer(handle_type);
+    buffer.set_buffer_data(&data);
+    buffer.set_mode(buffer_mode::serialize);
+    buffer.serialize_metadata(precision, version);
+    return data;
+}
+
+// saved_serialization_version < model_persistence_min_version
+// → rejected at deserialize_metadata level
+TEST_F(SerializationKernelErrorTests, VersionCheck_SavedBelowGlobalMinVersion) {
+    da_int saved_version = model_persistence_min_version - 1;
+    auto data = make_metadata_buffer(saved_version);
+
+    serialization_buffer buffer(da_handle_pca);
+    buffer.set_buffer_data(data.data(), data.size());
+
+    da_int precision;
+    da_status status = buffer.deserialize_metadata(precision);
+    EXPECT_EQ(status, da_status_version_mismatch);
+}
+
+// saved_serialization_version < algo's serialization_version (both >= min_version)
+// → passes deserialize_metadata, rejected at load_model (exact match fails)
+TEST_F(SerializationKernelErrorTests, VersionCheck_SavedSmallerThanAlgoVer) {
+    da_int algo_ver = model_persistence_min_version + 1;
+    da_int saved_version = model_persistence_min_version;
+    auto data = make_metadata_buffer(saved_version);
+
+    serialization_buffer buffer(da_handle_pca);
+    buffer.set_buffer_data(data.data(), data.size());
+
+    da_int precision;
+    da_status status = buffer.deserialize_metadata(precision);
+    ASSERT_EQ(status, da_status_success);
+
+    da_handle handle = nullptr;
+    status = da_handle_init_d(&handle, da_handle_pca);
+    ASSERT_EQ(status, da_status_success);
+
+    auto *alg = handle->get_alg_handle<double>();
+    alg->set_serialization_version(algo_ver);
+
+    status = alg->load_model(buffer);
+    EXPECT_EQ(status, da_status_version_mismatch);
+
+    da_handle_destroy(&handle);
+}
+
+// saved_serialization_version > algo's serialization_version (both >= min_version)
+// → passes deserialize_metadata, rejected at load_model (exact match fails)
+TEST_F(SerializationKernelErrorTests, VersionCheck_SavedGreaterThanAlgoVer) {
+    da_int algo_ver = model_persistence_min_version;
+    da_int saved_version = model_persistence_min_version + 1;
+    auto data = make_metadata_buffer(saved_version);
+
+    serialization_buffer buffer(da_handle_pca);
+    buffer.set_buffer_data(data.data(), data.size());
+
+    da_int precision;
+    da_status status = buffer.deserialize_metadata(precision);
+    ASSERT_EQ(status, da_status_success);
+
+    da_handle handle = nullptr;
+    status = da_handle_init_d(&handle, da_handle_pca);
+    ASSERT_EQ(status, da_status_success);
+
+    auto *alg = handle->get_alg_handle<double>();
+    alg->set_serialization_version(algo_ver);
+
+    status = alg->load_model(buffer);
+    EXPECT_EQ(status, da_status_version_mismatch);
+
+    da_handle_destroy(&handle);
+}
+
+// ============================================================================
+// Serialize-side overflow Tests (insert_data_in_buffer guard)
+// ============================================================================
+
+template <typename T> static void run_scalar_overflow() {
+    std::vector<char> buffer_data;
+    serialization_buffer buffer(da_handle_uninitialized);
+    ASSERT_EQ(buffer.set_buffer_data(&buffer_data), da_status_success);
+
+    size_t reserved = buffer.get_size();
+    buffer.set_mode(buffer_mode::serialize);
+
+    // Serialize scalars until the reserved size is exceeded.
+    size_t max_fit = reserved / sizeof(save_type_t<T>);
+    da_status status = da_status_success;
+    for (size_t i = 0; i <= max_fit; ++i) {
+        status = buffer.serialize_data(T(1));
+        if (status != da_status_success)
+            break;
+    }
+    EXPECT_EQ(status, da_status_internal_error);
+}
+
+TEST_F(SerializationKernelErrorTests, SerializeScalarOverflow) {
+    run_scalar_overflow<da_int>();
+    run_scalar_overflow<float>();
+    run_scalar_overflow<double>();
+}
+
+template <typename T> static void run_container_overflow() {
+    std::vector<char> buffer_data;
+    serialization_buffer buffer(da_handle_uninitialized);
+    ASSERT_EQ(buffer.set_buffer_data(&buffer_data), da_status_success);
+
+    size_t reserved = buffer.get_size();
+    buffer.set_mode(buffer_mode::serialize);
+
+    std::vector<T> big(reserved / sizeof(save_type_t<T>) + 1, T(1));
+    EXPECT_EQ(buffer.serialize_data(big), da_status_internal_error);
+}
+
+TEST_F(SerializationKernelErrorTests, SerializeContainerOverflow) {
+    run_container_overflow<da_int>();
+    run_container_overflow<float>();
+    run_container_overflow<double>();
+}
+
+// ============================================================================
+// serialize_user_data / serialize_user_data_impl Tests
+// ============================================================================
+
+template <typename T> static void run_user_data_overflow_1d(da_order order) {
+    std::vector<char> buffer_data;
+    serialization_buffer buffer(da_handle_uninitialized);
+    ASSERT_EQ(buffer.set_buffer_data(&buffer_data), da_status_success);
+
+    ASSERT_EQ(buffer.add_size(size_t(100)), da_status_success);
+    size_t reserved = buffer.get_size();
+
+    buffer.set_mode(buffer_mode::serialize);
+
+    da_int count = static_cast<da_int>(reserved / sizeof(save_type_t<T>)) + 1;
+    std::vector<T> data(count, T(1));
+    da_status status = buffer.serialize_user_data(data.data(), order, count, 1, count);
+    EXPECT_EQ(status, da_status_internal_error);
+}
+
+template <typename T> static void run_user_data_overflow_2d(da_order order) {
+    std::vector<char> buffer_data;
+    serialization_buffer buffer(da_handle_uninitialized);
+    ASSERT_EQ(buffer.set_buffer_data(&buffer_data), da_status_success);
+
+    // Add extra space to ensure matrix will be of useful size
+    ASSERT_EQ(buffer.add_size(size_t(200)), da_status_success);
+    size_t reserved = buffer.get_size();
+    buffer.set_mode(buffer_mode::serialize);
+
+    da_int n_elements = static_cast<da_int>(reserved / sizeof(save_type_t<T>));
+    da_int n_rows = static_cast<da_int>(std::sqrt(n_elements));
+
+    // Add more columns to ensure it overflows
+    da_int n_cols = n_rows + 5;
+
+    std::vector<T> data(n_cols * n_rows, T(1));
+    da_status status = buffer.serialize_user_data(
+        data.data(), order, n_rows, n_cols, order == column_major ? n_rows : n_cols);
+    EXPECT_EQ(status, da_status_internal_error);
+}
+
+TEST_F(SerializationKernelErrorTests, SerializeUserDataOverflow) {
+    run_user_data_overflow_1d<da_int>(column_major);
+    run_user_data_overflow_1d<float>(column_major);
+    run_user_data_overflow_1d<double>(column_major);
+
+    run_user_data_overflow_1d<da_int>(row_major);
+    run_user_data_overflow_1d<float>(row_major);
+    run_user_data_overflow_1d<double>(row_major);
+
+    run_user_data_overflow_2d<da_int>(column_major);
+    run_user_data_overflow_2d<float>(column_major);
+    run_user_data_overflow_2d<double>(column_major);
+
+    run_user_data_overflow_2d<da_int>(row_major);
+    run_user_data_overflow_2d<float>(row_major);
+    run_user_data_overflow_2d<double>(row_major);
+}
+
+template <typename T>
+static void run_user_data_reserve_size(da_order order, da_int extra_ldx) {
+    std::vector<char> buffer_data;
+    serialization_buffer buffer(da_handle_uninitialized);
+    ASSERT_EQ(buffer.set_buffer_data(&buffer_data), da_status_success);
+    ASSERT_EQ(buffer.get_mode(), buffer_mode::reserve);
+
+    const da_int saved_data_size = 512;
+
+    // Add extra space to ensure matrix will be of useful size
+    size_t initial_size = buffer.get_size();
+    ASSERT_EQ(
+        buffer.add_size(size_t(saved_data_size) - initial_size + sizeof(int_save_t)),
+        da_status_success);
+
+    initial_size = buffer.get_size();
+    da_int outer_dim = 4;
+    da_int inner_dim = initial_size / (outer_dim * sizeof(save_type_t<T>));
+    ASSERT_EQ(outer_dim * inner_dim * sizeof(save_type_t<T>) + sizeof(int_save_t),
+              saved_data_size + sizeof(int_save_t));
+
+    da_int ldx = inner_dim + extra_ldx;
+    std::vector<T> data(ldx * outer_dim, T(1));
+
+    da_int m = order == column_major ? inner_dim : outer_dim;
+    da_int n = order == column_major ? outer_dim : inner_dim;
+
+    // this adds another saved_data_size + sizeof(int_save_t) to the size
+    da_status status = buffer.serialize_user_data(data.data(), order, m, n, ldx);
+    ASSERT_EQ(status, da_status_success);
+
+    EXPECT_EQ(buffer.get_size(), 2 * (saved_data_size + sizeof(int_save_t)));
+
+    // ** Additional serialization to ensure everything is correct **
+    buffer.set_mode(buffer_mode::serialize);
+    status = buffer.serialize_user_data(data.data(), order, m, n, ldx);
+    ASSERT_EQ(status, da_status_success);
+    status = buffer.serialize_user_data(data.data(), order, m, n, ldx);
+    ASSERT_EQ(status, da_status_success);
+    EXPECT_EQ(buffer.get_size(), 2 * (saved_data_size + sizeof(int_save_t)));
+}
+
+TEST_F(SerializationKernelErrorTests, SerializeUserDataReserveSize) {
+    run_user_data_reserve_size<da_int>(column_major, 0);
+    run_user_data_reserve_size<float>(column_major, 0);
+    run_user_data_reserve_size<double>(column_major, 0);
+
+    run_user_data_reserve_size<da_int>(row_major, 0);
+    run_user_data_reserve_size<float>(row_major, 0);
+    run_user_data_reserve_size<double>(row_major, 0);
+
+    run_user_data_reserve_size<da_int>(column_major, 2);
+    run_user_data_reserve_size<float>(column_major, 5);
+    run_user_data_reserve_size<double>(column_major, 4);
+
+    run_user_data_reserve_size<da_int>(row_major, 3);
+    run_user_data_reserve_size<float>(row_major, 8);
+    run_user_data_reserve_size<double>(row_major, 2);
+}
+
+TEST_F(SerializationKernelErrorTests, SerializeUserDataReserveModeNullptr) {
+    std::vector<char> buffer_data;
+    serialization_buffer buffer(da_handle_uninitialized);
+    ASSERT_EQ(buffer.set_buffer_data(&buffer_data), da_status_success);
+    ASSERT_EQ(buffer.get_mode(), buffer_mode::reserve);
+
+    size_t size_before = buffer.get_size();
+    da_status status = buffer.serialize_user_data<float>(nullptr, column_major, 5, 5, 5);
+    ASSERT_EQ(status, da_status_success);
+
+    EXPECT_EQ(buffer.get_size() - size_before, sizeof(int_save_t));
 }

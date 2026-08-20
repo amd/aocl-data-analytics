@@ -176,6 +176,13 @@ inline da_status register_forest_options(da_options::OptionRegistry &opts,
                          "ordered"));
         status = opts.register_opt(os);
 
+        oi = std::make_shared<OptionNumeric<da_int>>(OptionNumeric<da_int>(
+            "maximum tree threads",
+            "Maximum number of threads allocated to each tree for parallel feature "
+            "evaluation. 0 means no cap.",
+            0, lbound_t::greaterequal, max_da_int, ubound_t::p_inf, 0));
+        status = opts.register_opt(oi);
+
     } catch (std::bad_alloc &) {
         return da_error(&err, da_status_memory_error, // LCOV_EXCL_LINE
                         "Memory allocation failed.");

@@ -240,6 +240,16 @@ da_status serialize_all(std::vector<char> &data) {
     if (status != da_status_success)
         return status;
 
+    // Add exact amount of space needed
+    // (buffer by default has some size allocated due to metadata expectation)
+    size_t target = get_buffer_size();
+    size_t current = buffer.get_size();
+    if (current > target)
+        return da_status_internal_error;
+    status = buffer.add_size(target - current);
+    if (status != da_status_success)
+        return status;
+
     // Switch from reserve mode to serialize mode so serialize_user_data writes bytes
     buffer.set_mode(buffer_mode::serialize);
 

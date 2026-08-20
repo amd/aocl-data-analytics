@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2025 Advanced Micro Devices, Inc. All rights reserved.
+ * Copyright (C) 2025-2026 Advanced Micro Devices, Inc. All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without modification,
  * are permitted provided that the following conditions are met:
@@ -54,7 +54,7 @@ da_status decision_tree<T>::predict(da_int nsamp, da_int nfeat, const T *X_test,
                                    std::to_string(n_features) + ".");
     }
 
-    if (!model_trained) {
+    if (!this->model_trained) {
         return da_error_bypass(this->err, da_status_out_of_date,
                                "The model has not yet been trained or the data it is "
                                "associated with is out of date.");
@@ -125,7 +125,7 @@ da_status decision_tree<T>::predict_proba(da_int nsamp, da_int nfeat, const T *X
                                    std::to_string(nclass) + ".");
     }
 
-    if (!model_trained) {
+    if (!this->model_trained) {
         return da_error_bypass(this->err, da_status_out_of_date,
                                "The model has not yet been trained or the data it is "
                                "associated with is out of date.");
@@ -223,7 +223,7 @@ da_status decision_tree<T>::score(da_int nsamp, da_int nfeat, const T *X_test,
                                    std::to_string(n_features) + ".");
     }
 
-    if (!model_trained) {
+    if (!this->model_trained) {
         return da_error_bypass(this->err, da_status_out_of_date,
                                "The model has not yet been trained or the data it is "
                                "associated with is out of date.");

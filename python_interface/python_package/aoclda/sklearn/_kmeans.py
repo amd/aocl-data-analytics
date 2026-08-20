@@ -1,4 +1,4 @@
-# Copyright (C) 2024-2025 Advanced Micro Devices, Inc. All rights reserved.
+# Copyright (C) 2024-2026 Advanced Micro Devices, Inc. All rights reserved.
 #
 # Redistribution and use in source and binary forms, with or without modification,
 # are permitted provided that the following conditions are met:
@@ -27,8 +27,8 @@
 """
 Patching scikit-learn clustering: kmeans
 """
-# pylint: disable = missing-function-docstring, too-many-ancestors,
-# useless-return, super-init-not-called, no-member
+# pylint: disable = useless-return, super-init-not-called, no-member, arguments-differ
+# pylint: disable = missing-function-docstring, too-many-ancestors, too-many-locals
 
 import warnings
 from sklearn.cluster import KMeans as kmeans_sklearn
@@ -42,27 +42,41 @@ class kmeans(kmeans_sklearn):
     """
 
     def __init__(
-            self,
-            n_clusters=8,
-            *,
-            init='k-means++',
-            n_init='auto',
-            max_iter=300,
-            tol=0.0001,
-            verbose=None,
-            random_state=None,
-            copy_x=None,
-            algorithm='lloyd'):
+        self,
+        n_clusters=8,
+        *,
+        init='k-means++',
+        n_init='auto',
+        max_iter=300,
+        tol=0.0001,
+        verbose=None,
+        random_state=None,
+        copy_x=None,
+        algorithm='lloyd',
+        distance='euclidean',
+        normalize_data=False,
+        empty_clusters='ignore',
+        afk_mcmc_samples=50,
+        mixed_precision=False,
+        low_precision_max_iter=200,
+        low_precision_tol=0.01
+    ):
 
         # Supported attributes
         self.n_clusters = n_clusters
         self.max_iter = max_iter
         self.algorithm = algorithm
+        self.distance = distance
+        self.normalize_data = normalize_data
         self.random_state = random_state
         self.n_init = n_init
         self.tol = tol
         self.init = init
-
+        self.mixed_precision = mixed_precision
+        self.low_precision_max_iter = low_precision_max_iter
+        self.low_precision_tol = low_precision_tol
+        self.empty_clusters = empty_clusters
+        self.afk_mcmc_samples = afk_mcmc_samples
         # Not supported yet
         self.copy_x = copy_x
         self.verbose = verbose
@@ -84,7 +98,7 @@ class kmeans(kmeans_sklearn):
 
         # guard against some deprecated options in Scikit-learn
         algorithm_internal = self.algorithm
-        if algorithm_internal == "full" or algorithm_internal == "auto":
+        if algorithm_internal in ["full", "auto"]:
             algorithm_internal = "lloyd"
 
         if isinstance(random_state, np.random.RandomState):
@@ -102,7 +116,14 @@ class kmeans(kmeans_sklearn):
                 seed=self.seed,
                 C=init,
                 algorithm=algorithm_internal,
-                tol=self.tol)
+                distance=self.distance,
+                normalize_data=self.normalize_data,
+                tol=self.tol,
+                empty_clusters=self.empty_clusters,
+                afk_mcmc_samples=self.afk_mcmc_samples,
+                mixed_precision=self.mixed_precision,
+                low_precision_max_iter=self.low_precision_max_iter,
+                low_precision_tol=self.low_precision_tol)
         elif n_init == "auto":
             if init == "k-means++":
                 n_init_internal = 1
@@ -116,7 +137,14 @@ class kmeans(kmeans_sklearn):
                 max_iter=self.max_iter,
                 seed=self.seed,
                 tol=self.tol,
-                algorithm=algorithm_internal)
+                algorithm=algorithm_internal,
+                distance=self.distance,
+                normalize_data=self.normalize_data,
+                empty_clusters=self.empty_clusters,
+                afk_mcmc_samples=self.afk_mcmc_samples,
+                mixed_precision=self.mixed_precision,
+                low_precision_max_iter=self.low_precision_max_iter,
+                low_precision_tol=self.low_precision_tol)
         else:
             self.kmeans = kmeans_da(
                 n_clusters,
@@ -125,7 +153,14 @@ class kmeans(kmeans_sklearn):
                 max_iter=self.max_iter,
                 tol=self.tol,
                 seed=self.seed,
-                algorithm=algorithm_internal)
+                algorithm=algorithm_internal,
+                distance=self.distance,
+                normalize_data=self.normalize_data,
+                empty_clusters=self.empty_clusters,
+                afk_mcmc_samples=self.afk_mcmc_samples,
+                mixed_precision=self.mixed_precision,
+                low_precision_max_iter=self.low_precision_max_iter,
+                low_precision_tol=self.low_precision_tol)
 
     def fit(self, X, y=None, sample_weight=None):
         self.kmeans.fit(X)
@@ -155,12 +190,20 @@ class kmeans(kmeans_sklearn):
         params = {'n_clusters': self.n_clusters,
                   'max_iter': self.max_iter,
                   'algorithm': self.algorithm,
+                  'distance': self.distance,
+                  'normalize_data': self.normalize_data,
                   'random_state': self.random_state,
                   'n_init': self.n_init,
                   'tol': self.tol,
                   'init': self.init,
                   'copy_x': self.copy_x,
-                  'verbose': self.verbose}
+                  'verbose': self.verbose,
+                  'mixed_precision': self.mixed_precision,
+                  'low_precision_max_iter': self.low_precision_max_iter,
+                  'low_precision_tol': self.low_precision_tol,
+                  'empty_clusters': self.empty_clusters,
+                  'afk_mcmc_samples': self.afk_mcmc_samples
+                  }
         return params
 
     def score(self, X, y=None):
@@ -206,6 +249,5 @@ class kmeans(kmeans_sklearn):
     @property
     def feature_names_in_(self):
         print("This attribute is not implemented")
-        return None
 
     # AOCL-DA attributes not yet matched with an sklearn attribute

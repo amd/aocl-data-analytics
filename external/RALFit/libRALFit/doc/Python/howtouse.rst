@@ -165,7 +165,12 @@ Controlling data is sent to the subroutine using a Python dictionary.  A descrip
    *  maxit (int)
 		 
 		 |maxit|
-		 Default is 100
+		 Default is 100.
+
+   *  maxtime (float)
+		 
+		 |maxtime|
+		 Default is 1e6.
 
    *  stop_g_absolute (float)
 		 

@@ -615,9 +615,12 @@ da_status cubic_spline<T>::get_result(da_result query, da_int *dim, T *result) {
 
 // Get results (integer)
 template <typename T>
-da_status cubic_spline<T>::get_result([[maybe_unused]] da_result query,
-                                      [[maybe_unused]] da_int *dim,
-                                      [[maybe_unused]] da_int *result) {
+da_status cubic_spline<T>::get_result(da_result query, da_int *dim, da_int *result) {
+    // check to see if user needs common stuff from the basic handle first
+    da_status status = this->get_result_common(query, dim, result);
+    if (status != da_status_unknown_query) {
+        return status; // either got requested info or error
+    }
     return da_error(this->err, da_status_unknown_query,
                     "No integer results available for interpolation.");
 }

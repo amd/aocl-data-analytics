@@ -45,12 +45,18 @@ def main():
     parser.add_argument("name", help="Your Python script or module name")
     parser.add_argument("args", nargs=argparse.REMAINDER,
                         help="Command line arguments for your Python script")
-    parser.add_argument(
+    group = parser.add_mutually_exclusive_group()
+    group.add_argument(
         "--print-patch",
-        default=True,
         dest="print_patched",
-        help="Print welcome message",
-        action=argparse.BooleanOptionalAction)
+        action="store_true",
+        help="Print welcome message")
+    group.add_argument(
+        "--no-print-patch",
+        dest="print_patched",
+        action="store_false",
+        help="Suppress welcome message")
+    parser.set_defaults(print_patched=True)
 
     args = parser.parse_args()
 

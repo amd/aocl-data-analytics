@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2024-2025 Advanced Micro Devices, Inc. All rights reserved.
+ * Copyright (C) 2024-2026 Advanced Micro Devices, Inc. All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without modification,
  * are permitted provided that the following conditions are met:
@@ -27,114 +27,81 @@
 
 #include "nlls_public.hpp"
 #include "aoclda.h"
+#include "aoclda_cpp_overloads.hpp"
 #include "da_handle.hpp"
 
 using namespace nlls_public;
 
-da_status da_nlls_define_residuals_d(da_handle handle, da_int n_coef, da_int n_res,
-                                     da_resfun_t_d *resfun, da_resgrd_t_d *resgrd,
-                                     da_reshes_t_d *reshes, da_reshp_t_d *reshp) {
+template <typename T>
+da_status da_nlls_define_residuals(da_handle handle, da_int n_coef, da_int n_res,
+                                   da_resfun_t<T> *resfun, da_resgrd_t<T> *resgrd,
+                                   da_reshes_t<T> *reshes, da_reshp_t<T> *reshp) {
     if (!handle)
         return da_status_handle_not_initialized;
     handle->clear(); // Clean up handle logs
-    if (handle->precision != da_double)
-        return da_error(
-            handle->err, da_status_wrong_type,
-            "The handle was initialized with a different precision type than double.");
+
+    da_status status = handle->check_precision<T>();
+    if (status != da_status_success)
+        return da_error_trace(handle->err, status, "Wrong precision type.");
 
     DISPATCHER(
         handle->err,
-        return (nlls_define_residuals<da_nlls::nlls<double>, da_resfun_t_d, da_resgrd_t_d,
-                                      da_reshes_t_d, da_reshp_t_d, double>(
+        return (nlls_define_residuals<da_nlls::nlls<T>, da_resfun_t<T>, da_resgrd_t<T>,
+                                      da_reshes_t<T>, da_reshp_t<T>, T>(
             handle, n_coef, n_res, resfun, resgrd, reshes, reshp)));
 }
 
-da_status da_nlls_define_residuals_s(da_handle handle, da_int n_coef, da_int n_res,
-                                     da_resfun_t_s *resfun, da_resgrd_t_s *resgrd,
-                                     da_reshes_t_s *reshes, da_reshp_t_s *reshp) {
+template <typename T>
+da_status da_nlls_define_bounds(da_handle handle, da_int n_coef, T *lower, T *upper) {
     if (!handle)
         return da_status_handle_not_initialized;
     handle->clear(); // Clean up handle logs
-    if (handle->precision != da_single)
-        return da_error(
-            handle->err, da_status_wrong_type,
-            "The handle was initialized with a different precision type than single.");
 
-    DISPATCHER(
-        handle->err,
-        return (nlls_define_residuals<da_nlls::nlls<float>, da_resfun_t_s, da_resgrd_t_s,
-                                      da_reshes_t_s, da_reshp_t_s, float>(
-            handle, n_coef, n_res, resfun, resgrd, reshes, reshp)));
-}
+    da_status status = handle->check_precision<T>();
+    if (status != da_status_success)
+        return da_error_trace(handle->err, status, "Wrong precision type.");
 
-da_status da_nlls_define_bounds_d(da_handle handle, da_int n_coef, double *lower,
-                                  double *upper) {
-    if (!handle)
-        return da_status_handle_not_initialized;
-    handle->clear(); // Clean up handle logs
-    if (handle->precision != da_double)
-        return da_error(
-            handle->err, da_status_wrong_type,
-            "The handle was initialized with a different precision type than double.");
-    DISPATCHER(handle->err, return (nlls_define_bounds<da_nlls::nlls<double>, double>(
-                                handle, n_coef, lower, upper)));
-}
-da_status da_nlls_define_bounds_s(da_handle handle, da_int n_coef, float *lower,
-                                  float *upper) {
-    if (!handle)
-        return da_status_handle_not_initialized;
-    handle->clear(); // Clean up handle logs
-    if (handle->precision != da_single)
-        return da_error(
-            handle->err, da_status_wrong_type,
-            "The handle was initialized with a different precision type than single.");
-    DISPATCHER(handle->err, return (nlls_define_bounds<da_nlls::nlls<float>, float>(
+    DISPATCHER(handle->err, return (nlls_define_bounds<da_nlls::nlls<T>, T>(
                                 handle, n_coef, lower, upper)));
 }
 
-da_status da_nlls_define_weights_d(da_handle handle, da_int n_coef, double *weights) {
+template <typename T>
+da_status da_nlls_define_weights(da_handle handle, da_int n_coef, T *weights) {
     if (!handle)
         return da_status_handle_not_initialized;
     handle->clear(); // Clean up handle logs
-    if (handle->precision != da_double)
-        return da_error(
-            handle->err, da_status_wrong_type,
-            "The handle was initialized with a different precision type than double.");
-    DISPATCHER(handle->err, return (nlls_define_weights<da_nlls::nlls<double>, double>(
+
+    da_status status = handle->check_precision<T>();
+    if (status != da_status_success)
+        return da_error_trace(handle->err, status, "Wrong precision type.");
+
+    DISPATCHER(handle->err, return (nlls_define_weights<da_nlls::nlls<T>, T>(
                                 handle, n_coef, weights)));
 }
 
-da_status da_nlls_define_weights_s(da_handle handle, da_int n_coef, float *weights) {
+template <typename T>
+da_status da_nlls_fit(da_handle handle, da_int n_coef, T *coef, void *udata) {
     if (!handle)
         return da_status_handle_not_initialized;
     handle->clear(); // Clean up handle logs
-    if (handle->precision != da_single)
-        return da_error(
-            handle->err, da_status_wrong_type,
-            "The handle was initialized with a different precision type than single.");
-    DISPATCHER(handle->err, return (nlls_define_weights<da_nlls::nlls<float>, float>(
-                                handle, n_coef, weights)));
+
+    da_status status = handle->check_precision<T>();
+    if (status != da_status_success)
+        return da_error_trace(handle->err, status, "Wrong precision type.");
+
+    DISPATCHER(handle->err,
+               return (nlls_fit<da_nlls::nlls<T>, T>(handle, n_coef, coef, udata)));
 }
 
-da_status da_nlls_fit_d(da_handle handle, da_int n_coef, double *coef, void *udata) {
-    if (!handle)
-        return da_status_handle_not_initialized;
-    handle->clear(); // Clean up handle logs
-    if (handle->precision != da_double)
-        return da_error(
-            handle->err, da_status_wrong_type,
-            "The handle was initialized with a different precision type than double.");
-    DISPATCHER(handle->err, return (nlls_fit<da_nlls::nlls<double>, double>(
-                                handle, n_coef, coef, udata)));
-}
-da_status da_nlls_fit_s(da_handle handle, da_int n_coef, float *coef, void *udata) {
-    if (!handle)
-        return da_status_handle_not_initialized;
-    handle->clear(); // Clean up handle logs
-    if (handle->precision != da_single)
-        return da_error(
-            handle->err, da_status_wrong_type,
-            "The handle was initialized with a different precision type than single.");
-    DISPATCHER(handle->err, return (nlls_fit<da_nlls::nlls<float>, float>(handle, n_coef,
-                                                                          coef, udata)));
-}
+template da_status da_nlls_define_residuals<float>(da_handle, da_int, da_int,
+                                                   da_resfun_t_s *, da_resgrd_t_s *,
+                                                   da_reshes_t_s *, da_reshp_t_s *);
+template da_status da_nlls_define_residuals<double>(da_handle, da_int, da_int,
+                                                    da_resfun_t_d *, da_resgrd_t_d *,
+                                                    da_reshes_t_d *, da_reshp_t_d *);
+template da_status da_nlls_define_bounds<float>(da_handle, da_int, float *, float *);
+template da_status da_nlls_define_bounds<double>(da_handle, da_int, double *, double *);
+template da_status da_nlls_define_weights<float>(da_handle, da_int, float *);
+template da_status da_nlls_define_weights<double>(da_handle, da_int, double *);
+template da_status da_nlls_fit<float>(da_handle, da_int, float *, void *);
+template da_status da_nlls_fit<double>(da_handle, da_int, double *, void *);

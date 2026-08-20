@@ -105,6 +105,7 @@ template <typename T> class interpolation_generic {
 
     virtual da_status get_result(da_result query, da_int *dim, T *result);
     virtual da_status get_result(da_result query, da_int *dim, da_int *result);
+    da_status get_result_common(da_result query, da_int *dim, da_int *result);
 };
 
 template <typename T> void interpolation_generic<T>::refresh() { model_trained = false; }
@@ -405,6 +406,32 @@ da_status interpolation_generic<T>::get_result([[maybe_unused]] da_result query,
     return da_error(this->err, da_status_invalid_input,
                     "Requested result is not available for this interpolation model.");
 }
+
+// Return data thas is common accross the interpolation types this function should
+// be called at the beginning of the get_result function of the derived classes
+// If the query is not handled by this function, it returns da_status_unknown_query
+template <typename T>
+da_status interpolation_generic<T>::get_result_common(da_result query, da_int *dim,
+                                                      da_int *result) {
+    switch (query) {
+    case da_result::da_trained:
+        if (*dim < 1) {
+            *dim = 1;
+            return da_warn(
+                this->err, da_status_invalid_array_dimension,
+                "Size of the result array is too small, provide an array of at "
+                "least size: 1.");
+        }
+        result[0] = T(this->model_trained);
+        return da_status_success;
+    // case da_...
+    default:
+        // Inform the caller that the query was not handled by this function
+        return da_warn(this->err, da_status_unknown_query,
+                       "Handle does not contain data relevant to this query.");
+    }
+}
+
 } // namespace da_interpolation
 } // namespace ARCH
 

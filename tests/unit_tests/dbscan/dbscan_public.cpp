@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2025 Advanced Micro Devices, Inc. All rights reserved.
+ * Copyright (C) 2025-2026 Advanced Micro Devices, Inc. All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without modification,
  * are permitted provided that the following conditions are met:
@@ -112,8 +112,19 @@ template <typename T> void test_functionality(const DBSCANParamType<T> &param) {
                   da_status_success)
             << "Call to set_data failed.";
 
+        // Check da_trained before compute
+        da_int tr_dim = 1, tr_val = -1;
+        EXPECT_EQ(da_handle_get_result(handle, da_result::da_trained, &tr_dim, &tr_val),
+                  da_status_success);
+        EXPECT_EQ(tr_val, 0);
+
         EXPECT_EQ(da_dbscan_compute<T>(handle), param.expected_status)
             << "Call to compute failed.";
+
+        // Check da_trained after compute
+        EXPECT_EQ(da_handle_get_result(handle, da_result::da_trained, &tr_dim, &tr_val),
+                  da_status_success);
+        EXPECT_EQ(tr_val, 1);
 
         // Check that the serial vs parallel cluster path is correct
         char answer[100];

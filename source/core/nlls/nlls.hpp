@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2024-2025 Advanced Micro Devices, Inc. All rights reserved.
+ * Copyright (C) 2024-2026 Advanced Micro Devices, Inc. All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without modification,
  * are permitted provided that the following conditions are met:
@@ -68,8 +68,7 @@ template <typename T> class nlls : public da_optimization<T> {
                                reshp_t<T> reshp);
     da_status fit(da_int n_coef, T *coef, void *udata);
     da_status get_result(da_result query, da_int *dim, T *result);
-    da_status get_result([[maybe_unused]] da_result query, [[maybe_unused]] da_int *dim,
-                         [[maybe_unused]] da_int *result);
+    da_status get_result(da_result query, da_int *dim, da_int *result);
 };
 
 } // namespace da_nlls

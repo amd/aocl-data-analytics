@@ -1,6 +1,6 @@
 
 /*
- * Copyright (C) 2024-2025 Advanced Micro Devices, Inc. All rights reserved.
+ * Copyright (C) 2024-2026 Advanced Micro Devices, Inc. All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without modification,
  * are permitted provided that the following conditions are met:
@@ -349,7 +349,7 @@ class nlls : public pyda_handle {
         }
         if (check_data == true) {
             std::string yes_str = "yes";
-            status = da_options_set(handle, "check data", yes_str.data());
+            status = da_options_set(handle, "check data", yes_str.c_str());
             exception_check(status);
         }
 
@@ -484,7 +484,7 @@ class nlls : public pyda_handle {
              std::optional<nlls_cb::py_cb2_t<T>> hp, std::optional<py::object> data,
              T ftol = 1.0e-8, T abs_ftol = 1.0e-8, T gtol = 1.0e-8, T abs_gtol = 1.0e-5,
              T xtol = 2.22e-16, T reg_term = 0.0, da_int maxit = da_int(100),
-             T fd_step = 1.0e-7, T fd_ttol = 1.0e-4) {
+             T fd_step = 1.0e-7, T fd_ttol = 1.0e-4, T maxtime = T(1.0e6)) {
 
         da_status status{da_status_success};
         std::string mesg{""};
@@ -571,6 +571,8 @@ class nlls : public pyda_handle {
         status = da_options_set(handle, "finite differences step", fd_step);
         exception_check(status, mesg);
         status = da_options_set(handle, "derivative test tol", fd_ttol);
+        exception_check(status, mesg);
+        status = da_options_set(handle, "time limit", maxtime);
         exception_check(status, mesg);
 
         callbacks.set(fun, py_jac, py_hf, py_hp);

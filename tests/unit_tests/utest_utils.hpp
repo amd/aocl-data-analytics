@@ -32,12 +32,15 @@
 #include "gtest/gtest.h"
 #include <algorithm>
 #include <cmath>
-#ifdef WIN32
+#ifdef _WIN32
 #include <stdlib.h>
+#include <windows.h>
 #else
 #include <cstdlib>
+#include <unistd.h>
 #endif
 #include <iostream>
+#include <string>
 #include <vector>
 
 // Auxiliary macro for token concatenation
@@ -117,7 +120,7 @@ template <class T_in, class T_out>
 std::vector<T_out> convert_vector(const std::vector<T_in> &input) {
     std::vector<T_out> output(input.size());
     std::transform(input.begin(), input.end(), output.begin(),
-                   [](T_out x) { return static_cast<T_in>(x); });
+                   [](T_in x) { return static_cast<T_out>(x); });
     return output;
 }
 
@@ -129,6 +132,33 @@ inline da_status da_linmod_get_coef(da_handle handle, da_int *nc, float *x) {
 }
 
 namespace da_test {
+
+template <typename T>
+bool read_csv_data(const std::string &filename, std::vector<T> &data, da_int &n_rows,
+                   da_int &n_cols, da_order order = column_major) {
+    da_datastore csv_store = nullptr;
+    bool ok =
+        da_datastore_init(&csv_store) == da_status_success &&
+        da_datastore_options_set_string(csv_store, "datastore precision",
+                                        prec_name<T>()) == da_status_success &&
+        da_datastore_options_set_string(csv_store, "datatype", type_opt_name<T>()) ==
+            da_status_success &&
+        da_data_load_from_csv(csv_store, filename.c_str()) == da_status_success &&
+        da_data_get_n_cols(csv_store, &n_cols) == da_status_success &&
+        da_data_get_n_rows(csv_store, &n_rows) == da_status_success &&
+        da_data_select_columns(csv_store, "data", 0, n_cols - 1) == da_status_success;
+    if (ok) {
+        data.resize(n_rows * n_cols);
+        da_int ld = (order == row_major) ? n_cols : n_rows;
+        ok = da_data_extract_selection(csv_store, "data", order, data.data(), ld) ==
+             da_status_success;
+    }
+    if (!ok)
+        std::cerr << "read_csv_data: failed to load '" << filename << "'" << std::endl;
+    da_datastore_destroy(&csv_store);
+    return ok;
+}
+
 template <typename T> inline void free_data(T **arr, [[maybe_unused]] da_int n) {
     if (*arr)
         free(*arr);
@@ -138,10 +168,18 @@ inline void free_data(char ***arr, da_int n) { da_delete_string_array(arr, n); }
 
 // Helper function to set an environment variable
 inline int da_setenv(const char *name, const char *value, int overwrite) {
-#ifdef WIN32
+#ifdef _WIN32
     return _putenv_s(name, value);
 #else
     return setenv(name, value, overwrite);
+#endif
+}
+
+void sleep(int milliseconds) {
+#ifdef _WIN32
+    Sleep(milliseconds);
+#else
+    usleep(1000 * milliseconds);
 #endif
 }
 

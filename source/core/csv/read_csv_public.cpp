@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2024 Advanced Micro Devices, Inc. All rights reserved.
+ * Copyright (C) 2024-2026 Advanced Micro Devices, Inc. All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without modification,
  * are permitted provided that the following conditions are met:
@@ -31,36 +31,9 @@
 
 /* Public facing routines for reading in a csv and storing an array of data */
 
-da_status da_read_csv_d(da_datastore store, const char *filename, double **a,
-                        da_int *n_rows, da_int *n_cols, char ***headings) {
-    if (store == nullptr)
-        return da_status_store_not_initialized;
-    return da_csv::read_csv(store->csv_parser, filename, a, n_rows, n_cols, headings);
-}
-
-da_status da_read_csv_s(da_datastore store, const char *filename, float **a,
-                        da_int *n_rows, da_int *n_cols, char ***headings) {
-    if (store == nullptr)
-        return da_status_store_not_initialized;
-    return da_csv::read_csv(store->csv_parser, filename, a, n_rows, n_cols, headings);
-}
-
-da_status da_read_csv_int(da_datastore store, const char *filename, da_int **a,
-                          da_int *n_rows, da_int *n_cols, char ***headings) {
-    if (store == nullptr)
-        return da_status_store_not_initialized;
-    return da_csv::read_csv(store->csv_parser, filename, a, n_rows, n_cols, headings);
-}
-
-da_status da_read_csv_uint8(da_datastore store, const char *filename, uint8_t **a,
-                            da_int *n_rows, da_int *n_cols, char ***headings) {
-    if (store == nullptr)
-        return da_status_store_not_initialized;
-    return da_csv::read_csv(store->csv_parser, filename, a, n_rows, n_cols, headings);
-}
-
-da_status da_read_csv_string(da_datastore store, const char *filename, char ***a,
-                             da_int *n_rows, da_int *n_cols, char ***headings) {
+template <typename T>
+da_status da_read_csv(da_datastore store, const char *filename, T **a, da_int *n_rows,
+                      da_int *n_cols, char ***headings) {
     if (store == nullptr)
         return da_status_store_not_initialized;
     return da_csv::read_csv(store->csv_parser, filename, a, n_rows, n_cols, headings);
@@ -69,3 +42,14 @@ da_status da_read_csv_string(da_datastore store, const char *filename, char ***a
 da_status da_delete_string_array(char ***headings, da_int n_cols) {
     return da_csv::delete_string_array(headings, n_cols);
 }
+
+template da_status da_read_csv<float>(da_datastore, const char *, float **, da_int *,
+                                      da_int *, char ***);
+template da_status da_read_csv<double>(da_datastore, const char *, double **, da_int *,
+                                       da_int *, char ***);
+template da_status da_read_csv<da_int>(da_datastore, const char *, da_int **, da_int *,
+                                       da_int *, char ***);
+template da_status da_read_csv<uint8_t>(da_datastore, const char *, uint8_t **, da_int *,
+                                        da_int *, char ***);
+template da_status da_read_csv<char *>(da_datastore, const char *, char ***, da_int *,
+                                       da_int *, char ***);

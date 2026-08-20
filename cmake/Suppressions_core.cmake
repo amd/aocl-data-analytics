@@ -34,9 +34,6 @@ set_source_files_properties(
     COMPILE_FLAGS
     "-Wno-unused-variable -Wno-unused-parameter -Wno-implicit-fallthrough -Wno-format -Wno-sign-compare -Wno-type-limits"
 )
-set_source_files_properties(
-  core/csv/tokenizer.c
-  PROPERTIES
-    COMPILE_FLAGS
-    "-Wno-unused-variable -Wno-unused-parameter -Wno-implicit-fallthrough -Wno-format $<$<Fortran_COMPILER_ID:Flang>:-Wno-unknown-warning-option> -Wno-old-style-declaration -Wno-sign-compare -Wno-type-limits"
-)
+AppendCFlags(_compiler_flags -Wno-old-style-declaration)
+set(_compiler_flags "${_compiler_flags} -Wno-unused-variable -Wno-unused-parameter -Wno-implicit-fallthrough -Wno-format -Wno-sign-compare -Wno-type-limits")
+set_source_files_properties( core/csv/tokenizer.c PROPERTIES COMPILE_FLAGS ${_compiler_flags})

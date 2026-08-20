@@ -132,9 +132,9 @@ template <typename T> void test_functionality(const ANNParamType<T> &param) {
     EXPECT_EQ(da_approx_nn_train_and_add<T>(handle), da_status_success);
 
     // Call with return_distance=false
-    EXPECT_EQ(da_approx_nn_kneighbors(handle, param.n_queries, param.n_features,
-                                      param.X_test.data(), param.ldx_test, k_ind.data(),
-                                      nullptr, param.k, false),
+    EXPECT_EQ(da_approx_nn_kneighbors<T>(handle, param.n_queries, param.n_features,
+                                         param.X_test.data(), param.ldx_test,
+                                         k_ind.data(), nullptr, param.k, false),
               da_status_success);
 
     if (!param.expected_kind.empty()) {
@@ -300,31 +300,12 @@ template <typename T> void test_ann_recall(const ANNParamType<T> &param) {
     // Get the training data
     std::string input_data_fname =
         std::string(DATA_DIR) + "/ann_data/" + param.csvname + "_data.csv";
-    da_datastore csv_store = nullptr;
-    EXPECT_EQ(da_datastore_init(&csv_store), da_status_success);
-    EXPECT_EQ(
-        da_datastore_options_set_string(csv_store, "datastore precision", prec_name<T>()),
-        da_status_success);
-    EXPECT_EQ(da_data_load_from_csv(csv_store, input_data_fname.c_str()),
-              da_status_success);
-
-    da_int ncols, nrows;
-    EXPECT_EQ(da_data_get_n_cols(csv_store, &ncols), da_status_success);
-    EXPECT_EQ(da_data_get_n_rows(csv_store, &nrows), da_status_success);
-    EXPECT_EQ(da_data_select_columns(csv_store, "features", 0, ncols - 1),
-              da_status_success);
-
-    da_int nfeat = ncols;
-    da_int nsamples_train = nrows;
-    // Extract the selections
-    std::vector<T> X_train(nfeat * nsamples_train);
+    std::vector<T> X_train;
+    da_int nsamples_train, nfeat;
+    ASSERT_TRUE(
+        da_test::read_csv_data(input_data_fname, X_train, nsamples_train, nfeat, order))
+        << "Failed to read training data: " << input_data_fname;
     da_int ldx_train = (order == column_major) ? nsamples_train : nfeat;
-
-    EXPECT_EQ(da_data_extract_selection(csv_store, "features", order, X_train.data(),
-                                        ldx_train),
-              da_status_success);
-
-    da_datastore_destroy(&csv_store);
 
     // Create the model
     EXPECT_EQ(da_approx_nn_set_training_data(ann_handle, nsamples_train, nfeat,
@@ -335,29 +316,12 @@ template <typename T> void test_ann_recall(const ANNParamType<T> &param) {
 
     // Get the test data
     input_data_fname = std::string(DATA_DIR) + "/ann_data/" + param.csvname + "_test.csv";
-    csv_store = nullptr;
-    EXPECT_EQ(da_datastore_init(&csv_store), da_status_success);
-    EXPECT_EQ(
-        da_datastore_options_set_string(csv_store, "datastore precision", prec_name<T>()),
-        da_status_success);
-    EXPECT_EQ(da_data_load_from_csv(csv_store, input_data_fname.c_str()),
-              da_status_success);
-
-    EXPECT_EQ(da_data_get_n_cols(csv_store, &ncols), da_status_success);
-    EXPECT_EQ(da_data_get_n_rows(csv_store, &nrows), da_status_success);
-    EXPECT_EQ(da_data_select_columns(csv_store, "features", 0, ncols - 1),
-              da_status_success);
-
-    nfeat = ncols;
-    da_int nsamples_test = nrows;
-    // Extract the selections
-    std::vector<T> X_test(nfeat * nsamples_test);
+    std::vector<T> X_test;
+    da_int nsamples_test;
+    ASSERT_TRUE(
+        da_test::read_csv_data(input_data_fname, X_test, nsamples_test, nfeat, order))
+        << "Failed to read test data: " << input_data_fname;
     da_int ldx_test = (order == column_major) ? nsamples_test : nfeat;
-
-    EXPECT_EQ(
-        da_data_extract_selection(csv_store, "features", order, X_test.data(), ldx_test),
-        da_status_success);
-    da_datastore_destroy(&csv_store);
 
     // Check that the recall is good enough
     da_int k_neigh = param.k;
@@ -365,15 +329,15 @@ template <typename T> void test_ann_recall(const ANNParamType<T> &param) {
     std::vector<da_int> computed_indices(k_neigh * nsamples_test);
 
     T recall;
-    EXPECT_EQ(da_approx_nn_kneighbors(ann_handle, nsamples_test, nfeat, X_test.data(),
-                                      ldx_test, computed_indices.data(), nullptr, k_neigh,
-                                      false),
+    EXPECT_EQ(da_approx_nn_kneighbors<T>(ann_handle, nsamples_test, nfeat, X_test.data(),
+                                         ldx_test, computed_indices.data(), nullptr,
+                                         k_neigh, false),
               da_status_success);
 
     // Compute recall based on inputs and computed_indices
     recall =
-        compute_recall(param, computed_indices.data(), X_train.data(), nsamples_train,
-                       nfeat, ldx_train, X_test.data(), nsamples_test, ldx_test);
+        compute_recall(param, nfeat, computed_indices.data(), X_train.data(),
+                       nsamples_train, ldx_train, X_test.data(), nsamples_test, ldx_test);
 
     EXPECT_GT(recall, param.target_recall);
     std::cout << "Recall on the test data: " << recall << std::endl;
@@ -734,7 +698,16 @@ TYPED_TEST(ANNTest, MultipleCalls) {
                                                  param.n_features, param.X_train.data(),
                                                  param.ldx_train),
                   da_status_success);
+        // Check da_trained before training
+        da_int tr_dim = 1, tr_val = -1;
+        EXPECT_EQ(da_handle_get_result(handle, da_result::da_trained, &tr_dim, &tr_val),
+                  da_status_success);
+        EXPECT_EQ(tr_val, 0);
         EXPECT_EQ(da_approx_nn_train<TypeParam>(handle), da_status_success);
+        // Check da_trained after training
+        EXPECT_EQ(da_handle_get_result(handle, da_result::da_trained, &tr_dim, &tr_val),
+                  da_status_success);
+        EXPECT_EQ(tr_val, 1);
 
         EXPECT_EQ(da_approx_nn_add(handle, param.n_samples, param.n_features,
                                    param.X_train.data(), param.ldx_train),
@@ -798,8 +771,9 @@ TYPED_TEST(ANNTest, BadHandleTests) {
               da_status_handle_not_initialized);
 
     EXPECT_EQ(da_approx_nn_add(handle, 1, 1, &X, 1), da_status_handle_not_initialized);
-    EXPECT_EQ(da_approx_nn_kneighbors(handle, 1, 1, &X, 1, &I, nullptr, 1, false),
-              da_status_handle_not_initialized);
+    EXPECT_EQ(
+        da_approx_nn_kneighbors<TypeParam>(handle, 1, 1, &X, 1, &I, nullptr, 1, false),
+        da_status_handle_not_initialized);
 
     // Incorrect handle type
     EXPECT_EQ(da_handle_init<TypeParam>(&handle, da_handle_linmod), da_status_success);
@@ -808,8 +782,9 @@ TYPED_TEST(ANNTest, BadHandleTests) {
               da_status_invalid_handle_type);
 
     EXPECT_EQ(da_approx_nn_add(handle, 1, 1, &X, 1), da_status_invalid_handle_type);
-    EXPECT_EQ(da_approx_nn_kneighbors(handle, 1, 1, &X, 1, &I, nullptr, 1, false),
-              da_status_invalid_handle_type);
+    EXPECT_EQ(
+        da_approx_nn_kneighbors<TypeParam>(handle, 1, 1, &X, 1, &I, nullptr, 1, false),
+        da_status_invalid_handle_type);
 
     da_handle_destroy(&handle);
 }
@@ -849,4 +824,242 @@ TEST(ANNTest, IncorrectHandlePrecision) {
 
     da_handle_destroy(&handle_d);
     da_handle_destroy(&handle_s);
+}
+
+// Verify IVF blocking by comparing against brute-force KNN.
+// Uses n_probe == n_list so the approximate search is exact; expects recall 1.0 per query.
+template <typename T> void test_ivf_blocking_properties(const ANNParamType<T> &param) {
+    std::cout << "IVF blocking test: " << param.test_name << std::endl;
+
+    if (param.query_blk_sz_override > 0) {
+        EXPECT_EQ(da_debug_set("ivf.query_blk_sz",
+                               std::to_string(param.query_blk_sz_override).c_str()),
+                  da_status_success);
+    }
+    if (param.list_blk_sz_override > 0) {
+        EXPECT_EQ(da_debug_set("ivf.list_blk_sz",
+                               std::to_string(param.list_blk_sz_override).c_str()),
+                  da_status_success);
+    }
+    if (param.add_blk_sz_override > 0) {
+        EXPECT_EQ(da_debug_set("ivf.add_blk_sz",
+                               std::to_string(param.add_blk_sz_override).c_str()),
+                  da_status_success);
+    }
+
+    da_handle handle = nullptr;
+    EXPECT_EQ(da_handle_init<T>(&handle, da_handle_approx_nn), da_status_success);
+    EXPECT_EQ(da_options_set_string(handle, "metric", param.metric.c_str()),
+              da_status_success);
+    EXPECT_EQ(da_options_set_string(handle, "storage order", param.order.c_str()),
+              da_status_success);
+    EXPECT_EQ(da_options_set_string(handle, "algorithm", param.algorithm.c_str()),
+              da_status_success);
+    EXPECT_EQ(da_options_set_int(handle, "number of neighbors", param.k),
+              da_status_success);
+    EXPECT_EQ(da_options_set_int(handle, "n_list", param.nlist), da_status_success);
+    EXPECT_EQ(da_options_set_int(handle, "n_probe", param.nprobe), da_status_success);
+    EXPECT_EQ(da_options_set_int(handle, "seed", param.seed), da_status_success);
+    EXPECT_EQ(da_options_set_int(handle, "k-means_iter", param.kmeans_iter),
+              da_status_success);
+
+    EXPECT_EQ(da_approx_nn_set_training_data(handle, param.n_samples, param.n_features,
+                                             param.X_train.data(), param.ldx_train),
+              da_status_success);
+    EXPECT_EQ(da_approx_nn_train_and_add<T>(handle), da_status_success);
+
+    // Add blocking telemetry and correctness checks
+    char telemetry_buf[128];
+    if (param.add_blk_sz_override > 0) {
+        EXPECT_EQ(da_debug_get("ivf.add_blk_sz_used", 128, telemetry_buf),
+                  da_status_success);
+        da_int expected_add_blk = std::min(param.n_samples, param.add_blk_sz_override);
+        EXPECT_EQ(std::string(telemetry_buf), std::to_string(expected_add_blk));
+
+        // Compare list sizes against an unblocked reference run to verify that each
+        // point was assigned to the same centroid regardless of add block size.
+        // (global_indices comparison will replace this once that result query is added.)
+        da_int sz = param.nlist;
+        std::vector<da_int> blocked_sizes(sz), ref_sizes(sz);
+        EXPECT_EQ(da_handle_get_result(handle, da_approx_nn_list_sizes, &sz,
+                                       blocked_sizes.data()),
+                  da_status_success);
+
+        // Clear the add-block override so the reference run is truly unblocked.
+        EXPECT_EQ(da_debug_set("ivf.add_blk_sz", ""), da_status_success);
+
+        da_handle ref_handle = nullptr;
+        EXPECT_EQ(da_handle_init<T>(&ref_handle, da_handle_approx_nn), da_status_success);
+        EXPECT_EQ(da_options_set_string(ref_handle, "metric", param.metric.c_str()),
+                  da_status_success);
+        EXPECT_EQ(da_options_set_string(ref_handle, "storage order", param.order.c_str()),
+                  da_status_success);
+        EXPECT_EQ(da_options_set_string(ref_handle, "algorithm", param.algorithm.c_str()),
+                  da_status_success);
+        EXPECT_EQ(da_options_set_int(ref_handle, "number of neighbors", param.k),
+                  da_status_success);
+        EXPECT_EQ(da_options_set_int(ref_handle, "n_list", param.nlist),
+                  da_status_success);
+        EXPECT_EQ(da_options_set_int(ref_handle, "n_probe", param.nprobe),
+                  da_status_success);
+        EXPECT_EQ(da_options_set_int(ref_handle, "seed", param.seed), da_status_success);
+        EXPECT_EQ(da_options_set_int(ref_handle, "k-means_iter", param.kmeans_iter),
+                  da_status_success);
+        EXPECT_EQ(da_approx_nn_set_training_data(ref_handle, param.n_samples,
+                                                 param.n_features, param.X_train.data(),
+                                                 param.ldx_train),
+                  da_status_success);
+        EXPECT_EQ(da_approx_nn_train_and_add<T>(ref_handle), da_status_success);
+        EXPECT_EQ(da_handle_get_result(ref_handle, da_approx_nn_list_sizes, &sz,
+                                       ref_sizes.data()),
+                  da_status_success);
+        da_handle_destroy(&ref_handle);
+
+        // Restore the override so the teardown clear at the end of the test is consistent.
+        EXPECT_EQ(da_debug_set("ivf.add_blk_sz",
+                               std::to_string(param.add_blk_sz_override).c_str()),
+                  da_status_success);
+
+        for (da_int i = 0; i < param.nlist; i++)
+            EXPECT_EQ(blocked_sizes[i], ref_sizes[i])
+                << "list " << i << " size mismatch in " << param.test_name;
+    }
+
+    std::vector<da_int> ivf_ind(param.n_queries * param.k);
+    std::vector<T> ivf_dist(param.n_queries * param.k);
+    EXPECT_EQ(da_approx_nn_kneighbors<T>(handle, param.n_queries, param.n_features,
+                                         param.X_test.data(), param.ldx_test,
+                                         ivf_ind.data(), ivf_dist.data(), param.k, true),
+              da_status_success);
+
+    // Telemetry checks
+    if (param.query_blk_sz_override > 0) {
+        EXPECT_EQ(da_debug_get("ivf.query_blk_sz_used", 128, telemetry_buf),
+                  da_status_success);
+        // IVF clamps block size to n_queries when override > n_queries
+        da_int expected_blk_sz = std::min(param.n_queries, param.query_blk_sz_override);
+        EXPECT_EQ(std::string(telemetry_buf), std::to_string(expected_blk_sz));
+    }
+
+    // Ground-truth exact neighbours (always row-major output)
+    const da_int ns = param.n_samples, nq = param.n_queries, k = param.k;
+    std::vector<da_int> true_ind(nq * k);
+    compute_exact_knn(param, param.n_features, true_ind.data(), param.X_train.data(), ns,
+                      param.ldx_train, param.X_test.data(), nq, param.ldx_test);
+
+    // Convert IVF output to row-major if the index was built in column-major order
+    std::vector<da_int> ivf_ind_row(nq * k);
+    std::vector<T> ivf_dist_row(nq * k);
+    if (param.order == "column-major") {
+        for (da_int q = 0; q < nq; q++)
+            for (da_int j = 0; j < k; j++) {
+                ivf_ind_row[q * k + j] = ivf_ind[q + j * nq];
+                ivf_dist_row[q * k + j] = ivf_dist[q + j * nq];
+            }
+    } else {
+        ivf_ind_row = ivf_ind;
+        ivf_dist_row = ivf_dist;
+    }
+
+    // Per-query: exact recall (n_probe == n_list → all candidates examined)
+    // Each result must match the ground truth at the same position.
+    for (da_int q = 0; q < nq; q++)
+        for (da_int j = 0; j < k; j++)
+            EXPECT_EQ(ivf_ind_row[q * k + j], true_ind[q * k + j])
+                << "query " << q << " position " << j << " mismatch in "
+                << param.test_name;
+
+    // Distance ordering: non-decreasing for sqeuclidean/euclidean/cosine (smaller = closer),
+    // non-increasing for inner product (larger = closer).
+    for (da_int q = 0; q < nq; q++)
+        for (da_int j = 0; j < k - 1; j++)
+            if (param.metric == "inner product")
+                EXPECT_GE(ivf_dist_row[q * k + j], ivf_dist_row[q * k + j + 1])
+                    << "query " << q << " j=" << j << " in " << param.test_name;
+            else
+                EXPECT_LE(ivf_dist_row[q * k + j], ivf_dist_row[q * k + j + 1])
+                    << "query " << q << " j=" << j << " in " << param.test_name;
+
+    // Non-negative distances for sqeuclidean / euclidean
+    if (param.metric == "sqeuclidean" || param.metric == "euclidean") {
+        for (da_int q = 0; q < nq; q++)
+            for (da_int j = 0; j < k; j++)
+                EXPECT_GE(ivf_dist_row[q * k + j], T(0))
+                    << "query " << q << " j=" << j << " in " << param.test_name;
+    }
+
+    // Clear overrides
+    if (param.query_blk_sz_override > 0) {
+        EXPECT_EQ(da_debug_set("ivf.query_blk_sz", ""), da_status_success);
+    }
+    if (param.list_blk_sz_override > 0) {
+        EXPECT_EQ(da_debug_set("ivf.list_blk_sz", ""), da_status_success);
+    }
+    if (param.add_blk_sz_override > 0) {
+        EXPECT_EQ(da_debug_set("ivf.add_blk_sz", ""), da_status_success);
+    }
+
+    da_handle_destroy(&handle);
+}
+
+template <typename T> std::vector<ANNParamType<T>> getBlockingParams() {
+    std::vector<ANNParamType<T>> params;
+    GetIVFBlockingTests(params);
+    return params;
+}
+
+class DoubleBlockingTest : public testing::TestWithParam<ANNParamType<double>> {};
+class FloatBlockingTest : public testing::TestWithParam<ANNParamType<float>> {};
+
+TEST_P(DoubleBlockingTest, ParameterizedTest) {
+    test_ivf_blocking_properties(GetParam());
+}
+TEST_P(FloatBlockingTest, ParameterizedTest) { test_ivf_blocking_properties(GetParam()); }
+
+INSTANTIATE_TEST_SUITE_P(ANN_IVFBlocking, DoubleBlockingTest,
+                         testing::ValuesIn(getBlockingParams<double>()));
+INSTANTIATE_TEST_SUITE_P(ANN_IVFBlocking, FloatBlockingTest,
+                         testing::ValuesIn(getBlockingParams<float>()));
+
+// Verify that NaN values in training and query data don't cause an error.
+TYPED_TEST(ANNTest, NaNPropagation) {
+    TypeParam nan = std::numeric_limits<TypeParam>::quiet_NaN();
+    // 16 samples, 2 features, column-major; two training values replaced with NaN.
+    std::vector<double> X_train_d = {0.0,  1.1,  0.0,  1.0,  6.0,  7.2,  6.1,  7.0,
+                                     0.0,  1.0,  nan,  1.1,  10.0, 11.1, 10.0, 11.0,
+                                     -0.1, 0.0,  1.1,  1.0,  0.0,  0.1,  1.0,  1.1,
+                                     10.0, 10.2, 11.0, 11.1, 10.0, 10.0, nan,  11.0};
+    std::vector<TypeParam> X_train = convert_vector<double, TypeParam>(X_train_d);
+    da_int n_samples = 16, n_features = 2, ldx_train = 16;
+
+    // Query also contains NaN values.
+    std::vector<double> X_test_d = {nan, 0.4, 5.6, nan, 5.0, 5.1};
+    std::vector<TypeParam> X_test = convert_vector<double, TypeParam>(X_test_d);
+    da_int n_queries = 3, k = 3, ldx_test = 3;
+
+    da_handle handle = nullptr;
+    EXPECT_EQ(da_handle_init<TypeParam>(&handle, da_handle_approx_nn), da_status_success);
+    EXPECT_EQ(da_options_set_string(handle, "algorithm", "ivfflat"), da_status_success);
+    EXPECT_EQ(da_options_set_string(handle, "metric", "sqeuclidean"), da_status_success);
+    EXPECT_EQ(da_options_set_int(handle, "number of neighbors", k), da_status_success);
+    EXPECT_EQ(da_options_set_int(handle, "n_list", 4), da_status_success);
+    EXPECT_EQ(da_options_set_int(handle, "n_probe", 1), da_status_success);
+    EXPECT_EQ(da_options_set_int(handle, "seed", 123), da_status_success);
+    EXPECT_EQ(da_options_set(handle, "train fraction", (TypeParam)0.8),
+              da_status_success);
+
+    EXPECT_EQ(da_approx_nn_set_training_data(handle, n_samples, n_features,
+                                             X_train.data(), ldx_train),
+              da_status_success);
+    EXPECT_EQ(da_approx_nn_train<TypeParam>(handle), da_status_success);
+    EXPECT_EQ(da_approx_nn_add(handle, n_samples, n_features, X_train.data(), ldx_train),
+              da_status_success);
+
+    std::vector<da_int> k_ind(n_queries * k);
+    std::vector<TypeParam> k_dist(n_queries * k);
+    EXPECT_EQ(da_approx_nn_kneighbors(handle, n_queries, n_features, X_test.data(),
+                                      ldx_test, k_ind.data(), k_dist.data(), k, true),
+              da_status_success);
+
+    da_handle_destroy(&handle);
 }

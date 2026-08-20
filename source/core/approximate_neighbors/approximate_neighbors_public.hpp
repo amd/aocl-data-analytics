@@ -82,7 +82,7 @@ da_status approx_nn_train_and_add(da_handle handle) {
 template <typename approx_nn_class, typename T>
 da_status approx_nn_kneighbors(da_handle handle, da_int n_queries, da_int n_features,
                                const T *X_test, da_int ldx_test, da_int *n_ind, T *n_dist,
-                               da_int k, da_int return_distance) {
+                               da_int k, bool return_distance) {
     approx_nn_class *ann = dynamic_cast<approx_nn_class *>(handle->get_alg_handle<T>());
     if (ann == nullptr)
         return da_error(

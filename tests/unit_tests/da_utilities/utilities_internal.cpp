@@ -45,8 +45,8 @@ TEST(UtilitiesTest, DynamicDispatchEnv) {
 
     // map of arch found
     std::map<std::string, bool> archs;
-    std::vector<std::string> arch_list{"generic", "generic_avx512", "zen2",
-                                       "zen3",    "zen4",           "zen5"};
+    std::vector<std::string> arch_list{"generic", "generic_avx512", "zen2", "zen3",
+                                       "zen4",    "zen5",           "zen6"};
 
     // make sure its empty
     EXPECT_EQ(0, da_test::da_setenv("AOCL_DA_ARCH", "", 1));
@@ -176,12 +176,13 @@ TEST(UtilitiesTest, DynamicDispatchTryArch) {
         std::string a{arch};
 
         if (a == "zen2"s || a == "zen3"s) {
-            // assume max_target_arch is at least zen4
-            // Request zen4 and arch does not change
-            EXPECT_EQ(0, da_test::da_setenv("AOCL_DA_ARCH", "zen4", 1));
-            EXPECT_EQ(da_status_success, da_get_arch_info(&len, arch, ns));
-            // verify
-            EXPECT_EQ(std::string(arch), a);
+            // Only request zen4 if this build actually includes znver4 objects.
+            if (version_str.find("znver4") != std::string::npos) {
+                EXPECT_EQ(0, da_test::da_setenv("AOCL_DA_ARCH", "zen4", 1));
+                EXPECT_EQ(da_status_success, da_get_arch_info(&len, arch, ns));
+                // Local arch is older, so request should be ignored.
+                EXPECT_EQ(std::string(arch), a);
+            }
         }
     }
 }

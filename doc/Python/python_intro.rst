@@ -127,6 +127,7 @@ The following AOCL-DA models support serialization (saving and loading):
 - **Linear Models**
 - **Nearest Neighbors**
 - **Principal Component Analysis**
+- **Kernel Principal Component Analysis**
 - **Support Vector Machines**
 
 The saved models preserve only the essential trained parameters and internal state needed for inference, 
@@ -155,3 +156,13 @@ particularly useful for existing codebases that use scikit-learn.
 .. literalinclude:: ../../python_interface/python_package/aoclda/examples/model_persistence_skpatch_pca_ex.py
    :language: Python
    :linenos:
+
+Inspecting Saved Models
+------------------------
+
+Two utility functions are available to help diagnose version mismatches or verify saved model files:
+
+- ``aoclda.utils.print_model_metadata(filename)`` — prints the metadata header from a saved pickle file
+  (serialization version, precision, handle type, AOCL-DA build version) without fully loading the model.
+- ``model.print_model_versions()`` — prints the AOCL-DA build version and serialization format version
+  recorded in an already-loaded model.

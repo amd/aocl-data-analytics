@@ -49,6 +49,8 @@ class linmod : public pyda_handle {
     linmod(std::string mod, std::optional<da_int> max_iter, bool intercept = false,
            std::string solver = "auto", std::string scaling = "auto",
            std::string constraint = "ssc", bool warm_start = false,
+           bool mixed_precision = false,
+           std::optional<da_int> low_precision_max_iter = 500,
            std::string prec = "double", bool check_data = false)
         : intercept(intercept), warm_start(warm_start), logreg_constraint_str(constraint),
           solver_str(solver) {
@@ -85,9 +87,18 @@ class linmod : public pyda_handle {
                 da_options_set_int(handle, "optim iteration limit", max_iter.value());
             exception_check(status);
         }
+        if (low_precision_max_iter.has_value()) {
+            status = da_options_set_int(handle, "low precision iteration limit",
+                                        low_precision_max_iter.value());
+            exception_check(status);
+        }
+        std::string yes_str = "yes";
+        if (mixed_precision == true) {
+            status = da_options_set(handle, "mixed precision", yes_str.c_str());
+            exception_check(status);
+        }
         if (check_data == true) {
-            std::string yes_str = "yes";
-            status = da_options_set(handle, "check data", yes_str.data());
+            status = da_options_set(handle, "check data", yes_str.c_str());
             exception_check(status);
         }
     }
@@ -98,7 +109,7 @@ class linmod : public pyda_handle {
     template <typename T>
     void fit(py::array_t<T> X, py::array_t<T> y, std::optional<py::array_t<T>> x0,
              std::optional<T> progress_factor, T reg_lambda = 0.0, T reg_alpha = 0.0,
-             T tol = 0.0001) {
+             T tol = 0.0001, T low_precision_tol = 0.001) {
         // floating point optional parameters are defined here since we cannot define those in the constructor (no template param)
 
         da_status status = da_status_success;
@@ -171,7 +182,12 @@ class linmod : public pyda_handle {
         status = da_options_set(handle, "alpha", reg_alpha);
 
         exception_check(status);
+
         status = da_options_set(handle, "optim convergence tol", tol);
+        exception_check(status);
+
+        status =
+            da_options_set(handle, "low precision convergence tol", low_precision_tol);
         exception_check(status);
 
         if (progress_factor.has_value()) {
@@ -199,13 +215,33 @@ class linmod : public pyda_handle {
         exception_check(status);
     }
 
-    template <typename T> py::array_t<T> predict(py::array_t<T> X) {
+    template <typename T>
+    py::tuple predict(py::array_t<T> X,
+                      std::optional<py::array_t<T>> observations = std::nullopt) {
 
         da_status status;
 
         da_int n_samples, n_features, ldx;
+        const T *obs_ptr{nullptr};
+        T *loss_ptr{nullptr};
+        T loss;
 
         get_numpy_array_properties(X, n_samples, n_features, ldx);
+
+        if (observations.has_value()) {
+            da_int dim1, dim2, ldd;
+            [[maybe_unused]] da_order order;
+            get_size(order, observations.value(), dim1, dim2, ldd);
+            if (ldd != 1 ||
+                !((dim1 == n_samples && dim2 == 1) || (dim2 == n_samples && dim1 == 1))) {
+                exception_check(
+                    da_status_invalid_input,
+                    "Observations array has invalid shape. It should be a 1D "
+                    "contiguous array with the same number elements as rows of X.");
+            }
+            obs_ptr = observations->data();
+            loss_ptr = &loss;
+        }
 
         size_t shape[1]{(size_t)n_samples};
         size_t strides[1]{sizeof(T)};
@@ -213,9 +249,30 @@ class linmod : public pyda_handle {
         auto predictions = py::array_t<T>(shape, strides);
 
         status = da_linmod_evaluate_model(handle, n_samples, n_features, X.data(), ldx,
-                                          predictions.mutable_data());
+                                          predictions.mutable_data(), obs_ptr, loss_ptr);
         exception_check(status);
-        return predictions;
+        if (observations.has_value())
+            return py::make_tuple(predictions, loss);
+        return py::make_tuple(predictions, py::none());
+    }
+
+    bool get_model_trained() {
+        da_status status = da_status_success;
+        da_int dim = 1;
+        da_int trained = 0;
+        switch (mod_enum) {
+        case linmod_model_mse:
+        case linmod_model_logistic: {
+            status = da_handle_get_result(handle, da_trained, &dim, &trained);
+            exception_check(status);
+            return trained != 0;
+        } break;
+        default:
+            exception_check(da_status_internal_error,
+                            "Model type was not correctly defined.");
+            return false;
+            break;
+        }
     }
 
     auto get_coef() {
@@ -499,6 +556,26 @@ class linmod : public pyda_handle {
         }
 
         return n_iter;
+    }
+
+    auto get_lp_n_iter() {
+        da_status status;
+        da_int dim = 100;
+        da_int lp_n_iter;
+        if (precision == da_single) {
+            float rinfo[100];
+            status = da_handle_get_result(handle, da_rinfo, &dim, rinfo);
+            exception_check(status);
+            lp_n_iter =
+                static_cast<da_int>(rinfo[da_linmod_info_t_::linmod_info_lp_n_iter]);
+        } else {
+            double rinfo[100];
+            status = da_handle_get_result(handle, da_rinfo, &dim, rinfo);
+            exception_check(status);
+            lp_n_iter =
+                static_cast<da_int>(rinfo[da_linmod_info_t_::linmod_info_lp_n_iter]);
+        }
+        return lp_n_iter;
     }
 
     void save_data(py::dict &state) override {

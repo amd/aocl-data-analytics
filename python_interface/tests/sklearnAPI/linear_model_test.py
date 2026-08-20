@@ -1,4 +1,4 @@
-# Copyright (C) 2024-2025 Advanced Micro Devices, Inc. All rights reserved.
+# Copyright (C) 2024-2026 Advanced Micro Devices, Inc. All rights reserved.
 #
 # Redistribution and use in source and binary forms, with or without modification,
 # are permitted provided that the following conditions are met:
@@ -29,16 +29,17 @@ Compare linear model modules with sklearn
 """
 
 # pylint: disable = import-outside-toplevel, invalid-name, reimported, no-member
+# pylint: disable = missing-function-docstring, too-many-locals
 
-import numpy as np
 import importlib
-from aoclda.sklearn import skpatch, undo_skpatch
 import pytest
+import numpy as np
+from aoclda.sklearn import skpatch, undo_skpatch
 from sklearn.datasets import make_regression, make_classification
 
 
-@pytest.fixture(scope="function")
-def no_fortran(request):
+@pytest.fixture(scope="function", name="no_fortran")
+def fixture_no_fortran(request):
     return request.config.no_fortran
 
 
@@ -219,24 +220,32 @@ def test_double_solve_lasso(no_fortran, precision):
 
 @pytest.mark.parametrize("intercept", [True, False])
 @pytest.mark.parametrize("precision", [np.float64, np.float32])
-def test_logistic(no_fortran, intercept, precision):
+@pytest.mark.parametrize("order", ["C", "F"])
+def test_logistic(no_fortran, intercept, precision, order):
     """
     Logistic Regression
     """
     if no_fortran:
         pytest.skip("Skipping test due to no_fortran flag")
+    from sklearn.utils.validation import check_is_fitted, NotFittedError
 
     X, y = make_classification(
         n_samples=200, n_features=8, random_state=1)
+    X = np.asfortranarray(X) if order == "F" else np.ascontiguousarray(X)
     X = X.astype(precision)
     y = y.astype(precision)
 
     skpatch()
     from sklearn.linear_model import LogisticRegression
     lg_da = LogisticRegression(fit_intercept=intercept)
+    with pytest.raises(NotFittedError):
+        check_is_fitted(lg_da)
     lg_da.fit(X, y)
+    check_is_fitted(lg_da)
     da_coef = lg_da.coef_
     assert lg_da.aocl is True
+    da_score = lg_da.score(X, y)
+    da_predict = lg_da.predict(X)
 
     # unpatch and solve the same problem with sklearn
     undo_skpatch()
@@ -245,9 +254,14 @@ def test_logistic(no_fortran, intercept, precision):
     lg.fit(X, y)
     coef = lg.coef_
     assert not hasattr(lg, 'aocl')
+    sk_score = lg.score(X, y)
+    sk_predict = lg.predict(X)
 
     # Check results
     assert da_coef == pytest.approx(coef, 1.0e-01)
+    assert da_score == pytest.approx(sk_score, 0.05)  # 5% tol
+    pr_sum = np.sum(da_predict == sk_predict) / len(da_predict)
+    assert pr_sum > 0.95  # 95% of predictions should match
 
     # print the results if pytest is invoked with the -rA option
     print("coefficients")

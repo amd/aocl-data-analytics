@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2024-2025 Advanced Micro Devices, Inc. All rights reserved.
+ * Copyright (C) 2024-2026 Advanced Micro Devices, Inc. All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without modification,
  * are permitted provided that the following conditions are met:
@@ -92,46 +92,57 @@ TEST(linmod, logregWarmstart) { // Problem data
 }
 #endif
 
-typedef struct {
+struct logregParam {
     std::string test_name; // name of the ctest test
     std::string data_name; // name of the files to read in
     std::vector<option_t<da_int>> iopts;
     std::vector<option_t<std::string>> sopts;
     std::vector<option_t<float>> fopts;
     std::vector<option_t<double>> dopts;
-} logregParam;
+    bool check_coeff{true};
+    bool check_predict{true};
+};
 
 // clang-format off
 // Test parameters for the logistic regression
 const logregParam logregPosValuesD[] = {
     // Two class tests
-    {"lrsetNoIntercept", "lrset", {}, {}, {}, {}},
-    {"lrsetIntercept", "lrset", {{"intercept", 1}}, {}, {}, {}},
-    {"studyNoIntercept", "study", {}, {}, {}, {}},
-    {"studyIntercept", "study", {{"intercept", 1}}, {}, {}, {}},
-    {"usrdataIntercept", "usrdata", {{"intercept", 1}}, {}, {}, {}},
+    {"lrsetNoIntercept", "lrset", {}, {}, {}, {}, true, false},
+    {"lrsetIntercept", "lrset", {{"intercept", 1}}, {}, {}, {}, true, false},
+    {"studyNoIntercept", "study", {}, {}, {}, {}, true, false},
+    {"studyIntercept", "study", {{"intercept", 1}}, {}, {}, {}, true, false},
+    {"usrdataIntercept", "usrdata", {{"intercept", 1}}, {}, {}, {}, false, true},
     // Multinomial RSC tests
-    {"multinomialNoInterceptRSC", "multinomial", {}, {{"logistic constraint", "rsc"}}, {}, {}},
-    {"multinomialInterceptRSC", "multinomial", {{"intercept", 1}}, {{"logistic constraint", "rsc"}}, {}, {}},
-    {"sep_data_4_4RSC", "sep_classes_4_4", {{"intercept", 1}}, {{"logistic constraint", "rsc"}}, {}, {}},
-    {"sep_data_8_5_indep1RSC", "sep_classes_8_5_indep1", {{"intercept", 1}}, {{"logistic constraint", "rsc"}}, {}, {{"lambda", 1.0}}},
-    {"sep_data_big_scaleRSC", "sep_classes_big_scale", {{"intercept", 1}}, {{"logistic constraint", "rsc"}}, {}, {{"lambda", 1.0}}},
+    {"multinomialNoInterceptRSC", "multinomial", {}, {{"logistic constraint", "rsc"}}, {}, {}, false, true},
+    {"multinomialInterceptRSC", "multinomial", {{"intercept", 1}}, {{"logistic constraint", "rsc"}}, {}, {}, false, true},
+    {"sep_data_8_5_indep1RSC", "sep_classes_8_5_indep1", {{"intercept", 1}}, {{"logistic constraint", "rsc"}}, {}, {{"lambda", 1.0}}, false, true},
+    {"sep_data_big_scaleRSC", "sep_classes_big_scale", {{"intercept", 1}}, {{"logistic constraint", "rsc"}}, {}, {{"lambda", 1.0}}, false, true},
+    // RSC order tests
+    {"sep_data_4_4_RSC_Intr_Col", "sep_classes_4_4", {{"intercept", 1}}, {{"logistic constraint", "rsc"}, {"storage order", "column-major"}}, {}, {}, false, true},
+    {"sep_data_4_4_RSC_Intr_Row", "sep_classes_4_4", {{"intercept", 1}}, {{"logistic constraint", "rsc"}, {"storage order", "row-major"}}, {}, {}, false, true},
+    {"sep_data_4_4_RSC_NoIntr_Col", "sep_classes_4_4", {{"intercept", 0}}, {{"logistic constraint", "rsc"}, {"storage order", "column-major"}}, {}, {}, false, true},
+    {"sep_data_4_4_RSC_NoIntr_Row", "sep_classes_4_4", {{"intercept", 0}}, {{"logistic constraint", "rsc"}, {"storage order", "row-major"}}, {}, {}, false, true},
     // Multinomial SSC tests
-    {"multinomialNoInterceptSSC", "multinomial", {}, {{"logistic constraint", "ssc"}}, {}, {}},
-    {"multinomialInterceptSSC", "multinomial", {{"intercept", 1}}, {{"logistic constraint", "ssc"}}, {}, {}},
-    {"sep_data_4_4SSC", "sep_classes_4_4", {{"intercept", 1}}, {{"logistic constraint", "ssc"}}, {}, {}},
-    {"sep_data_8_5_indep1SSC", "sep_classes_8_5_indep1", {{"intercept", 1}}, {{"logistic constraint", "ssc"}}, {}, {{"lambda", 1.0}}},
-    {"sep_data_big_scaleSSC", "sep_classes_big_scale", {{"intercept", 1}}, {{"logistic constraint", "ssc"}}, {}, {{"lambda", 1.0}}},
+    {"multinomialNoInterceptSSC", "multinomial", {}, {{"logistic constraint", "ssc"}}, {}, {}, false, true},
+    {"multinomialInterceptSSC", "multinomial", {{"intercept", 1}}, {{"logistic constraint", "ssc"}}, {}, {}, false, true},
+    {"sep_data_8_5_indep1SSC", "sep_classes_8_5_indep1", {{"intercept", 1}}, {{"logistic constraint", "ssc"}}, {}, {{"lambda", 1.0}}, false, true},
+    {"sep_data_big_scaleSSC", "sep_classes_big_scale", {{"intercept", 1}}, {{"logistic constraint", "ssc"}}, {}, {{"lambda", 1.0}}, false, true},
+    // SSC order tests [intercept, storage order]
+    {"sep_data_4_4_SSC_Intr_Col", "sep_classes_4_4", {{"intercept", 1}}, {{"logistic constraint", "ssc"}, {"storage order", "column-major"}}, {}, {}, false, true},
+    {"sep_data_4_4_SSC_Intr_Row", "sep_classes_4_4", {{"intercept", 1}}, {{"logistic constraint", "ssc"}, {"storage order", "row-major"}}, {}, {}, false, true},
+    {"sep_data_4_4_SSC_NoIntr_Col", "sep_classes_4_4", {{"intercept", 0}}, {{"logistic constraint", "ssc"}, {"storage order", "column-major"}}, {}, {}, false, true},
+    {"sep_data_4_4_SSC_NoIntr_Row", "sep_classes_4_4", {{"intercept", 0}}, {{"logistic constraint", "ssc"}, {"storage order", "row-major"}}, {}, {}, false, true},
 };
+
 const logregParam logregPosValuesF[] = {
     // Multinomial RSC tests
-    {"multinomialNoIntercept", "multinomial", {}, {{"logistic constraint", "rsc"}}, {}, {}},
-    {"multinomialIntercept", "multinomial", {{"intercept", 1}}, {{"logistic constraint", "rsc"}}, {}, {}},
-    {"sep_data_8_5_indep1", "sep_classes_8_5_indep1", {{"intercept", 1}}, {{"logistic constraint", "rsc"}}, {}, {{"lambda", 1.0}}},
+    {"multinomialNoIntercept", "multinomial", {}, {{"logistic constraint", "rsc"}}, {}, {}, false, true},
+    {"multinomialIntercept", "multinomial", {{"intercept", 1}}, {{"logistic constraint", "rsc"}}, {}, {}, false, true},
+    {"sep_data_8_5_indep1", "sep_classes_8_5_indep1", {{"intercept", 1}}, {{"logistic constraint", "rsc"}}, {}, {{"lambda", 1.0}}, false, true},
     // Multinomial SSC tests
-    {"multinomialNoIntercept", "multinomial", {}, {{"logistic constraint", "ssc"}}, {}, {}},
-    {"multinomialIntercept", "multinomial", {{"intercept", 1}}, {{"logistic constraint", "ssc"}}, {}, {}},
-    {"sep_data_8_5_indep1", "sep_classes_8_5_indep1", {{"intercept", 1}}, {{"logistic constraint", "ssc"}}, {}, {{"lambda", 1.0}}},
+    {"multinomialNoIntercept", "multinomial", {}, {{"logistic constraint", "ssc"}}, {}, {}, false, true},
+    {"multinomialIntercept", "multinomial", {{"intercept", 1}}, {{"logistic constraint", "ssc"}}, {}, {}, false, true},
+    {"sep_data_8_5_indep1", "sep_classes_8_5_indep1", {{"intercept", 1}}, {{"logistic constraint", "ssc"}}, {}, {{"lambda", 1.0}}, false, true},
 };
 // clang-format on
 
@@ -147,13 +158,15 @@ void PrintTo(const logregParam &param, ::std::ostream *os) { *os << param.test_n
 // Positive tests with double type
 TEST_P(logregPosD, Double) {
     const logregParam &param = GetParam();
-    test_logreg_positive<double>(param.data_name, param.iopts, param.sopts, param.dopts);
+    test_logreg_positive<double>(param.data_name, param.iopts, param.sopts, param.dopts,
+                                 param.check_coeff, param.check_predict);
 }
 
 // Positive tests with float type
 TEST_P(logregPosF, Float) {
     const logregParam &param = GetParam();
-    test_logreg_positive<float>(param.data_name, param.iopts, param.sopts, param.fopts);
+    test_logreg_positive<float>(param.data_name, param.iopts, param.sopts, param.fopts,
+                                param.check_coeff, param.check_predict);
 }
 
 INSTANTIATE_TEST_SUITE_P(logregPosSuiteD, logregPosD,

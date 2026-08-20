@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2025 Advanced Micro Devices, Inc. All rights reserved.
+ * Copyright (C) 2025-2026 Advanced Micro Devices, Inc. All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without modification,
  * are permitted provided that the following conditions are met:
@@ -105,13 +105,14 @@ decision_tree<T>::decision_tree(bins<T> *X_binned, da_int max_depth,
                                 da_int seed, T min_split_score, T feat_thresh,
                                 T min_improvement, bool bootstrap, da_int check_cat_data,
                                 da_int opt_max_cat, da_int use_hist, da_int usr_max_bins,
-                                T cat_tol, da_int cat_split_strat)
+                                T cat_tol, da_int cat_split_strat, da_int max_threads)
     : X_binned(X_binned), max_depth(max_depth), min_node_sample(min_node_sample),
       method(method), nfeat_split(nfeat_split), seed(seed),
       min_split_score(min_split_score), feat_thresh(feat_thresh),
       min_improvement(min_improvement), bootstrap(bootstrap),
       check_cat_data(check_cat_data), opt_max_cat(opt_max_cat), use_hist(use_hist),
-      usr_max_bins(usr_max_bins), cat_tol(cat_tol), cat_split_strat(cat_split_strat) {
+      usr_max_bins(usr_max_bins), cat_tol(cat_tol), cat_split_strat(cat_split_strat),
+      max_threads(max_threads) {
     this->err = nullptr;
     read_public_options = false;
 }
@@ -125,7 +126,7 @@ template <typename T> decision_tree<T>::~decision_tree() {
 }
 
 template <typename T> void decision_tree<T>::refresh() {
-    model_trained = false;
+    this->model_trained = false;
     if (tree.capacity() > 0)
         tree = std::vector<node<T>>();
 }
@@ -133,15 +134,10 @@ template <typename T> void decision_tree<T>::refresh() {
 template <typename T> void decision_tree<T>::clear_working_memory() {
     samples_idx = std::vector<da_int>();
     count_classes = std::vector<da_int>();
-    feature_values = std::vector<T>();
-    count_left_classes = std::vector<da_int>();
-    count_right_classes = std::vector<da_int>();
     cat_feat = std::vector<da_int>();
     features_idx = std::vector<da_int>();
-    cat_feat_table = std::vector<da_int>();
-    node_hist = std::vector<da_int>();
-    hist_count_samples = std::vector<da_int>();
-    hist_feat_values = std::vector<da_int>();
+    selected_features = std::vector<da_int>();
+    thread_workspaces = std::vector<split_workspace<T>>();
     if (X_temp) {
         delete[] (X_temp);
         X = nullptr;
@@ -157,10 +153,12 @@ template <typename T> void decision_tree<T>::clear_working_memory() {
  *************************************************************************/
 
 template <typename T>
-da_status decision_tree<T>::get_result([[maybe_unused]] da_result query,
-                                       [[maybe_unused]] da_int *dim,
-                                       [[maybe_unused]] da_int *result) {
-
+da_status decision_tree<T>::get_result(da_result query, da_int *dim, da_int *result) {
+    // check to see if user needs common stuff from the basic handle first
+    da_status status = this->get_result_common(query, dim, result);
+    if (status != da_status_unknown_query) {
+        return status; // either got requested info or error
+    }
     return da_warn_bypass(this->err, da_status_unknown_query,
                           "There are no integer results available for this API.");
 };
@@ -168,14 +166,14 @@ da_status decision_tree<T>::get_result([[maybe_unused]] da_result query,
 template <typename T>
 da_status decision_tree<T>::get_result(da_result query, da_int *dim, T *result) {
 
-    if (!model_trained)
+    if (!this->model_trained)
         return da_error_bypass(
             this->err, da_status_unknown_query,
             "Handle does not contain data relevant to this query. Was the "
             "last call to the solver successful?");
     // Pointers were already tested in the generic get_result
 
-    da_int rinfo_size = 7;
+    da_int rinfo_size = 8;
     switch (query) {
     case da_result::da_rinfo:
         if (*dim < rinfo_size) {
@@ -192,6 +190,7 @@ da_status decision_tree<T>::get_result(da_result query, da_int *dim, T *result) 
         result[4] = (T)depth;
         result[5] = (T)n_nodes;
         result[6] = (T)n_leaves;
+        result[7] = (T)n_threads_split;
         break;
     default:
         return da_warn_bypass(this->err, da_status_unknown_query,
@@ -210,29 +209,42 @@ template <typename T> void decision_tree<T>::init_samples_idx() {
 }
 template <typename T> void decision_tree<T>::init_feature_values(da_int feat_idx) {
     da_int col_idx = ldx * feat_idx;
-    feature_values.resize(n_samples);
+    if (thread_workspaces.empty() ||
+        thread_workspaces[0].feature_values.size() < (size_t)n_samples) {
+        thread_workspaces.resize(std::max((da_int)thread_workspaces.size(), (da_int)1));
+        thread_workspaces[0].feature_values.resize(n_samples);
+        thread_workspaces[0].samples_idx_local.resize(n_samples);
+    }
+    std::copy(samples_idx.begin(), samples_idx.begin() + n_samples,
+              thread_workspaces[0].samples_idx_local.begin());
     for (da_int i = 0; i < n_samples; i++) {
-        feature_values[i] = X[col_idx + samples_idx[i]];
+        thread_workspaces[0].feature_values[i] = X[col_idx + samples_idx[i]];
     }
 }
 template <typename T> std::vector<T> const &decision_tree<T>::get_features_values() {
-    return feature_values;
+    return thread_workspaces[0].feature_values;
 }
 template <typename T> std::vector<da_int> const &decision_tree<T>::get_count_classes() {
     return count_classes;
 }
 template <typename T>
 std::vector<da_int> const &decision_tree<T>::get_count_left_classes() {
-    return count_left_classes;
+    return thread_workspaces[0].count_left_classes;
 }
 template <typename T>
 std::vector<da_int> const &decision_tree<T>::get_count_right_classes() {
-    return count_right_classes;
+    return thread_workspaces[0].count_right_classes;
 }
 template <typename T> std::vector<da_int> const &decision_tree<T>::get_features_idx() {
     return features_idx;
 }
-template <typename T> bool decision_tree<T>::model_is_trained() { return model_trained; }
+template <typename T>
+std::vector<split_workspace<T>> const &decision_tree<T>::get_thread_workspaces() {
+    return thread_workspaces;
+}
+template <typename T> bool decision_tree<T>::model_is_trained() {
+    return this->model_trained;
+}
 template <typename T> std::vector<node<T>> const &decision_tree<T>::get_tree() {
     return tree;
 }
@@ -240,6 +252,138 @@ template <typename T> std::vector<node<T>> const &decision_tree<T>::get_tree() {
 // Setters for testing purposes
 template <typename T> void decision_tree<T>::set_bootstrap(bool bs) {
     this->bootstrap = bs;
+}
+
+using namespace da_model_persistence;
+
+template <typename T> da_status node<T>::serialize(serialization_buffer &buffer) {
+    da_status status = da_status_success;
+    auto io_dispatch = [&buffer, &status](auto &data) -> void {
+        if (status != da_status_success) {
+            return;
+        }
+        status = buffer.dispatch_buffer_io(data);
+        return;
+    };
+
+    io_dispatch(this->parent_idx);
+    io_dispatch(this->right_child_idx);
+    io_dispatch(this->left_child_idx);
+    io_dispatch(this->is_leaf);
+    io_dispatch(this->depth);
+    io_dispatch(this->score);
+    io_dispatch(this->prop);
+    io_dispatch(this->y_pred);
+    io_dispatch(this->feature);
+    io_dispatch(this->x_threshold);
+    io_dispatch(this->category);
+    io_dispatch(this->start_idx);
+    io_dispatch(this->end_idx);
+    io_dispatch(this->n_samples);
+    io_dispatch(this->const_feat_idx);
+    io_dispatch(this->children_const_idx);
+
+    return status;
+}
+
+template <typename T>
+da_status
+decision_tree<T>::tree_serialization(da_model_persistence::serialization_buffer &buffer) {
+    da_status status = da_status_success;
+
+    if (buffer.get_mode() == deserialize) {
+        if (this->n_nodes <= 0)
+            return da_status_invalid_file_data;
+
+        try {
+            this->tree.resize(this->n_nodes);
+        } catch (std::bad_alloc const &) {
+            return da_error_bypass(
+                this->err, da_status_memory_error,
+                "Failing to allocate enough memory."); // LCOV_EXCL_LINE
+        }
+    }
+
+    for (da_int i = 0; i < this->n_nodes; ++i) {
+        if (status != da_status_success)
+            return status;
+        status = this->tree[i].serialize(buffer);
+    }
+    return status;
+}
+
+/* Model persistence functions */
+template <typename T>
+da_status decision_tree<T>::serialize(serialization_buffer &buffer) {
+    da_status status = da_status_success;
+    auto io_dispatch = [&buffer, &status](auto &data) -> void {
+        if (status != da_status_success) {
+            return;
+        }
+        status = buffer.dispatch_buffer_io(data);
+        return;
+    };
+
+    io_dispatch(this->model_trained);
+    io_dispatch(this->predict_proba_opt);
+    io_dispatch(this->n_samples);
+    io_dispatch(this->n_features);
+    io_dispatch(this->n_class);
+    io_dispatch(this->n_obs);
+    io_dispatch(this->n_obs_total);
+    io_dispatch(this->depth);
+    io_dispatch(this->n_nodes);
+    io_dispatch(this->n_leaves);
+    io_dispatch(this->class_props);
+    io_dispatch(this->samples_idx);
+    io_dispatch(this->max_cat);
+    io_dispatch(this->max_depth);
+    io_dispatch(this->min_node_sample);
+    io_dispatch(this->method);
+    io_dispatch(this->nfeat_split);
+    io_dispatch(this->seed);
+    io_dispatch(this->min_split_score);
+    io_dispatch(this->feat_thresh);
+    io_dispatch(this->min_improvement);
+    io_dispatch(this->bootstrap);
+    io_dispatch(this->check_cat_data);
+    io_dispatch(this->opt_max_cat);
+    io_dispatch(this->use_hist);
+    io_dispatch(this->usr_max_bins);
+    io_dispatch(this->cat_tol);
+    io_dispatch(this->cat_split_strat);
+
+    if (status != da_status_success)
+        return status;
+
+    status = tree_serialization(buffer);
+
+    return status;
+}
+
+template <typename T>
+da_status decision_tree<T>::save_model(serialization_buffer &buffer) {
+
+    if (!this->model_trained) {
+        return da_error(this->err, da_status_no_data,
+                        "The model has not yet been trained or the data it is "
+                        "associated with is out of date.");
+    }
+
+    da_status status = basic_handle<T>::save_model(buffer);
+    if (status != da_status_success)
+        return da_error_trace(this->err, status, "Failure serializing model.");
+
+    return status;
+}
+
+template <typename T>
+da_status decision_tree<T>::load_model(serialization_buffer &buffer) {
+    da_status status = basic_handle<T>::load_model(buffer);
+    if (status != da_status_success)
+        return da_error_trace(this->err, status, "Failure deserializing model.");
+
+    return status;
 }
 
 } // namespace da_decision_forest

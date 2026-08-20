@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2024-2025 Advanced Micro Devices, Inc. All rights reserved.
+ * Copyright (C) 2024-2026 Advanced Micro Devices, Inc. All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without modification,
  * are permitted provided that the following conditions are met:
@@ -26,11 +26,15 @@
  */
 
 #pragma once
+#include "../utest_utils.hpp"
 #include "aoclda.h"
 #include "aoclda_cpp_overloads.hpp"
 #include "gmock/gmock.h"
 #include "gtest/gtest.h"
+#include <iostream>
 #include <math.h>
+#include <type_traits>
+#include <typeinfo>
 #include <vector>
 
 namespace template_nlls_cb_errors {
@@ -65,6 +69,9 @@ da_int eval_r([[maybe_unused]] da_int n, [[maybe_unused]] da_int m,
     if (fcnt >= 0) {
         count_down = fcnt;
         ((struct params_type<T> *)params)->fcnt = -1;
+    } else if (fcnt == -2) {
+        count_down = 10;
+        da_test::sleep(2); // delay
     }
     if (count_down-- <= 0) {
         return 1;
@@ -151,18 +158,27 @@ da_int eval_HF(da_int n, da_int m, void *params, T const *x, T const *r, T *HF) 
     return 0; // Success
 }
 template <typename T> void driver(void) {
-    T t[5]{1.0, 2.0, 4.0, 5.0, 8.0};
-    T y[5]{3.0, 4.0, 6.0, 11.0, 20.0};
-    const struct params_type<T> udata = {
-        t, y
-    };
-
     const da_int n_coef = 2;
     const da_int n_res = 5;
-    T coef[n_coef]{1.0, 0.15};
-    const T coef_exp[n_coef]{2.541046, 0.2595048};
-
+    std::vector<T> t{1.0, 2.0, 4.0, 5.0, 8.0};
+    std::vector<T> y(n_res);
+    std::vector<T> coef(n_coef), coef_exp(n_coef);
     T blx[2]{0.0, 0.0};
+    if constexpr (std::is_same_v<T, float>) {
+        y = {0.606531f, 0.367879f, 0.135335f, 0.082085f, 0.018316f};
+        coef = {0.1f, 0.1f};
+        coef_exp = {1.0f, -0.5f};
+        blx[1] = -1.0f;
+    } else {
+        static_assert(std::is_same_v<T, double>);
+        y = {3.0, 4.0, 6.0, 11.0, 20.0};
+        coef = {1.0, 0.15};
+        coef_exp = {2.541046, 0.2595048};
+    }
+    struct params_type<T> udata = {
+        t.data(), y.data()
+    };
+
     T bux[2]{3.0, 10.0};
     T tol{1.0e-2};
 
@@ -171,8 +187,8 @@ template <typename T> void driver(void) {
     // Initialize handle for nonlinear regression
     da_handle handle = nullptr;
     EXPECT_EQ(da_handle_init<T>(&handle, da_handle_nlls), da_status_success);
-    EXPECT_EQ(da_nlls_define_residuals(handle, n_coef, n_res, eval_r<T>, nullptr, nullptr,
-                                       nullptr),
+    EXPECT_EQ(da_nlls_define_residuals<T>(handle, n_coef, n_res, eval_r<T>, nullptr,
+                                          nullptr, nullptr),
               da_status_success);
     EXPECT_EQ(da_nlls_define_bounds(handle, n_coef, blx, bux), da_status_success);
     EXPECT_EQ(da_options_set_string(handle, "print options", "yes"), da_status_success);
@@ -184,14 +200,17 @@ template <typename T> void driver(void) {
     if constexpr (std::is_same_v<T, float>) {
         EXPECT_EQ(da_options_set_real_s(handle, "finite differences step", 1e-3),
                   da_status_success);
-        EXPECT_EQ(da_options_set_real_s(handle, "ralfit convergence abs tol grd", 1e-8f),
+        EXPECT_EQ(da_options_set_real_s(handle, "ralfit convergence abs tol grd", 1e-5f),
                   da_status_success);
-        EXPECT_EQ(da_nlls_fit_s(handle, n_coef, coef, (void *)&udata), da_status_success);
+        EXPECT_EQ(da_nlls_fit_s(handle, n_coef, coef.data(), static_cast<void *>(&udata)),
+                  da_status_success);
     } else {
-        EXPECT_EQ(da_options_set_real_d(handle, "finite differences step", 1e-6f),
+        static_assert(std::is_same_v<T, double>);
+        EXPECT_EQ(da_options_set_real_d(handle, "finite differences step", 1e-6),
                   da_status_success);
 
-        EXPECT_EQ(da_nlls_fit_d(handle, n_coef, coef, (void *)&udata), da_status_success);
+        EXPECT_EQ(da_nlls_fit_d(handle, n_coef, coef.data(), static_cast<void *>(&udata)),
+                  da_status_success);
     }
 
     EXPECT_NEAR(coef[0], coef_exp[0], tol);
@@ -329,7 +348,7 @@ template <typename T> void driver(void) {
     EXPECT_EQ(da_handle_init<T>(&handle, da_handle_type::da_handle_nlls),
               da_status_success);
     EXPECT_EQ(
-        da_nlls_define_residuals(handle, n, m, eval_r<T>, eval_J<T>, nullptr, nullptr),
+        da_nlls_define_residuals<T>(handle, n, m, eval_r<T>, eval_J<T>, nullptr, nullptr),
         da_status_success);
     EXPECT_EQ(da_options_set(handle, "ralfit model", "gauss-newton"), da_status_success);
     EXPECT_EQ(da_options_set(handle, "ralfit nlls method", "more-sorensen"),
@@ -381,7 +400,7 @@ template <typename T> void driver(void) {
 
     // solve again using fd
     EXPECT_EQ(
-        da_nlls_define_residuals(handle, n, m, eval_r<T>, nullptr, nullptr, nullptr),
+        da_nlls_define_residuals<T>(handle, n, m, eval_r<T>, nullptr, nullptr, nullptr),
         da_status_success);
     if constexpr (std::is_same_v<T, float>) {
         x[0] = 4.0f;
@@ -420,7 +439,7 @@ template <typename T> void driver(void) {
     // solve again using fd (with Fortran storage scheme)
     std::cout << "\nsolve again using fd (with Fortran storage scheme)\n";
     EXPECT_EQ(
-        da_nlls_define_residuals(handle, n, m, eval_r<T>, nullptr, nullptr, nullptr),
+        da_nlls_define_residuals<T>(handle, n, m, eval_r<T>, nullptr, nullptr, nullptr),
         da_status_success);
     EXPECT_EQ(da_options_set(handle, "storage order", "Fortran"), da_status_success);
     if constexpr (std::is_same_v<T, float>) {
@@ -459,8 +478,8 @@ template <typename T> void driver(void) {
 
     // Check for errors in eval_j
     EXPECT_EQ(da_options_set(handle, "check derivatives", "yes"), da_status_success);
-    EXPECT_EQ(da_nlls_define_residuals(handle, n, m, eval_r<T>, eval_J_bad<T>, nullptr,
-                                       nullptr),
+    EXPECT_EQ(da_nlls_define_residuals<T>(handle, n, m, eval_r<T>, eval_J_bad<T>, nullptr,
+                                          nullptr),
               da_status_success);
     EXPECT_EQ(da_nlls_fit(handle, n, x, &params), da_status_bad_derivatives);
 

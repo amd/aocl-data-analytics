@@ -35,6 +35,10 @@
 #include "model_persistence.hpp"
 #include "options.hpp"
 
+#include <iomanip>
+#include <iostream>
+#include <string>
+
 /*
  * Base handle class (basic_handle) that contains members that
  * are common for all specialized handle types, pca, linear
@@ -44,10 +48,14 @@
  */
 template <typename T> class basic_handle {
   protected:
-    // Earliest library version compatible with the current model serialization format.
-    // Library version used to store the model must be equal or greater to this.
-    // Format: Main version * 10'000 + minor version * 100 + patch version
-    da_int min_library_version = 0;
+    // Version of the serialization format supported by this algorithm.
+    // During loading, the saved version must exactly match this value.
+    // Algorithms may override this in their constructor to track format changes independently.
+    // Format: Major * 10'000 + Minor * 100 + Patch
+    da_int serialization_version = 0;
+
+    // Version of the build of the library that was used to save the algorithm.
+    std::string saved_aoclda_version = "NA";
 
   public:
     basic_handle(da_errors::da_error_t *err = nullptr);
@@ -60,6 +68,8 @@ template <typename T> class basic_handle {
      */
     virtual da_status get_result(da_result query, da_int *dim, T *result) = 0;
     virtual da_status get_result(da_result query, da_int *dim, da_int *result) = 0;
+    // Get the results objects that are stored in basic_handle
+    da_status get_result_common(da_result query, da_int *dim, da_int *result);
 
     /*
      * Function to inform that something related to the (sub)handle has
@@ -72,7 +82,7 @@ template <typename T> class basic_handle {
     /*
      * Model serialization function used to specify all handle-specific members
      * which will be saved/loaded. This function is called during save_model()/
-     * load_model() and should be overridden by derived classes 
+     * load_model() and should be overridden by derived classes
      * to correctly serialize their internal state.
      */
     virtual da_status
@@ -83,11 +93,22 @@ template <typename T> class basic_handle {
     /*
      * Functions to facilitate serialization (saving/loading) of the handle state.
      * Derived classes should override these to verify the model is in the required
-     * state, and perform any additional functionalities to get the model to the 
+     * state, and perform any additional functionalities to get the model to the
      * initial state while also calling the parent function.
      */
     virtual da_status save_model(da_model_persistence::serialization_buffer &buffer);
     virtual da_status load_model(da_model_persistence::serialization_buffer &buffer);
+
+    void set_serialization_version(da_int serialization_version) {
+        this->serialization_version = serialization_version;
+    }
+
+    void set_saved_aoclda_version(const std::string &saved_aoclda_version) {
+        this->saved_aoclda_version = saved_aoclda_version;
+    }
+
+    /* Print saved versions of AOCL-DA and model serialization. */
+    da_status print_model_versions();
 
     /*
      * Calculates the total buffer size required for serialization and preallocates the memory.
@@ -108,8 +129,11 @@ template <typename T> class basic_handle {
 
     da_options::OptionRegistry &get_opts();
 
+    // Whether the model is trained/computed
+    bool model_trained{false};
+
     // Whether model was loaded from memory
-    bool model_loaded = false;
+    bool model_loaded{false};
 
     // Argument checking for a 1D input array, including NaN check if option is set
     // @tparam T Type of the data array: float, double, da_int

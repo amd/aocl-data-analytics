@@ -29,6 +29,7 @@
 #include "basic_statistics.hpp"
 #include "da_omp.hpp"
 #include "da_std.hpp"
+#include "fp16_helpers.hpp"
 #include "macros.h"
 #include <algorithm>
 #include <cmath>
@@ -90,12 +91,15 @@ inline __attribute__((__always_inline__)) T sum_of_powers(T x, T mean, da_int k)
 
 // Computes the sum for a matrix (or a matrix subset) using recursive quasi-pairwise summation.
 // inner_dim_size: Number of rows (column-major) or columns (row-major) in the matrix.
+// Use wider_t for _Float16 accumulation to reduce risk of overflow and precision loss; for other types this is just T so no overhead.
 template <typename T, auto S>
-T recursive_sum(da_int chunk_size, da_int inner_dim_size, const T *data, da_int stride,
-                da_int element = 0, std::optional<T> opt_param1 = std::nullopt,
-                std::optional<da_int> opt_param2 = std::nullopt) {
+da_fp16::wider_t<T> recursive_sum(da_int chunk_size, da_int inner_dim_size, const T *data,
+                                  da_int stride, da_int element = 0,
+                                  std::optional<T> opt_param1 = std::nullopt,
+                                  std::optional<da_int> opt_param2 = std::nullopt) {
+    using W = da_fp16::wider_t<T>;
     if (chunk_size <= RECURSIVE_SUM_THRESHOLD) {
-        T tmp_sum = 0;
+        W tmp_sum = 0;
 
         // Get the outer dimension index of the specific element
         da_int outer_dim_n = element / inner_dim_size;
@@ -126,9 +130,9 @@ T recursive_sum(da_int chunk_size, da_int inner_dim_size, const T *data, da_int 
         return tmp_sum;
     }
 
-    T sum1 = recursive_sum<T, S>(chunk_size / 2, inner_dim_size, data, stride, element,
+    W sum1 = recursive_sum<T, S>(chunk_size / 2, inner_dim_size, data, stride, element,
                                  opt_param1, opt_param2);
-    T sum2 =
+    W sum2 =
         recursive_sum<T, S>(chunk_size - chunk_size / 2, inner_dim_size, data, stride,
                             element + (chunk_size / 2), opt_param1, opt_param2);
 
@@ -138,15 +142,17 @@ T recursive_sum(da_int chunk_size, da_int inner_dim_size, const T *data, da_int 
 // Computes recursive quasi-pairwise sum for matrix data when the computation axis mismatches the storage order.
 // chunk_size must be less than or equal to the outer dimension size.
 // inner_dim_size must be less than or equal to the inner dimension size.
+// Use wider_t for _Float16 accumulation to reduce risk of overflow and precision loss; for other types this is just T so no overhead.
 template <typename T, auto S>
 da_status recursive_sum_vector(da_int chunk_size, da_int inner_dim_size, const T *data,
-                               da_int ldx, T *&sum1,
+                               da_int ldx, da_fp16::wider_t<T> *&sum1,
                                std::optional<T *> opt_param1 = std::nullopt,
                                std::optional<da_int> opt_param2 = std::nullopt) {
+    using W = da_fp16::wider_t<T>;
     if (chunk_size <= RECURSIVE_SUM_THRESHOLD) {
         if (!sum1) {
             try {
-                sum1 = new T[inner_dim_size]();
+                sum1 = new W[inner_dim_size]();
             } catch (std::bad_alloc const &) {
                 return da_status_memory_error; // LCOV_EXCL_LINE
             }
@@ -176,7 +182,7 @@ da_status recursive_sum_vector(da_int chunk_size, da_int inner_dim_size, const T
         return status;
 
     // Null-initialize sum2 to potentially reduce average memory usage
-    T *sum2 = nullptr;
+    W *sum2 = nullptr;
     status = recursive_sum_vector<T, S>(chunk_size - chunk_size / 2, inner_dim_size,
                                         data + (chunk_size / 2) * ldx, ldx, sum2,
                                         opt_param1, opt_param2);
@@ -201,9 +207,11 @@ da_status recursive_sum_vector(da_int chunk_size, da_int inner_dim_size, const T
 
 template <typename T, auto S>
 da_status full_sum(da_int outer_dim_size, da_int inner_dim_size, const T *x, da_int ldx,
-                   T *asum, std::optional<T *> opt_param1 = std::nullopt,
+                   da_fp16::wider_t<T> *asum,
+                   std::optional<T *> opt_param1 = std::nullopt,
                    std::optional<da_int> opt_param2 = std::nullopt) {
-    asum[0] = 0.0;
+    using W = da_fp16::wider_t<T>;
+    asum[0] = W(0);
 
     // full_sum splits the matrix as if it is a 1D array. Thus, for small matrices
     // (par_threshold > m*n) parallelization is not always beneficial.
@@ -231,7 +239,7 @@ da_status full_sum(da_int outer_dim_size, da_int inner_dim_size, const T *x, da_
             chunk_size += ((outer_dim_size * inner_dim_size) % num_threads);
         }
 
-        T local_sum =
+        W local_sum =
             recursive_sum<T, S>(chunk_size, inner_dim_size, x, ldx - inner_dim_size,
                                 start_index, opt_param1_val, opt_param2);
 
@@ -244,7 +252,7 @@ da_status full_sum(da_int outer_dim_size, da_int inner_dim_size, const T *x, da_
 
 template <typename T, auto S>
 da_status sum_axis_aligned(da_int outer_dim_size, da_int inner_dim_size, const T *x,
-                           da_int ldx, T *asum,
+                           da_int ldx, da_fp16::wider_t<T> *asum,
                            std::optional<T *> opt_param1 = std::nullopt,
                            std::optional<da_int> opt_param2 = std::nullopt) {
 
@@ -269,9 +277,10 @@ da_status sum_axis_aligned(da_int outer_dim_size, da_int inner_dim_size, const T
 
 template <typename T, auto S>
 da_status sum_axis_misaligned(da_int outer_dim_size, da_int inner_dim_size, const T *x,
-                              da_int ldx, T *asum,
+                              da_int ldx, da_fp16::wider_t<T> *asum,
                               std::optional<T *> opt_param1 = std::nullopt,
                               std::optional<da_int> opt_param2 = std::nullopt) {
+    using W = da_fp16::wider_t<T>;
     da_std::fill(asum, asum + inner_dim_size, 0.0);
 
     da_int max_threads = inner_dim_size >= 1024 || outer_dim_size >= 1024
@@ -302,7 +311,7 @@ da_status sum_axis_misaligned(da_int outer_dim_size, da_int inner_dim_size, cons
 
     da_int threading_error = 0;
 
-    std::vector<T *> local_sums;
+    std::vector<W *> local_sums;
     try {
         local_sums.resize(n_outer_blocks, nullptr);
         local_sums[0] = asum;
@@ -323,7 +332,7 @@ da_status sum_axis_misaligned(da_int outer_dim_size, da_int inner_dim_size, cons
 #pragma omp for schedule(static)
         for (da_int i = 1; i < n_outer_blocks; ++i) {
             try {
-                local_sums[i] = new T[inner_dim_size]();
+                local_sums[i] = new W[inner_dim_size]();
             } catch (std::bad_alloc const &) {
 #pragma omp atomic write
                 threading_error = 1; // LCOV_EXCL_LINE
@@ -346,7 +355,7 @@ da_status sum_axis_misaligned(da_int outer_dim_size, da_int inner_dim_size, cons
                         current_inner_block_size = inner_dim_size - inner_offset;
 
                     da_int start_index = i * outer_block_size * ldx + inner_offset;
-                    T *this_sum = &(local_sums[i][inner_offset]);
+                    W *this_sum = &(local_sums[i][inner_offset]);
 
                     std::optional<T *> current_opt_param1 = std::nullopt;
                     if (opt_param1.has_value()) {
@@ -375,8 +384,8 @@ da_status sum_axis_misaligned(da_int outer_dim_size, da_int inner_dim_size, cons
                     da_int source_idx = destination_idx + stride;
 
                     if (source_idx < n_outer_blocks) {
-                        T *sum_destination = local_sums[destination_idx];
-                        T *sum_source = local_sums[source_idx];
+                        W *sum_destination = local_sums[destination_idx];
+                        W *sum_source = local_sums[source_idx];
 #pragma omp simd
                         for (da_int k = 0; k < inner_dim_size; ++k) {
                             sum_destination[k] += sum_source[k];
@@ -400,7 +409,7 @@ da_status sum_axis_misaligned(da_int outer_dim_size, da_int inner_dim_size, cons
 
 template <typename T, auto S>
 da_status da_sum(da_order order, da_axis axis, da_int m, da_int n, const T *x, da_int ldx,
-                 T *asum, std::optional<T *> opt_param1 = std::nullopt,
+                 da_fp16::wider_t<T> *asum, std::optional<T *> opt_param1 = std::nullopt,
                  std::optional<da_int> opt_param2 = std::nullopt) {
 
     da_status status;
@@ -453,12 +462,33 @@ da_status mean(da_order order, da_axis axis, da_int m, da_int n, const T *x, da_
     if (status != da_status_success)
         return status;
 
-    status = da_sum<T, arithmetic_sum<T>>(order, axis, m, n, x, ldx, amean);
+    // Accumulate the sum in the (possibly wider) type W = wider_t<T> so that it
+    // cannot overflow T (e.g. _Float16's ~65504 range) for large arrays. The
+    // narrowing cast back to T is deferred until after the division so the
+    // averaged magnitude (which is in range) is what gets stored. Only the
+    // _Float16 case (W != T) needs a separate accumulation buffer; otherwise we
+    // accumulate directly into the output.
+    using W = da_fp16::wider_t<T>;
+    std::vector<W> wbuf;
+    W *wmean;
+    if constexpr (std::is_same_v<T, _Float16>) {
+        da_int out_size = (axis == da_axis_all) ? 1 : (axis == da_axis_col ? n : m);
+        try {
+            wbuf.resize(out_size);
+        } catch (std::bad_alloc const &) {
+            return da_status_memory_error; // LCOV_EXCL_LINE
+        }
+        wmean = wbuf.data();
+    } else {
+        wmean = amean;
+    }
+
+    status = da_sum<T, arithmetic_sum<W>>(order, axis, m, n, x, ldx, wmean);
     if (status != da_status_success)
         return status;
 
     if (axis == da_axis_all) {
-        amean[0] /= (m * n);
+        amean[0] = static_cast<T>(wmean[0] / (m * n));
     } else {
         da_int axis_size, divisor;
         if (axis == da_axis_col) {
@@ -471,7 +501,7 @@ da_status mean(da_order order, da_axis axis, da_int m, da_int n, const T *x, da_
 
 #pragma omp simd
         for (da_int i = 0; i < axis_size; ++i) {
-            amean[i] /= divisor;
+            amean[i] = static_cast<T>(wmean[i] / divisor);
         }
     }
 
@@ -580,7 +610,25 @@ da_status variance(da_order order, da_axis axis, da_int m, da_int n, const T *x,
     if (status != da_status_success)
         return status;
 
-    status = da_sum<T, sum_of_squares<T>>(order, axis, m, n, x, ldx, var, amean);
+    // Accumulate the sum of squares in W = wider_t<T> to avoid overflowing T,
+    // and defer the narrowing cast back to T until after the division by the
+    // (degrees-of-freedom adjusted) scale factor.
+    using W = da_fp16::wider_t<T>;
+    std::vector<W> wbuf;
+    W *wvar;
+    if constexpr (std::is_same_v<T, _Float16>) {
+        da_int out_size = (axis == da_axis_all) ? 1 : (axis == da_axis_col ? n : m);
+        try {
+            wbuf.resize(out_size);
+        } catch (std::bad_alloc const &) {
+            return da_status_memory_error; // LCOV_EXCL_LINE
+        }
+        wvar = wbuf.data();
+    } else {
+        wvar = var;
+    }
+
+    status = da_sum<T, sum_of_squares<W>>(order, axis, m, n, x, ldx, wvar, amean);
     if (status != da_status_success)
         return status;
 
@@ -595,7 +643,8 @@ da_status variance(da_order order, da_axis axis, da_int m, da_int n, const T *x,
         }
 
         if (scale_factor > 1)
-            var[0] /= scale_factor;
+            wvar[0] /= scale_factor;
+        var[0] = static_cast<T>(wvar[0]);
     } else {
 
         axis_size = axis == da_axis_col ? n : m;
@@ -608,8 +657,12 @@ da_status variance(da_order order, da_axis axis, da_int m, da_int n, const T *x,
         if (scale_factor > 1) {
 #pragma omp simd
             for (da_int i = 0; i < axis_size; ++i) {
-                var[i] /= scale_factor;
+                wvar[i] /= scale_factor;
             }
+        }
+#pragma omp simd
+        for (da_int i = 0; i < axis_size; ++i) {
+            var[i] = static_cast<T>(wvar[i]);
         }
     }
     return da_status_success;
@@ -724,24 +777,43 @@ da_status moment(da_order order, da_axis axis, da_int m, da_int n, const T *x, d
             return status;
     }
 
-    if (k == 2) {
-        status = da_sum<T, sum_of_squares<T>>(order, axis, m, n, x, ldx, mom, amean);
+    // Accumulate in W = wider_t<T> to avoid overflowing T, and defer the
+    // narrowing cast back to T until after the division by the element count.
+    // Only the _Float16 case (W != T) needs a separate accumulation buffer;
+    // otherwise we accumulate directly into the output.
+    using W = da_fp16::wider_t<T>;
+    std::vector<W> wbuf;
+    W *wmom;
+    if constexpr (std::is_same_v<T, _Float16>) {
+        da_int out_size = (axis == da_axis_all) ? 1 : (axis == da_axis_col ? n : m);
+        try {
+            wbuf.resize(out_size);
+        } catch (std::bad_alloc const &) {
+            return da_status_memory_error; // LCOV_EXCL_LINE
+        }
+        wmom = wbuf.data();
     } else {
-        status = da_sum<T, sum_of_powers<T>>(order, axis, m, n, x, ldx, mom, amean, k);
+        wmom = mom;
+    }
+
+    if (k == 2) {
+        status = da_sum<T, sum_of_squares<W>>(order, axis, m, n, x, ldx, wmom, amean);
+    } else {
+        status = da_sum<T, sum_of_powers<W>>(order, axis, m, n, x, ldx, wmom, amean, k);
     }
 
     if (status != da_status_success)
         return status;
 
     if (axis == da_axis_all) {
-        mom[0] /= (m * n);
+        mom[0] = static_cast<T>(wmom[0] / (m * n));
     } else {
         da_int axis_size = axis == da_axis_col ? n : m;
         da_int divisor = axis == da_axis_col ? m : n;
 
 #pragma omp simd
         for (da_int i = 0; i < axis_size; ++i) {
-            mom[i] /= divisor;
+            mom[i] = static_cast<T>(wmom[i] / divisor);
         }
     }
 
@@ -755,6 +827,11 @@ template da_status mean<double>(da_order order, da_axis axis_in, da_int n_in, da
                                 const double *x, da_int ldx, double *amean);
 template da_status mean<float>(da_order order, da_axis axis_in, da_int n_in, da_int p_in,
                                const float *x, da_int ldx, float *amean);
+#ifdef __AVX512FP16__
+template da_status mean<_Float16>(da_order order, da_axis axis_in, da_int n_in,
+                                  da_int p_in, const _Float16 *x, da_int ldx,
+                                  _Float16 *amean);
+#endif
 template da_status geometric_mean<double>(da_order order, da_axis axis_in, da_int n_in,
                                           da_int p_in, const double *x, da_int ldx,
                                           double *gmean);
@@ -773,6 +850,11 @@ template da_status variance<double>(da_order order, da_axis axis_in, da_int n_in
 template da_status variance<float>(da_order order, da_axis axis_in, da_int n_in,
                                    da_int p_in, const float *x, da_int ldx, da_int dof,
                                    float *amean, float *var);
+#ifdef __AVX512FP16__
+template da_status variance<_Float16>(da_order order, da_axis axis_in, da_int n_in,
+                                      da_int p_in, const _Float16 *x, da_int ldx,
+                                      da_int dof, _Float16 *amean, _Float16 *var);
+#endif
 template da_status skewness<double>(da_order order, da_axis axis_in, da_int n_in,
                                     da_int p_in, const double *x, da_int ldx,
                                     double *amean, double *var, double *skew);
@@ -792,6 +874,12 @@ template da_status moment<double>(da_order order, da_axis axis_in, da_int n_in,
 template da_status moment<float>(da_order order, da_axis axis_in, da_int n_in,
                                  da_int p_in, const float *x, da_int ldx, da_int k,
                                  da_int use_precomputed_mean, float *amean, float *mom);
+#ifdef __AVX512FP16__
+template da_status moment<_Float16>(da_order order, da_axis axis_in, da_int n_in,
+                                    da_int p_in, const _Float16 *x, da_int ldx, da_int k,
+                                    da_int use_precomputed_mean, _Float16 *amean,
+                                    _Float16 *mom);
+#endif
 
 } // namespace da_basic_statistics
 

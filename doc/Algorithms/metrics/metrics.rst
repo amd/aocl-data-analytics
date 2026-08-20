@@ -110,6 +110,23 @@ The distance matrix :math:`D`, between two matrices :math:`X` and :math:`Y`, is 
 where :math:`p>0` is the Minkowski or power parameter, :math:`i=1,\dots,m` and  :math:`j=1,\dots,n`.
 For :math:`p=1` this is equivalent to Manhattan distance and for :math:`p=2` this is equivalent to Euclidean distance.
 
+**Inner product similarity**
+
+The matrix :math:`D`, between two matrices :math:`X` and :math:`Y`, is defined as
+
+.. math::
+    D_{ij} = X_i^\mathrm{T}Y_j,
+
+where :math:`i=1,\dots,m` and :math:`j=1,\dots,n`.
+
+.. note::
+   The inner product is a similarity measure, not a true distance metric, since it does not satisfy
+   non-negativity (:math:`D_{ij}` can be negative when vectors point in opposing directions) and
+   :math:`D_{ii} = \|X_i\|^2 \neq 0` in general.
+   It is commonly used in recommendation systems, dense retrieval, and embedding-based search,
+   where the goal is to find the vectors with the largest inner product with a given query
+   (Maximum Inner Product Search, MIPS).
+
 
 Examples
 ========

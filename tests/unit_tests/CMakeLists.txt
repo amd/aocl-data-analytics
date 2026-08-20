@@ -35,8 +35,8 @@ FetchContent_Declare(
 
 # For Windows: Prevent overriding the parent project's compiler/linker settings
 set(gtest_force_shared_crt
-    ON
-    CACHE BOOL "" FORCE)
+  ON
+  CACHE BOOL "" FORCE)
 FetchContent_MakeAvailable(googletest)
 
 if(NOT WIN32)
@@ -59,27 +59,28 @@ include_directories(
   ${Boost_INCLUDE_DIRS})
 
 set(INTERNAL_INC_DIRS
-    ${CMAKE_SOURCE_DIR}/source/core/csv
-    ${CMAKE_SOURCE_DIR}/source/core/clustering
-    ${CMAKE_SOURCE_DIR}/source/core/optimization
-    ${CMAKE_SOURCE_DIR}/source/core/data_management
-    ${CMAKE_SOURCE_DIR}/source/core/drivers
-    ${CMAKE_SOURCE_DIR}/source/core/factorization
-    ${CMAKE_SOURCE_DIR}/source/core/nlls
-    ${CMAKE_SOURCE_DIR}/source/core/nearest_neighbors
-    ${CMAKE_SOURCE_DIR}/source/core/utilities
-    ${CMAKE_SOURCE_DIR}/source/core/decision_forest
-    ${CMAKE_SOURCE_DIR}/source/core/decision_forest/tree
-    ${CMAKE_SOURCE_DIR}/source/core/metrics
-    ${CMAKE_SOURCE_DIR}/source/core/linear_model
-    ${CMAKE_SOURCE_DIR}/source/core/basic_statistics
-    ${CMAKE_SOURCE_DIR}/source/core/dynamic_dispatch
-    ${CMAKE_SOURCE_DIR}/source/core/kernel_functions
-    ${CMAKE_SOURCE_DIR}/source/core/svm
-    ${CMAKE_SOURCE_DIR}/source/core/interpolation
-    ${CMAKE_SOURCE_DIR}/source/core/train_test_split
-    ${CMAKE_SOURCE_DIR}/source/core/approximate_neighbors
-    )
+  ${CMAKE_SOURCE_DIR}/source/core/csv
+  ${CMAKE_SOURCE_DIR}/source/core/clustering
+  ${CMAKE_SOURCE_DIR}/source/core/optimization
+  ${CMAKE_SOURCE_DIR}/source/core/data_management
+  ${CMAKE_SOURCE_DIR}/source/core/drivers
+  ${CMAKE_SOURCE_DIR}/source/core/factorization
+  ${CMAKE_SOURCE_DIR}/source/core/nlls
+  ${CMAKE_SOURCE_DIR}/source/core/nearest_neighbors
+  ${CMAKE_SOURCE_DIR}/source/core/utilities
+  ${CMAKE_SOURCE_DIR}/source/core/decision_forest
+  ${CMAKE_SOURCE_DIR}/source/core/decision_forest/tree
+  ${CMAKE_SOURCE_DIR}/source/core/metrics
+  ${CMAKE_SOURCE_DIR}/source/core/linear_model
+  ${CMAKE_SOURCE_DIR}/source/core/basic_statistics
+  ${CMAKE_SOURCE_DIR}/source/core/dynamic_dispatch
+  ${CMAKE_SOURCE_DIR}/source/core/kernel_functions
+  ${CMAKE_SOURCE_DIR}/source/core/svm
+  ${CMAKE_SOURCE_DIR}/source/core/interpolation
+  ${CMAKE_SOURCE_DIR}/source/core/train_test_split
+  ${CMAKE_SOURCE_DIR}/source/core/approximate_neighbors
+  ${CMAKE_SOURCE_DIR}/source/core/dimension_reduction
+)
 
 set(DATA_PATH "${CMAKE_CURRENT_SOURCE_DIR}/../data/")
 
@@ -96,12 +97,12 @@ add_executable(train_test_split_internal train_test_split/train_test_split_inter
 target_link_libraries(train_test_split_internal PRIVATE ${BLAS})
 
 add_executable(train_test_split_public
-               train_test_split/train_test_split_public.cpp)
+  train_test_split/train_test_split_public.cpp)
 target_compile_definitions(train_test_split_public PRIVATE DATA_DIR="${DATA_PATH}")
 target_link_libraries(train_test_split_public PRIVATE ${BLAS})
 
 add_executable(shuffle_indices_public
-               train_test_split/shuffle_indices_public.cpp)
+  train_test_split/shuffle_indices_public.cpp)
 target_link_libraries(shuffle_indices_public PRIVATE ${BLAS})
 
 # ##############################################################################
@@ -110,7 +111,7 @@ target_link_libraries(shuffle_indices_public PRIVATE ${BLAS})
 add_executable(metrics_public metrics/metric_public.cpp)
 target_link_libraries(metrics_public PRIVATE ${BLAS})
 add_executable(euclidean_distance_internal
-               metrics/euclidean_distance_internal.cpp)
+  metrics/euclidean_distance_internal.cpp)
 target_link_libraries(euclidean_distance_internal PRIVATE ${BLAS})
 
 # ##############################################################################
@@ -146,21 +147,27 @@ target_compile_definitions(linreg_elnet_public PRIVATE DATA_DIR="${DATA_PATH}")
 # ##############################################################################
 # Decision trees/forests ########
 # ##############################################################################
-add_executable(dectree_public decision_trees/dectree_public.cpp)
-target_compile_definitions(dectree_public PRIVATE DATA_DIR="${DATA_PATH}")
-target_link_libraries(dectree_public PRIVATE ${BLAS})
+add_executable(decision_tree_public decision_trees/decision_tree_public.cpp)
+target_compile_definitions(decision_tree_public PRIVATE DATA_DIR="${DATA_PATH}")
+target_link_libraries(decision_tree_public PRIVATE ${BLAS})
 
-add_executable(dectree_internal decision_trees/dectree_internal.cpp)
+add_executable(decision_tree_internal decision_trees/decision_tree_internal.cpp)
+target_compile_definitions(decision_tree_internal PRIVATE DATA_DIR="${DATA_PATH}")
+target_link_libraries(decision_tree_internal PRIVATE ${BLAS})
 
-add_executable(decforest_public decision_forests/decforest_public.cpp)
-target_compile_definitions(decforest_public PRIVATE DATA_DIR="${DATA_PATH}")
-target_link_libraries(decforest_public PRIVATE ${BLAS})
+add_executable(decision_forest_public decision_forests/decision_forest_public.cpp)
+target_compile_definitions(decision_forest_public PRIVATE DATA_DIR="${DATA_PATH}")
+target_link_libraries(decision_forest_public PRIVATE ${BLAS})
+add_executable(decision_forest_internal decision_forests/decision_forest_internal.cpp)
+target_compile_definitions(decision_forest_internal PRIVATE DATA_DIR="${DATA_PATH}")
+
+
 
 # ##############################################################################
 # DA Utilities (opts, errors, ...) ########
 # ##############################################################################
 add_executable(option_registry_internal
-               da_utilities/option_registry_internal.cpp)
+  da_utilities/option_registry_internal.cpp)
 
 add_executable(errors_public da_utilities/errors_public.cpp)
 add_executable(errors_internal da_utilities/errors_internal.cpp)
@@ -187,11 +194,23 @@ target_link_libraries(da_cache_internal PRIVATE aocl-da)
 add_executable(da_syrk_internal da_utilities/da_syrk_internal.cpp)
 target_link_libraries(da_syrk_internal PRIVATE aocl-da ${BLAS})
 
+# ##############################################################################
+# ############ FP16 ##################
+# ##############################################################################
+add_executable(fp16_syrk_internal fp16/fp16_syrk_internal.cpp)
+target_link_libraries(fp16_syrk_internal PRIVATE aocl-da ${BLAS})
+# Static aocl-da propagates its DLP dependency (whole-archived) transitively,
+# so DLP must NOT be repeated here. A shared aocl-da does not propagate its PRIVATE DLP
+# dependency, so link DLP explicitly in that case.
+if(NOT WIN32 AND BUILD_SHARED_LIBS)
+  target_link_libraries(fp16_syrk_internal PRIVATE ${DLP})
+endif()
+
 # C compatibility test - compile with C compiler and link with C++ compiler
 set_source_files_properties(da_utilities/c_compatibility_nog_public.c
-                            PROPERTIES LANGUAGE C)
+  PROPERTIES LANGUAGE C)
 add_executable(c_compatibility_nog_public
-               da_utilities/c_compatibility_nog_public.c)
+  da_utilities/c_compatibility_nog_public.c)
 set_target_properties(c_compatibility_nog_public PROPERTIES LINKER_LANGUAGE CXX)
 target_link_libraries(c_compatibility_nog_public PRIVATE aocl-da)
 
@@ -202,6 +221,13 @@ target_compile_definitions(miscellaneous_internal PRIVATE ${AOCLDA_DEFS} ${AVAIL
 # ############ kmeans ################
 # ##############################################################################
 add_executable(kmeans_public kmeans/kmeans_public.cpp)
+
+# ##############################################################################
+# ############ t-SNE #################
+# ##############################################################################
+add_executable(tsne_public tsne/tsne_public.cpp)
+target_compile_definitions(tsne_public PRIVATE DATA_DIR="${DATA_PATH}")
+add_executable(tsne_internal tsne/tsne_internal.cpp)
 
 # ##############################################################################
 # ############ DBSCAN ################
@@ -229,6 +255,12 @@ add_executable(pca_public factorization/pca_public.cpp)
 target_link_libraries(pca_public PRIVATE ${BLAS})
 
 # ##############################################################################
+# ######## Kernel PCA #############
+# ##############################################################################
+add_executable(kernel_pca_public factorization/kernel_pca_public.cpp)
+target_link_libraries(kernel_pca_public PRIVATE ${BLAS})
+
+# ##############################################################################
 # Data management ###########
 # ##############################################################################
 add_executable(data_public data_management/data_public.cpp)
@@ -247,7 +279,7 @@ target_link_libraries(nearest_neighbors_public PRIVATE aocl-da ${BLAS})
 target_compile_definitions(nearest_neighbors_public PRIVATE DATA_DIR="${DATA_PATH}")
 add_executable(trees_internal nearest_neighbors/trees_internal.cpp)
 add_executable(radius_neighbors_internal
-               nearest_neighbors/radius_neighbors_internal.cpp)
+  nearest_neighbors/radius_neighbors_internal.cpp)
 add_executable(k_neighbors_internal nearest_neighbors/k_neighbors_internal.cpp)
 target_link_libraries(radius_neighbors_internal PRIVATE ${BLAS})
 
@@ -255,10 +287,26 @@ target_link_libraries(radius_neighbors_internal PRIVATE ${BLAS})
 # ######### Kernel function ###########
 # ##############################################################################
 add_executable(kernel_functions_public
-               kernel_functions/kernel_functions_public.cpp)
+  kernel_functions/kernel_functions_public.cpp)
 
 add_executable(kernel_functions_internal
-               kernel_functions/kernel_functions_internal.cpp)
+  kernel_functions/kernel_functions_internal.cpp)
+
+# ##############################################################################
+# ############ KT L2 micro kernels used in Kernel functions #################
+# ##############################################################################
+add_executable(ktl2 kernel_functions/ktl2.cpp)
+add_executable(ktl2_fallback kernel_functions/ktl2.cpp)
+target_compile_definitions(ktl2_fallback PRIVATE DA_KT_TEST_FALLBACK)
+
+# ktl2 instantiates the AOCC vectorised kt_exp_p() (kt_l2_clang.hpp) directly in
+# the test object, so it calls amd_vr* symbols itself and must link amdlibm.
+if(COMPILER_FAMILY STREQUAL "LLVM")
+  IsAOCC(IS_AOCC)
+  if(IS_AOCC)
+    target_link_libraries(ktl2 PRIVATE amdlibm)
+  endif()
+endif()
 
 # ##############################################################################
 # ############## SVM #################
@@ -287,6 +335,7 @@ target_compile_definitions(ann_public PRIVATE DATA_DIR="${DATA_PATH}")
 # ############## Model Persistence #################
 # ##############################################################################
 set(TEST_OUTPUT_DIR "${CMAKE_BINARY_DIR}/tests/unit_tests/tmp_test_files")
+file(MAKE_DIRECTORY ${TEST_OUTPUT_DIR})
 
 add_executable(serialization_kernel_internal model_persistence/kernel_tests_internal.cpp)
 target_compile_definitions(serialization_kernel_internal PRIVATE TEST_OUTPUT_DIR="${TEST_OUTPUT_DIR}")
@@ -318,6 +367,10 @@ add_executable(pca_persistence_public model_persistence/algorithms/pca_persisten
 target_compile_definitions(pca_persistence_public PRIVATE TEST_OUTPUT_DIR="${TEST_OUTPUT_DIR}")
 target_link_libraries(pca_persistence_public PRIVATE aocl-da ${BLAS})
 
+add_executable(kernel_pca_persistence_public model_persistence/algorithms/kernel_pca_persistence_public.cpp)
+target_compile_definitions(kernel_pca_persistence_public PRIVATE TEST_OUTPUT_DIR="${TEST_OUTPUT_DIR}")
+target_link_libraries(kernel_pca_persistence_public PRIVATE aocl-da ${BLAS})
+
 add_executable(knn_class_persistence_public model_persistence/algorithms/knn_class_persistence_public.cpp)
 target_compile_definitions(knn_class_persistence_public PRIVATE TEST_OUTPUT_DIR="${TEST_OUTPUT_DIR}")
 target_link_libraries(knn_class_persistence_public PRIVATE aocl-da ${BLAS})
@@ -338,74 +391,176 @@ add_executable(handle_persistence_public model_persistence/handle_errors_public.
 target_compile_definitions(handle_persistence_public PRIVATE TEST_OUTPUT_DIR="${TEST_OUTPUT_DIR}")
 target_link_libraries(handle_persistence_public PRIVATE aocl-da ${BLAS})
 
+# ##############################################################################
+# ############## C API tests #################
+# ##############################################################################
+add_executable(ann_capi_public c_tests/ann_capi_public.cpp)
+target_link_libraries(ann_capi_public PRIVATE aocl-da ${BLAS})
+
+add_executable(basic_stats_capi_public c_tests/basic_stats_capi_public.cpp)
+target_link_libraries(basic_stats_capi_public PRIVATE aocl-da ${BLAS})
+
+add_executable(csv_capi_public c_tests/csv_capi_public.cpp)
+target_compile_definitions(csv_capi_public PRIVATE DATA_DIR="${DATA_PATH}")
+target_link_libraries(csv_capi_public PRIVATE aocl-da ${BLAS})
+
+add_executable(datastore_capi_public c_tests/datastore_capi_public.cpp)
+target_compile_definitions(datastore_capi_public PRIVATE DATA_DIR="${DATA_PATH}")
+target_link_libraries(datastore_capi_public PRIVATE aocl-da ${BLAS})
+
+add_executable(dbscan_capi_public c_tests/dbscan_capi_public.cpp)
+target_link_libraries(dbscan_capi_public PRIVATE aocl-da ${BLAS})
+
+add_executable(decision_forest_capi_public c_tests/decision_forest_capi_public.cpp)
+target_link_libraries(decision_forest_capi_public PRIVATE aocl-da ${BLAS})
+
+add_executable(decision_tree_capi_public c_tests/decision_tree_capi_public.cpp)
+target_link_libraries(decision_tree_capi_public PRIVATE aocl-da ${BLAS})
+
+add_executable(handle_capi_public c_tests/handle_capi_public.cpp)
+target_compile_definitions(handle_capi_public PRIVATE TEST_OUTPUT_DIR="${TEST_OUTPUT_DIR}")
+target_link_libraries(handle_capi_public PRIVATE aocl-da ${BLAS})
+
+add_executable(interpolation_capi_public c_tests/interpolation_capi_public.cpp)
+target_link_libraries(interpolation_capi_public PRIVATE aocl-da ${BLAS})
+
+add_executable(kernel_functions_capi_public c_tests/kernel_functions_capi_public.cpp)
+target_link_libraries(kernel_functions_capi_public PRIVATE aocl-da ${BLAS})
+
+add_executable(kmeans_capi_public c_tests/kmeans_capi_public.cpp)
+target_link_libraries(kmeans_capi_public PRIVATE aocl-da ${BLAS})
+
+add_executable(linmod_capi_public c_tests/linmod_capi_public.cpp)
+target_link_libraries(linmod_capi_public PRIVATE aocl-da ${BLAS})
+
+add_executable(metrics_capi_public c_tests/metrics_capi_public.cpp)
+target_link_libraries(metrics_capi_public PRIVATE aocl-da ${BLAS})
+
+add_executable(miscellaneous_capi_public c_tests/miscellaneous_capi_public.cpp)
+target_link_libraries(miscellaneous_capi_public PRIVATE aocl-da ${BLAS})
+
+add_executable(nlls_capi_public c_tests/nlls_capi_public.cpp)
+target_link_libraries(nlls_capi_public PRIVATE aocl-da ${BLAS})
+
+add_executable(nn_capi_public c_tests/nn_capi_public.cpp)
+target_link_libraries(nn_capi_public PRIVATE aocl-da ${BLAS})
+
+add_executable(options_capi_public c_tests/options_capi_public.cpp)
+target_link_libraries(options_capi_public PRIVATE aocl-da ${BLAS})
+
+add_executable(pca_capi_public c_tests/pca_capi_public.cpp)
+target_link_libraries(pca_capi_public PRIVATE aocl-da ${BLAS})
+
+add_executable(result_capi_public c_tests/result_capi_public.cpp)
+target_link_libraries(result_capi_public PRIVATE aocl-da ${BLAS})
+
+add_executable(svm_capi_public c_tests/svm_capi_public.cpp)
+target_link_libraries(svm_capi_public PRIVATE aocl-da ${BLAS})
+
+add_executable(tsne_capi_public c_tests/tsne_capi_public.cpp)
+target_link_libraries(tsne_capi_public PRIVATE aocl-da ${BLAS})
+
+add_executable(utils_capi_public c_tests/utils_capi_public.cpp)
+target_link_libraries(utils_capi_public PRIVATE aocl-da ${BLAS})
+
 set(GTEST_INTERNAL
-    csv_internal
-    linmod_internal
-    dectree_internal
-    option_registry_internal
-    data_internal
-    interval_map_internal
-    euclidean_distance_internal
-    interval_set_internal
-    errors_internal
-    doc_internal
-    coord_internal
-    nlls_internal
-    svm_internal
-    train_test_split_internal
-    kernel_functions_internal
-    miscellaneous_internal
-    da_vector_internal
-    da_cache_internal
-    radius_neighbors_internal
-    k_neighbors_internal
-    trees_internal
-    utilities_internal
-    da_syrk_internal
-    serialization_kernel_internal
-    serialization_kernel_errors_internal)
+  csv_internal
+  linmod_internal
+  decision_tree_internal
+  decision_forest_internal
+  option_registry_internal
+  data_internal
+  interval_map_internal
+  euclidean_distance_internal
+  interval_set_internal
+  errors_internal
+  doc_internal
+  coord_internal
+  nlls_internal
+  svm_internal
+  tsne_internal
+  train_test_split_internal
+  kernel_functions_internal
+  ktl2
+  ktl2_fallback
+  miscellaneous_internal
+  da_vector_internal
+  da_cache_internal
+  radius_neighbors_internal
+  k_neighbors_internal
+  trees_internal
+  utilities_internal
+  da_syrk_internal
+  fp16_syrk_internal
+  serialization_kernel_internal
+  serialization_kernel_errors_internal)
 set(INDEP_INTERNAL printf_debug_internal lbfgsb_rc_internal
-                   lbfgsb_fcomm_internal)
+  lbfgsb_fcomm_internal)
 set(INTERNAL_UTESTS ${GTEST_INTERNAL} ${INDEP_INTERNAL})
 
 set(GTEST_PUBLIC
-    basic_stats_public
-    train_test_split_public
-    shuffle_indices_public
-    metrics_public
-    csv_public
-    linmod_public
-    logreg_public
-    linreg_noreg_public
-    linreg_ridge_public
-    linreg_lasso_public
-    linreg_elnet_public
-    decforest_public
-    dectree_public
-    data_public
-    errors_public
-    pca_public
-    kmeans_public
-    dbscan_public
-    parallel_public
-    utilities_public
-    nlls_public
-    nearest_neighbors_public
-    kernel_functions_public
-    svm_public
-    cubic_spline_public
-    ann_public
-    ann_persistence_public
-    dforest_persistence_public
-    dtree_persistence_public
-    kmeans_persistence_public
-    linmod_persistence_public
-    pca_persistence_public
-    knn_class_persistence_public
-    knn_reg_persistence_public
-    radius_nn_persistence_public
-    svm_persistence_public
-    handle_persistence_public)
+  basic_stats_public
+  train_test_split_public
+  shuffle_indices_public
+  metrics_public
+  csv_public
+  linmod_public
+  logreg_public
+  linreg_noreg_public
+  linreg_ridge_public
+  linreg_lasso_public
+  linreg_elnet_public
+  decision_forest_public
+  decision_tree_public
+  data_public
+  errors_public
+  pca_public
+  kernel_pca_public
+  kmeans_public
+  tsne_public
+  dbscan_public
+  parallel_public
+  utilities_public
+  nlls_public
+  nearest_neighbors_public
+  kernel_functions_public
+  svm_public
+  cubic_spline_public
+  ann_public
+  ann_persistence_public
+  dforest_persistence_public
+  dtree_persistence_public
+  kmeans_persistence_public
+  linmod_persistence_public
+  pca_persistence_public
+  kernel_pca_persistence_public
+  knn_class_persistence_public
+  knn_reg_persistence_public
+  radius_nn_persistence_public
+  svm_persistence_public
+  handle_persistence_public
+  ann_capi_public
+  basic_stats_capi_public
+  csv_capi_public
+  datastore_capi_public
+  dbscan_capi_public
+  decision_forest_capi_public
+  decision_tree_capi_public
+  handle_capi_public
+  interpolation_capi_public
+  kernel_functions_capi_public
+  kmeans_capi_public
+  linmod_capi_public
+  metrics_capi_public
+  miscellaneous_capi_public
+  nlls_capi_public
+  nn_capi_public
+  options_capi_public
+  pca_capi_public
+  result_capi_public
+  svm_capi_public
+  tsne_capi_public
+  utils_capi_public)
 set(INDEP_PUBLIC c_compatibility_nog_public)
 set(PUBLIC_UTESTS ${GTEST_PUBLIC} ${INDEP_PUBLIC})
 
@@ -419,7 +574,7 @@ foreach(internal_test ${INTERNAL_UTESTS})
   if(ARCH STREQUAL "dynamic" OR ARCH STREQUAL "generic")
     # Internal tests will just use the generic codepath
     target_compile_definitions(${internal_test}
-                               PRIVATE ARCH_generic;ZNVER_MAX=generic)
+      PRIVATE ARCH_generic;ZNVER_MAX=generic)
   elseif(ARCH STREQUAL "generic_avx512")
     target_compile_definitions(
       ${internal_test} PRIVATE ARCH_generic_avx512;ZNVER_MAX=generic_avx512)
@@ -428,7 +583,7 @@ foreach(internal_test ${INTERNAL_UTESTS})
     extract_native_namespace(NATIVE_NAMESPACE)
     if(NATIVE_NAMESPACE STREQUAL "generic")
       target_compile_definitions(${internal_test}
-                                 PRIVATE ARCH_generic;ZNVER_MAX=generic)
+        PRIVATE ARCH_generic;ZNVER_MAX=generic)
     elseif(NATIVE_NAMESPACE STREQUAL "generic_avx512")
       target_compile_definitions(
         ${internal_test}
@@ -447,7 +602,15 @@ foreach(internal_test ${INTERNAL_UTESTS})
   endif()
 endforeach()
 
+# Some compilers complain about gtest variadic macros, try to suppress
+AppendCXXFlags(SUPPRESSIONS -Wno-gnu-zero-variadic-macro-arguments -Wno-c++20-extensions)
+string(REGEX REPLACE "\ " ";" SUPPRESSIONS "${SUPPRESSIONS}")
+
 foreach(target ${UTESTS})
+  target_compile_options(${target} PRIVATE -march=native)
+  foreach(flag_ ${SUPPRESSIONS})
+    target_compile_options(${target} PRIVATE ${flag_})
+  endforeach()
   target_link_libraries(${target} PRIVATE aocl-da gtest_main gmock_main)
   if(BUILD_SMP)
     target_link_libraries(${target} PRIVATE OpenMP::OpenMP_CXX)
@@ -462,21 +625,51 @@ foreach(target ${UTESTS})
 endforeach()
 
 if(WIN32 AND BUILD_SHARED_LIBS)
-  foreach(UTEST ${UTESTS})
-    add_custom_command(
-      TARGET ${UTEST}
-      POST_BUILD
-      COMMAND ${CMAKE_COMMAND} -E copy_if_different
-              $<TARGET_RUNTIME_DLLS:${UTEST}> $<TARGET_FILE_DIR:${UTEST}>
-      COMMAND_EXPAND_LISTS)
+  # Copy runtime DLLs once, via a single custom target gated on all unit-test
+  # exes.
+  # We do this via a single custom target rather than a per-executable POST_BUILD
+  # command, because every example writes the same DLLs to the same destination
+  # directory; running N parallel `cmake -E copy_if_different` invocations on
+  # Windows causes sporadic sharing-violation failures ("Error copying file (if
+  # different)"). Using one ALL target gated on all example exes guarantees the
+  # copy runs exactly once after all examples have linked.
+  list(GET UTESTS 0 UTEST_EXE)
 
-    # gtest_discover_tests does not work with Windows shared library builds
+  add_custom_target(copy_utest_runtime_dlls ALL
+    COMMAND
+    ${CMAKE_COMMAND} -E copy_if_different
+    $<TARGET_RUNTIME_DLLS:${UTEST_EXE}>
+    $<TARGET_FILE_DIR:${UTEST_EXE}>
+    COMMAND_EXPAND_LISTS
+    VERBATIM)
+  add_dependencies(copy_utest_runtime_dlls ${UTESTS})
+
+  # gtest_discover_tests does not work with Windows shared library builds
+  foreach(UTEST ${UTESTS})
     add_test(${UTEST} ${UTEST})
   endforeach()
 endif()
 
+# Defer gtest enumeration to ctest time on Windows shared builds (otherwise the
+# build-time exe launch hits STATUS_DLL_NOT_FOUND before copy_utest_runtime_dlls
+# has run). Also defer when cross-targeting a specific ISA that may be newer
+# than the build host (e.g. building znver6 on a Zen 3 box): POST_BUILD would
+# launch the freshly-built exe at build time and SIGILL ("Illegal instruction")
+# on the unsupported opcodes. PRE_TEST lets the build finish; the tests are
+# still only runnable on matching hardware at ctest time. Everywhere else, keep
+# the default POST_BUILD enumeration.
+if(WIN32 AND BUILD_SHARED_LIBS)
+  set(GTEST_DISCOVERY_MODE PRE_TEST)
+elseif(NOT (ARCH STREQUAL "native" OR ARCH STREQUAL "dynamic" OR ARCH STREQUAL
+     "generic"))
+  set(GTEST_DISCOVERY_MODE PRE_TEST)
+else()
+  set(GTEST_DISCOVERY_MODE POST_BUILD)
+endif()
+
 foreach(GTEST_EXE ${GTEST_EXES})
-  gtest_discover_tests(${GTEST_EXE} DISCOVERY_TIMEOUT 120)
+  gtest_discover_tests(${GTEST_EXE} DISCOVERY_TIMEOUT 120
+    DISCOVERY_MODE ${GTEST_DISCOVERY_MODE})
 endforeach()
 foreach(INDEP_EXE ${INDEP_EXES})
   add_test(${INDEP_EXE} ${INDEP_EXE})

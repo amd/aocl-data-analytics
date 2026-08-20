@@ -30,13 +30,16 @@ Utility functions.
 # pylint: disable=import-error,invalid-name,too-many-arguments
 # pylint: disable=missing-module-docstring,too-many-locals, anomalous-backslash-in-string
 
+import io
 import math
+import pickle
 from aoclda._internal_utils import check_convert_data
 from ._aoclda.utils import (
     pybind_train_test_split,
     pybind_get_shuffled_indices,
     pybind_get_version,
-    pybind_get_git_commit)
+    pybind_get_git_commit,
+    pybind_print_model_metadata)
 
 
 def train_test_split(
@@ -177,3 +180,41 @@ def get_git_commit():
         str: Git tag or commit hash for the build.
     """
     return pybind_get_git_commit()
+
+
+def print_model_metadata(filename):
+    """
+    Print metadata from a saved model file without loading the full model.
+
+    Args:
+        filename (str): Path to the pickle file containing the saved model.
+    """
+
+    class _StateCapture:
+        """Dummy class to capture __setstate__ dict without reconstruction."""
+
+        def __init__(self, *args, **kwargs):
+            pass
+
+        def __setstate__(self, state):
+            self._state = state
+
+    class _MetadataUnpickler(pickle.Unpickler):
+        """Unpickler that replaces model classes with a lightweight dummy."""
+
+        def find_class(self, module, name):
+            if "aoclda" in module or "pybind" in name:
+                return _StateCapture
+            return super().find_class(module, name)
+
+    with open(filename, "rb") as f:
+        obj = _MetadataUnpickler(f).load()
+
+    state = obj._state
+    # The inner pybind_state is a pickled pybind11 object; use the custom unpickler
+    # to capture its state dict without reconstructing the C++ model
+
+    inner_obj = _MetadataUnpickler(io.BytesIO(state['pybind_state'])).load()
+    buffer = inner_obj._state['data']
+    pybind_print_model_metadata(buffer)
+    return

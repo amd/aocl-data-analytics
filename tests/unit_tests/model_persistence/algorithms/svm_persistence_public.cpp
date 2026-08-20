@@ -281,6 +281,8 @@ void svm_serialization_test(const svm_serial_params &pr, const std::string &mode
             EXPECT_EQ(coef0_loaded, (T)pr.coef0);
         }
 
+        model_persistence_test_utils::test_print_model_versions(handle_loaded);
+
         da_handle_destroy(&handle_loaded);
     }
 }

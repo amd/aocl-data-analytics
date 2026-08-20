@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2025 Advanced Micro Devices, Inc. All rights reserved.
+ * Copyright (C) 2025-2026 Advanced Micro Devices, Inc. All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without modification,
  * are permitted provided that the following conditions are met:
@@ -55,9 +55,13 @@ template <typename T> decision_forest<T>::~decision_forest() {
 }
 
 template <typename T>
-da_status decision_forest<T>::get_result([[maybe_unused]] da_result query,
-                                         [[maybe_unused]] da_int *dim,
-                                         [[maybe_unused]] da_int *result) {
+da_status decision_forest<T>::get_result(da_result query, da_int *dim, da_int *result) {
+    // check to see if user needs common stuff from the basic handle first
+    da_status status = this->get_result_common(query, dim, result);
+    if (status != da_status_unknown_query) {
+        return status; // either got requested info or error
+    }
+
     return da_warn(this->err, da_status_unknown_query,
                    "There are no integer results available for this API.");
 };
@@ -65,14 +69,14 @@ da_status decision_forest<T>::get_result([[maybe_unused]] da_result query,
 template <typename T>
 da_status decision_forest<T>::get_result(da_result query, da_int *dim, T *result) {
 
-    if (!model_trained)
+    if (!this->model_trained)
         return da_warn_bypass(
             this->err, da_status_unknown_query,
             "Handle does not contain data relevant to this query. Was the "
             "last call to the solver successful?");
     // Pointers were already tested in the generic get_result
 
-    da_int rinfo_size = 5;
+    da_int rinfo_size = 6;
     switch (query) {
     case da_result::da_rinfo:
         if (*dim < rinfo_size) {
@@ -87,6 +91,7 @@ da_status decision_forest<T>::get_result(da_result query, da_int *dim, T *result
         result[2] = (T)n_obs;
         result[3] = (T)seed;
         result[4] = (T)n_tree;
+        result[5] = (T)n_tree_threads;
         break;
     default:
         return da_warn_bypass(this->err, da_status_unknown_query,

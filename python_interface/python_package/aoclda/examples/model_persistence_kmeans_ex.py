@@ -32,6 +32,7 @@ import os
 import pickle
 import numpy as np
 from aoclda.clustering import kmeans
+from aoclda.utils import print_model_metadata
 
 
 def model_persistence_kmeans_ex():
@@ -61,6 +62,10 @@ def model_persistence_kmeans_ex():
 
     # Delete the original model
     del km
+
+    print("")
+    print_model_metadata("kmeans_model.pkl")
+    print("")
 
     # Later, load the model from disk
     print("Loading model from 'kmeans_model.pkl'...")

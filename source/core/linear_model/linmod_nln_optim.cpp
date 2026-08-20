@@ -1,5 +1,5 @@
 /* ************************************************************************
- * Copyright (C) 2023-2025 Advanced Micro Devices, Inc.
+ * Copyright (C) 2023-2026 Advanced Micro Devices, Inc.
  *
  * Permission is hereby granted, free of charge, to any person obtaining a copy
  * of this software and associated documentation files (the "Software"), to deal
@@ -25,20 +25,44 @@
 #include "aoclda.h"
 #include "da_cblas.hh"
 #include "da_std.hpp"
+#include "fp16_helpers.hpp"
 #include "linear_model.hpp"
 #include "linmod_types.hpp"
 #include "macros.h"
 
+// Suppress informational "loop not vectorized" diagnostics from `#pragma omp simd`
+// on _Float16 instantiations when the target lacks FP16 SIMD. clang emits these
+// under -Wpass-failed, GCC under -Wopenmp-simd; the -Wunknown/-Wpragmas guards
+// keep the suppression harmless on compilers that don't recognise those names.
+#if defined(__clang__)
+#pragma clang diagnostic ignored "-Wunknown-warning-option"
+#pragma clang diagnostic ignored "-Wpass-failed"
+#elif defined(__GNUC__)
+#pragma GCC diagnostic ignored "-Wpragmas"
+#pragma GCC diagnostic ignored "-Wopenmp-simd"
+#endif
+
 using namespace da_linmod_types;
 
 namespace ARCH {
+
+// #pragma omp simd in _Float16 arithmetic forces FP16 vector ops even on targets without
+// AVX-512 FP16, crashing the compiler. simd_ok catches such cases
+template <typename T>
+inline constexpr bool simd_ok =
+#ifdef __AVX512FP16__
+    true;
+#else
+    !std::is_same_v<T, _Float16>;
+#endif
 
 /* Base class of the callback user data to be passed as void pointers
  * Contain all the basic data to compute */
 template <class T>
 usrdata_base<T>::usrdata_base(da_order order, const T *X, da_int ldX, const T *y,
                               da_int nsamples, da_int nfeat, bool intercept, T lambda,
-                              T alpha, const T *xv, da_linmod_types::scaling_t scaling)
+                              T alpha, const da_fp16::wider_t<T> *xv,
+                              da_linmod_types::scaling_t scaling)
     : order(order), nsamples(nsamples), nfeat(nfeat), X(X), ldX(ldX), y(y),
       intercept(intercept), xv(xv), scaling(scaling) {
     l1reg = lambda * alpha;
@@ -90,7 +114,7 @@ template <class T>
 stepfun_usrdata_linreg<T>::stepfun_usrdata_linreg(da_order order, const T *X, da_int ldX,
                                                   const T *y, da_int nsamples,
                                                   da_int nfeat, bool intercept, T lambda,
-                                                  T alpha, const T *xv,
+                                                  T alpha, const da_fp16::wider_t<T> *xv,
                                                   da_linmod_types::scaling_t scaling)
     : usrdata_base<T>(order, X, ldX, y, nsamples, nfeat, intercept, lambda, alpha, xv,
                       scaling) {
@@ -578,10 +602,17 @@ da_int loss_mse(da_order order, da_int nsamples, da_int nfeat, const T *X, da_in
         // Observation vector provided, return also the loss function value
         // sum (X * coef (+intr) - y)^2
         T ls{0};
+        if constexpr (simd_ok<T>) {
 #pragma omp simd reduction(+ : ls)
-        for (da_int i = 0; i < nsamples; i++) {
-            T res = pred[i] - y[i];
-            ls += res * res;
+            for (da_int i = 0; i < nsamples; i++) {
+                T res = pred[i] - y[i];
+                ls += res * res;
+            }
+        } else {
+            for (da_int i = 0; i < nsamples; i++) {
+                T res = pred[i] - y[i];
+                ls += res * res;
+            }
         }
         *loss = ls / T(2 * nsamples);
 
@@ -612,7 +643,8 @@ da_int objgrd_mse(da_int n, T *x, T *grad, void *udata, [[maybe_unused]] da_int 
     da_blas::cblas_axpy(nsamples, alpha, data->y, 1, matvec, 1);
 
     // alpha = 2.0;
-    alpha = T(1) / T(nsamples);
+    // inv_int avoids _Float16 overflow for large nsamples
+    alpha = da_fp16::inv_int<T>(nsamples);
     T beta = 0.0;
     da_int aux = data->intercept ? 1 : 0;
     enum CBLAS_ORDER storage =
@@ -679,9 +711,13 @@ da_int stepfun_linreg_glmnet(da_int nfeat, T *coef, T *knew, da_int k, T *f, voi
     *knew = coef[k]; // Default value, no change
 
     if (f) { // Quick exit, just provide f
-        *f = da_blas::cblas_dot(nsamples, data->residual.data(), 1, data->residual.data(),
-                                1);
-        *f /= ((T)2 * (T)nsamples);
+        // Accumulate SSE in the wider type so _Float16 does not saturate to inf
+        // (a no-op for float/double).
+        using W = da_fp16::wider_t<T>;
+        const W f_w = da_blas::cblas_dot_wide(nsamples, data->residual.data(), 1,
+                                              data->residual.data(), 1) /
+                      (static_cast<W>(nsamples) * W(2));
+        *f = static_cast<T>(f_w);
         // Add regularization (exclude intercept)
         *f += regfun(nmod, coef, data->l1reg, data->l2reg);
         return 0;
@@ -691,10 +727,16 @@ da_int stepfun_linreg_glmnet(da_int nfeat, T *coef, T *knew, da_int k, T *f, voi
         // Compute X*coef = *y (takes care of intercept)
         eval_feature_matrix(data->order, nfeat, coef, nsamples, data->X, data->ldX,
                             data->residual.data(), data->intercept);
+        if constexpr (simd_ok<T>) {
 #pragma omp simd
-        for (da_int i = 0; i < nsamples; ++i) {
-            // Compute residuals
-            data->residual[i] = data->y[i] - data->residual[i];
+            for (da_int i = 0; i < nsamples; ++i) {
+                // Compute residuals
+                data->residual[i] = data->y[i] - data->residual[i];
+            }
+        } else {
+            for (da_int i = 0; i < nsamples; ++i) {
+                data->residual[i] = data->y[i] - data->residual[i];
+            }
         }
     } else if (action < 0 && kdiff != (T)0) {
         /* Low rank update.
@@ -709,25 +751,24 @@ da_int stepfun_linreg_glmnet(da_int nfeat, T *coef, T *knew, da_int k, T *f, voi
             da_blas::cblas_axpy(nsamples, -kdiff, &data->X[kold * data->Xcinc],
                                 data->Xrinc, data->residual.data(), 1);
         } else {
+            if constexpr (simd_ok<T>) {
 #pragma omp simd
-            for (da_int i = 0; i < nsamples; ++i) {
-                // Change from intercept, X[:,nfeat]=1
-                data->residual[i] -= kdiff;
+                for (da_int i = 0; i < nsamples; ++i) {
+                    // Change from intercept, X[:,nfeat]=1
+                    data->residual[i] -= kdiff;
+                }
+            } else {
+                for (da_int i = 0; i < nsamples; ++i) {
+                    data->residual[i] -= kdiff;
+                }
             }
         }
     }
 
-    auto sign = [](T num) {
-        const T absnum = std::abs(num);
-        return (absnum == (T)0 ? (T)0 : num / absnum);
-    };
-    auto soft = [sign](T z, T Gamma) {
-        return (sign(z) * std::max(std::abs(z) - Gamma, (T)0));
-    };
-
     T betak;
     T gk{T(0)};
-    T xvk{T(1)};
+    using W = da_fp16::wider_t<T>;
+    W xvk{W(1)};
 
     const bool standardized = data->scaling == da_linmod_types::scaling_t::standardize;
     const bool usexv = data->scaling == da_linmod_types::scaling_t::standardize ||
@@ -740,21 +781,34 @@ da_int stepfun_linreg_glmnet(da_int nfeat, T *coef, T *knew, da_int k, T *f, voi
         gk = da_blas::cblas_dot(nsamples, &data->X[k * data->Xcinc], data->Xrinc,
                                 data->residual.data(), 1);
         if (standardized) {
-            gk /= T(nsamples);
+            gk = da_fp16::div_int(gk, nsamples);
         }
         if (usexv) {
             xvk = data->xv[k];
         }
         // betak = gk + coef[k] * xv[k]; // see (8) paper GLM2010
-        betak = gk + coef[k] * xvk; // <- scale by xv[k]
-        betak = soft(betak, l1) / (xvk + l2);
+        // Soft-threshold in the wider type W so the divisor (xvk + l2) cannot
+        // underflow to 0 for _Float16 (a no-op for float/double).
+        const W betak_w = static_cast<W>(gk) + static_cast<W>(coef[k]) * xvk;
+        const W abs_b = betak_w < W(0) ? -betak_w : betak_w;
+        W shr = abs_b - static_cast<W>(l1);
+        if (shr < W(0))
+            shr = W(0);
+        const W signed_shr = betak_w < W(0) ? -shr : shr;
+        betak = static_cast<T>(signed_shr / (xvk + static_cast<W>(l2)));
     } else {
+        if constexpr (simd_ok<T>) {
 #pragma omp simd reduction(+ : gk)
-        for (da_int i = 0; i < nsamples; ++i) {
-            // handle intercept beta0 = coef[nmod+1] = coef[nfeat]
-            gk += data->residual[i];
+            for (da_int i = 0; i < nsamples; ++i) {
+                // handle intercept beta0 = coef[nmod+1] = coef[nfeat]
+                gk += data->residual[i];
+            }
+        } else {
+            for (da_int i = 0; i < nsamples; ++i) {
+                gk += data->residual[i];
+            }
         }
-        gk /= (T)nsamples;
+        gk = da_fp16::div_int(gk, nsamples);
         betak = gk + coef[k];
     }
     *knew = betak;
@@ -788,7 +842,8 @@ da_int stepfun_linreg_sklearn(da_int nfeat, T *coef, T *knew, da_int k, T *f, vo
     if (f) { // Quick exit, just provide f
         *f = da_blas::cblas_dot(nsamples, data->residual.data(), 1, data->residual.data(),
                                 1);
-        *f /= ((T)2 * (T)nsamples);
+        *f = da_fp16::div_int(*f, nsamples);
+        *f = static_cast<T>(static_cast<da_fp16::wider_t<T>>(*f) / 2);
         // Add regularization (exclude intercept)
         *f += regfun(nmod, coef, data->l1reg, data->l2reg);
         return 0;
@@ -798,20 +853,26 @@ da_int stepfun_linreg_sklearn(da_int nfeat, T *coef, T *knew, da_int k, T *f, vo
         // Compute X*coef = *y (takes care of intercept)
         eval_feature_matrix(data->order, nfeat, coef, nsamples, data->X, data->ldX,
                             data->residual.data(), data->intercept);
+        if constexpr (simd_ok<T>) {
 #pragma omp simd
-        for (da_int i = 0; i < nsamples; ++i) {
-            // Compute residuals
-            data->residual[i] = data->y[i] - data->residual[i];
+            for (da_int i = 0; i < nsamples; ++i) {
+                // Compute residuals
+                data->residual[i] = data->y[i] - data->residual[i];
+            }
+        } else {
+            for (da_int i = 0; i < nsamples; ++i) {
+                data->residual[i] = data->y[i] - data->residual[i];
+            }
         }
     }
 
     auto sign = [](T num) {
-        const T absnum = std::abs(num);
+        const T absnum = da_std::abs(num);
         return (absnum == (T)0 ? (T)0 : num / absnum);
     };
 
     if (k < nmod) {
-        if (data->xv[k] == T(0)) {
+        if (data->xv[k] == da_fp16::wider_t<T>(0)) {
             // Quick return
             *knew = T(0);
             data = nullptr;
@@ -820,9 +881,9 @@ da_int stepfun_linreg_sklearn(da_int nfeat, T *coef, T *knew, da_int k, T *f, vo
     }
 
     // data->xv = diagonal(X^T * X)
-    const T l1{T(nsamples) * data->l1reg}; // N * lambdahat * alpha
+    const T l1{da_fp16::mul_int(data->l1reg, nsamples)}; // N * lambdahat * alpha
     // Note that data->l2reg = lambdahat (1-alpha) / 2;
-    const T l2{T(nsamples * 2) * data->l2reg};
+    const T l2{da_fp16::mul_int(data->l2reg, nsamples * 2)};
     T betak;
 
     if (coef[k] != T(0)) {
@@ -831,9 +892,15 @@ da_int stepfun_linreg_sklearn(da_int nfeat, T *coef, T *knew, da_int k, T *f, vo
             da_blas::cblas_axpy(nsamples, coef[k], &data->X[k * data->Xcinc], data->Xrinc,
                                 data->residual.data(), 1);
         } else { // Intercept
+            if constexpr (simd_ok<T>) {
 #pragma omp simd
-            for (da_int i = 0; i < nsamples; ++i) {
-                data->residual[i] += coef[k];
+                for (da_int i = 0; i < nsamples; ++i) {
+                    data->residual[i] += coef[k];
+                }
+            } else {
+                for (da_int i = 0; i < nsamples; ++i) {
+                    data->residual[i] += coef[k];
+                }
             }
         }
     }
@@ -843,22 +910,32 @@ da_int stepfun_linreg_sklearn(da_int nfeat, T *coef, T *knew, da_int k, T *f, vo
         gk = da_blas::cblas_dot(nsamples, &data->X[k * data->Xcinc], data->Xrinc,
                                 data->residual.data(), 1);
     } else { // Intercept
+        if constexpr (simd_ok<T>) {
 #pragma omp simd reduction(+ : gk)
-        for (da_int i = 0; i < nsamples; ++i) {
-            gk += data->residual[i];
+            for (da_int i = 0; i < nsamples; ++i) {
+                gk += data->residual[i];
+            }
+        } else {
+            for (da_int i = 0; i < nsamples; ++i) {
+                gk += data->residual[i];
+            }
         }
     }
 
     if (positive && gk < T(0))
         betak = T(0);
     else {
-        T xv;
+        using W = da_fp16::wider_t<T>;
+        W xv;
         if (k < nmod) {
             xv = data->xv[k];
         } else { // Intercept
-            xv = T(1);
+            xv = W(1);
         }
-        betak = sign(gk) * std::max(std::abs(gk) - l1, T(0)) / (xv + l2);
+        // Form the divisor in the wider type W so (xv + l2) cannot underflow to
+        // 0/0 = NaN for _Float16 (a no-op for float/double).
+        const T num = sign(gk) * da_std::max(da_std::abs(gk) - l1, T(0));
+        betak = static_cast<T>(static_cast<W>(num) / (xv + static_cast<W>(l2)));
     }
 
     if (betak != T(0)) {
@@ -866,10 +943,16 @@ da_int stepfun_linreg_sklearn(da_int nfeat, T *coef, T *knew, da_int k, T *f, vo
             da_blas::cblas_axpy(nsamples, -betak, &data->X[k * data->Xcinc], data->Xrinc,
                                 data->residual.data(), 1);
         } else {
+            if constexpr (simd_ok<T>) {
 #pragma omp simd
-            for (da_int i = 0; i < nsamples; ++i) {
-                // Intercept
-                data->residual[i] -= betak;
+                for (da_int i = 0; i < nsamples; ++i) {
+                    // Intercept
+                    data->residual[i] -= betak;
+                }
+            } else {
+                for (da_int i = 0; i < nsamples; ++i) {
+                    data->residual[i] -= betak;
+                }
             }
         }
     }
@@ -893,9 +976,9 @@ da_int stepchk_linreg_dualgap(da_int nfeat, const T *coef, void *udata, T *gap) 
     const da_int nmod = data->intercept ? nfeat - 1 : nfeat;
     const da_int nsamples = data->nsamples;
     const bool positive = data->positive;
-    const T l1{T(nsamples) * data->l1reg}; // N * lambdahat * alpha
+    const T l1{da_fp16::mul_int(data->l1reg, nsamples)}; // N * lambdahat * alpha
     // Note that data->l2reg = lambdahat (1-alpha) / 2;
-    const T half_l2{T(nsamples) * data->l2reg};
+    const T half_l2{da_fp16::mul_int(data->l2reg, nsamples)};
     const T l2{T(2) * half_l2};
 
     // data->work := std::vector<T> XtA(coef, coef + nmod);
@@ -911,7 +994,7 @@ da_int stepchk_linreg_dualgap(da_int nfeat, const T *coef, void *udata, T *gap) 
         dnXtA = *idx;
     } else {
         da_int idx = da_blas::cblas_iamax(nmod, data->work.data(), 1);
-        dnXtA = std::abs(data->work[idx]);
+        dnXtA = da_std::abs(data->work[idx]);
     }
 
     T nrm2R{0};
@@ -955,6 +1038,9 @@ template class cb_usrdata_logreg<double>;
 template class cb_usrdata_logreg<float>;
 template class stepfun_usrdata_linreg<double>;
 template class stepfun_usrdata_linreg<float>;
+#ifdef __AVX512FP16__
+template class stepfun_usrdata_linreg<_Float16>;
+#endif
 
 template void eval_feature_matrix<double>(da_order order, da_int n, const double *x,
                                           da_int m, const double *X, da_int ldX,
@@ -963,13 +1049,29 @@ template void eval_feature_matrix<double>(da_order order, da_int n, const double
 template void eval_feature_matrix<float>(da_order order, da_int n, const float *x,
                                          da_int m, const float *X, da_int ldX, float *v,
                                          bool intercept, bool trans = false,
-                                         float alpha = 1.0, float beta = 0.0);
+                                         float alpha = 1.0f, float beta = 0.0f);
+#ifdef __AVX512FP16__
+template void eval_feature_matrix<_Float16>(da_order order, da_int n, const _Float16 *x,
+                                            da_int m, const _Float16 *X, da_int ldX,
+                                            _Float16 *v, bool intercept,
+                                            bool trans = false,
+                                            _Float16 alpha = (_Float16)1,
+                                            _Float16 beta = (_Float16)0);
+#endif
 template double regfun<double>(da_int n, const double *x, double l1reg, double l2reg);
 template float regfun<float>(da_int n, const float *x, float l1reg, float l2reg);
+#ifdef __AVX512FP16__
+template _Float16 regfun<_Float16>(da_int n, const _Float16 *x, _Float16 l1reg,
+                                   _Float16 l2reg);
+#endif
 template void reggrd<double>(da_int n, const double *x, double l1reg, double l2reg,
                              double *grad);
 template void reggrd<float>(da_int n, const float *x, float l1reg, float l2reg,
                             float *grad);
+#ifdef __AVX512FP16__
+template void reggrd<_Float16>(da_int n, const _Float16 *x, _Float16 l1reg,
+                               _Float16 l2reg, _Float16 *grad);
+#endif
 template da_int objfun_logistic_rsc<double>(da_int n, double *x, double *f, void *udata);
 template da_int objfun_logistic_rsc<float>(da_int n, float *x, float *f, void *udata);
 template da_int objgrd_logistic_rsc<double>(da_int n, double *x, double *grad,
@@ -1004,20 +1106,42 @@ template da_int loss_mse<float>(da_order order, da_int nsamples, da_int nfeat,
                                 const float *X, da_int ldX, bool intercept, float l1reg,
                                 float l2reg, const float *coef, const float *y,
                                 float *loss, float *pred);
+#ifdef __AVX512FP16__
+template da_int loss_mse<_Float16>(da_order order, da_int nsamples, da_int nfeat,
+                                   const _Float16 *X, da_int ldX, bool intercept,
+                                   _Float16 l1reg, _Float16 l2reg, const _Float16 *coef,
+                                   const _Float16 *y, _Float16 *loss, _Float16 *pred);
+#endif
 template da_int stepfun_linreg_glmnet<double>(da_int nfeat, double *coef, double *knew,
                                               da_int k, double *f, void *udata,
                                               da_int action, double kdiff);
 template da_int stepfun_linreg_glmnet<float>(da_int nfeat, float *coef, float *knew,
                                              da_int k, float *f, void *udata,
                                              da_int action, float kdiff);
+#ifdef __AVX512FP16__
+template da_int stepfun_linreg_glmnet<_Float16>(da_int nfeat, _Float16 *coef,
+                                                _Float16 *knew, da_int k, _Float16 *f,
+                                                void *udata, da_int action,
+                                                _Float16 kdiff);
+#endif
 template da_int stepfun_linreg_sklearn<double>(da_int nfeat, double *coef, double *knew,
                                                da_int k, double *f, void *udata,
                                                da_int action, double kdiff);
 template da_int stepfun_linreg_sklearn<float>(da_int nfeat, float *coef, float *knew,
                                               da_int k, float *f, void *udata,
                                               da_int action, float kdiff);
+#ifdef __AVX512FP16__
+template da_int stepfun_linreg_sklearn<_Float16>(da_int nfeat, _Float16 *coef,
+                                                 _Float16 *knew, da_int k, _Float16 *f,
+                                                 void *udata, da_int action,
+                                                 _Float16 kdiff);
+#endif
 template da_int stepchk_linreg_dualgap<double>(da_int nfeat, const double *coef,
                                                void *udata, double *gap);
 template da_int stepchk_linreg_dualgap<float>(da_int nfeat, const float *coef,
                                               void *udata, float *gap);
+#ifdef __AVX512FP16__
+template da_int stepchk_linreg_dualgap<_Float16>(da_int nfeat, const _Float16 *coef,
+                                                 void *udata, _Float16 *gap);
+#endif
 } // namespace ARCH

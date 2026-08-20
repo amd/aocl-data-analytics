@@ -30,6 +30,7 @@
 #include "da_cblas.hh"
 #include "da_error.hpp"
 #include "da_omp.hpp"
+#include "da_simd_math.hpp"
 #include "macros.h"
 #include "model_persistence.hpp"
 #include "nearest_neighbors_options.hpp"
@@ -47,10 +48,8 @@ namespace da_neighbors {
 
 using namespace da_model_persistence;
 
-#define KNN_BLOCK_FLOAT 2048
-#define KNN_BLOCK_DOUBLE 1024
-#define KNN_BLOCK_SMALL 16
-#define KNN_BLOCK_MEDIUM 128
+#define KNN_BLOCK_FLOAT 512
+#define KNN_BLOCK_DOUBLE 256
 
 #define RNN_BLOCK_FLOAT 2048
 #define RNN_BLOCK_DOUBLE 1024
@@ -80,12 +79,29 @@ da_status validate_and_store_X_test(neighbors<T> *self, da_int n_queries,
                                    std::to_string(n_features_train) + ".");
     }
 
-    ldx_test_temp = ldx_test;
-    da_status status = da_status_success;
-    // Store and validate the 2D array
-    status = self->store_2D_array(n_queries, n_features, X_test, ldx_test, utility_ptr1,
-                                  X_test_temp, ldx_test_temp, "n_queries", "n_features",
-                                  "X_test", "ldx_test");
+    // Validate the 2D array (dimensions, null, NaN checks)
+    da_status status =
+        self->check_2D_array(self->order, n_queries, n_features, X_test, ldx_test,
+                             "n_queries", "n_features", "X_test", "ldx_test");
+    if (status != da_status_success)
+        return status;
+
+    // Handle storage: column-major points directly, row-major needs transpose
+    if (self->order == column_major) {
+        *X_test_temp = X_test;
+        ldx_test_temp = ldx_test;
+    } else {
+        try {
+            *utility_ptr1 = new T[n_queries * n_features];
+        } catch (std::bad_alloc const &) {
+            return da_error_bypass(err, da_status_memory_error,
+                                   "Memory allocation failed.");
+        }
+        ARCH::da_utils::copy_transpose_2D_array_row_to_column_major(
+            n_queries, n_features, X_test, ldx_test, *utility_ptr1, n_queries);
+        *const_cast<T **>(X_test_temp) = *utility_ptr1;
+        ldx_test_temp = n_queries;
+    }
     return status;
 }
 
@@ -107,13 +123,13 @@ template <typename T>
 da_status neighbors<T>::get_result(da_result query, da_int *dim, T *result) {
     da_int n_count = *dim;
 
+    if (!this->model_trained) {
+        return da_warn(this->err, da_status_no_data,
+                       "Radius neighbors have not been computed. Please call "
+                       "da_nn_radius_neighbors_s or da_nn_radius_neighbors_d first.");
+    }
     switch (query) {
     case da_result::da_nn_radius_neighbors_distances_index: {
-        if (!this->radius_neighbors_computed) {
-            return da_warn(this->err, da_status_no_data,
-                           "Radius neighbors have not been computed. Please call "
-                           "da_nn_radius_neighbors_s or da_nn_radius_neighbors_d first.");
-        }
         if (this->rnn_return_distances == false) {
             return da_warn(this->err, da_status_no_data,
                            "Distances were not requested during radius neighbors "
@@ -143,11 +159,6 @@ da_status neighbors<T>::get_result(da_result query, da_int *dim, T *result) {
         break;
     }
     case da_result::da_nn_radius_neighbors_distances: {
-        if (!this->radius_neighbors_computed) {
-            return da_warn(this->err, da_status_no_data,
-                           "Radius neighbors have not been computed. Please call "
-                           "da_nn_radius_neighbors_s or da_nn_radius_neighbors_d first.");
-        }
         if (this->rnn_return_distances == false) {
             return da_warn(this->err, da_status_no_data,
                            "Distances were not requested during radius neighbors "
@@ -185,14 +196,19 @@ da_status neighbors<T>::get_result(da_result query, da_int *dim, T *result) {
 
 template <typename T>
 da_status neighbors<T>::get_result(da_result query, da_int *dim, da_int *result) {
+    // check to see if user needs common stuff from the basic handle first
+    da_status status = this->get_result_common(query, dim, result);
+    if (status != da_status_unknown_query) {
+        return status; // either got requested info or error
+    }
+    if (!this->model_trained) {
+        return da_warn(this->err, da_status_no_data,
+                       "Radius neighbors have not been computed. Please call "
+                       "da_nn_radius_neighbors first.");
+    }
     da_int n_count = *dim;
     switch (query) {
     case da_result::da_nn_radius_neighbors_count: {
-        if (!this->radius_neighbors_computed) {
-            return da_warn(this->err, da_status_no_data,
-                           "Radius neighbors have not been computed. Please call "
-                           "da_nn_radius_neighbors_s or da_nn_radius_neighbors_d first.");
-        }
 
         da_int n_queries = (da_int)this->radius_neighbors_count.size();
         if (n_queries + 1 > n_count) {
@@ -207,12 +223,6 @@ da_status neighbors<T>::get_result(da_result query, da_int *dim, da_int *result)
         break;
     }
     case da_result::da_nn_radius_neighbors_offsets: {
-        if (!this->radius_neighbors_computed) {
-            return da_warn(this->err, da_status_no_data,
-                           "Radius neighbors have not been computed. Please call "
-                           "radius_neighbors first.");
-        }
-
         da_int offset = 0;
         da_int n_queries = (da_int)this->radius_neighbors_count.size();
         if (n_queries + 1 > n_count) {
@@ -234,11 +244,6 @@ da_status neighbors<T>::get_result(da_result query, da_int *dim, da_int *result)
         break;
     }
     case da_result::da_nn_radius_neighbors_indices_index: {
-        if (!this->radius_neighbors_computed) {
-            return da_warn(this->err, da_status_no_data,
-                           "Radius neighbors have not been computed. Please call "
-                           "da_nn_radius_neighbors_s or da_nn_radius_neighbors_d first.");
-        }
         da_int index = da_int(result[0]);
         if (index < 0 || index >= (da_int)this->radius_neighbors_indices.size()) {
             return da_warn(this->err, da_status_invalid_input,
@@ -260,12 +265,6 @@ da_status neighbors<T>::get_result(da_result query, da_int *dim, da_int *result)
         break;
     }
     case da_result::da_nn_radius_neighbors_indices: {
-        if (!this->radius_neighbors_computed) {
-            return da_warn(this->err, da_status_no_data,
-                           "Radius neighbors have not been computed. Please call "
-                           "da_nn_radius_neighbors_s or da_nn_radius_neighbors_d first.");
-        }
-
         da_int total_neighbors = 0;
         da_int array_index = 0;
         for (da_int i = 0; i < (da_int)this->radius_neighbors_indices.size(); i++) {
@@ -322,10 +321,10 @@ template <typename T> da_status neighbors<T>::set_params() {
     else if (this->working_algo == da_neighbors_types::nn_algorithm::kd_tree ||
              this->working_algo == da_neighbors_types::nn_algorithm::ball_tree) {
         if (metric == da_cosine || metric == da_sqeuclidean ||
-            metric == da_sqeuclidean_gemm) {
+            metric == da_sqeuclidean_gemm || metric == da_inner_product) {
             return da_error(this->err, da_status_incompatible_options,
-                            "The tree algorithms are not compatible with the cosine or "
-                            "squared Euclidean distances.");
+                            "The tree algorithms are not compatible with the cosine, "
+                            "squared Euclidean, or inner product distances.");
         } else if (metric == da_minkowski && p < (T)1.0) {
             // Minkowski distance with p<1 does not satisfy the triangle inequality,
             // so it is not a metric.
@@ -356,7 +355,8 @@ template <typename T> da_status neighbors<T>::set_params() {
 template <typename T> void neighbors<T>::set_neighbors_algorithm() {
     if ((this->metric == da_cosine) || (this->metric == da_sqeuclidean) ||
         (this->metric == da_minkowski && this->p < (T)1.0) ||
-        (this->metric == da_sqeuclidean_gemm)) { // LCOV_EXCL_LINE
+        (this->metric == da_sqeuclidean_gemm) ||
+        (this->metric == da_inner_product)) { // LCOV_EXCL_LINE
         this->working_algo = da_neighbors_types::nn_algorithm::brute;
     } else {
         // If the number of features is small and the number of samples is large, use k-d tree
@@ -563,192 +563,6 @@ da_status neighbors<T>::set_targets(da_int n_samples, const T *y_train_reg) {
     return da_status_success;
 }
 
-// Given a vector D of length n and an integer k, this function returns in the first k positions
-// of a vector k_dist, the k smaller values of D (unordered) and in the first k positions of a vector
-// k_ind, the corresponding indices of the original vector D, where initial indices are
-// init_index, init_index+1, ...
-template <typename T>
-inline void smaller_values_and_indices_cblas(da_int n, T *D, da_int k, da_int *k_ind,
-                                             T *k_dist, da_int init_index,
-                                             bool init = true) {
-    // Initialize the first k values of k_ind with init_index, init_index+1, ..., init_index+k-1
-    if (init)
-        da_std::iota(k_ind, k_ind + k, init_index);
-    // Find the index of the maximum element and the corresponding maximum value.
-    da_int max_index = da_blas::cblas_iamax(k, k_dist, 1);
-    T max_val = k_dist[max_index];
-
-    for (da_int i = k; i < n; i++) {
-        // Check if an element of D is smaller than the maximum value. If it is,
-        // we need to replace it's index in k_ind and replace the corresponding D[i] in k_dist.
-        if (D[i] <= max_val) {
-            // We know D[i] is smaller than Dmax. So we update k_ind[max_index] and D[max_index]
-            // so that they hold the new value.
-            k_ind[max_index] = i;
-            k_dist[max_index] = D[i];
-            // Now we need to find the new maximum so that we compare against that in the next iteration.
-            max_index = da_blas::cblas_iamax(k, k_dist, 1);
-            max_val = k_dist[max_index];
-        }
-    }
-}
-
-template <typename T>
-template <da_int XTRAIN_BLOCK>
-inline __attribute__((__always_inline__)) da_status
-neighbors<T>::kneighbors_brute_force_Xtest_kernel(
-    da_int xtrain_block_size, da_int n_blocks_train, da_int block_rem_train,
-    da_int n_queries, da_int n_features, const T *X_test, da_int ldx_test, T *D,
-    da_int *n_ind, T *n_dist, da_int n_neigh, bool return_distance) {
-
-    da_status status = da_status_success;
-    // Set blocking of X_train depending on the block size
-    constexpr bool block_xtrain = XTRAIN_BLOCK != 1;
-    if constexpr (block_xtrain) {
-        da_int xtrain_subblock = xtrain_block_size;
-        for (da_int iblock = 0; iblock < n_blocks_train; iblock++) {
-            if (iblock == n_blocks_train - 1 && block_rem_train > 0)
-                xtrain_subblock = block_rem_train;
-
-            status = da_metrics::pairwise_distances::pairwise_distance_kernel(
-                column_major, xtrain_subblock, n_queries, n_features,
-                X_train + iblock * xtrain_block_size, ldx_train, X_test, ldx_test,
-                D + iblock * xtrain_block_size, n_samples, this->p,
-                this->internal_metric);
-        }
-    } else {
-        status = da_metrics::pairwise_distances::pairwise_distance_kernel(
-            column_major, this->n_samples, n_queries, n_features, this->X_train,
-            this->ldx_train, X_test, ldx_test, D, this->n_samples, this->p,
-            this->internal_metric);
-    }
-    if (status != da_status_success) {
-        return status;
-    }
-    // Get the first n_neigh smaller values of D on k_dist and the correspondind distances on n_dist.
-    // Here we can use D and replace the smaller values in place since D is not used later on.
-    T *k_dist = D;
-    std::vector<da_int> perm_vector;
-    std::vector<da_int> k_ind;
-    try {
-        perm_vector.resize(n_neigh);
-        k_ind.resize(n_queries * n_neigh);
-    } catch (std::bad_alloc const &) {
-        return da_error(this->err, da_status_memory_error, // LCOV_EXCL_LINE
-                        "Memory allocation failed.");
-    }
-    for (da_int k = 0; k < n_queries; k++) {
-        smaller_values_and_indices_cblas(this->n_samples, D + k * this->n_samples,
-                                         n_neigh, k_ind.data() + k * n_neigh,
-                                         k_dist + k * this->n_samples, 0);
-        sorted_n_dist_n_ind(n_neigh, k_dist + k * this->n_samples,
-                            k_ind.data() + k * n_neigh, n_dist + k * n_neigh,
-                            n_ind + k * n_neigh, perm_vector.data(), return_distance,
-                            this->get_squares);
-    }
-
-    return status;
-}
-
-// Computational kernel that computes kneighbors using blocking on Xtest for overall algorithm.
-// In addition, it uses blocking for Xtrain only for the distance computation.
-template <typename T>
-template <da_int XTRAIN_BLOCK, da_int XTEST_BLOCK>
-inline __attribute__((__always_inline__)) da_status
-neighbors<T>::kneighbors_brute_force_Xtest(da_int n_queries, da_int n_features,
-                                           const T *X_test, da_int ldx_test,
-                                           da_int *n_ind, T *n_dist, da_int n_neigh,
-                                           bool return_distance) {
-    da_int xtest_block_size = std::min(XTEST_BLOCK, n_queries);
-    da_int n_blocks_test = 0, block_rem_test = 0;
-    da_utils::blocking_scheme(n_queries, xtest_block_size, n_blocks_test, block_rem_test);
-    [[maybe_unused]] da_int n_threads =
-        da_utils::get_n_threads_loop(std::max(n_blocks_test, (da_int)1));
-
-    da_int threading_error = 0;
-    da_int xtrain_block_size = std::min(XTRAIN_BLOCK, n_samples);
-    da_int n_blocks_train = 0, block_rem_train = 0;
-    da_utils::blocking_scheme(n_samples, xtrain_block_size, n_blocks_train,
-                              block_rem_train);
-    da_status private_status = da_status_success;
-    da_int xtest_subblock = xtest_block_size;
-    da_int samplex_x_xtest_block = this->n_samples * xtest_block_size;
-    da_int xtest_block_x_n_neigh = xtest_block_size * n_neigh;
-
-    // Iterate through the number of blocks
-    if (block_rem_test > 0)
-        n_blocks_test = n_blocks_test - 1;
-
-#pragma omp parallel default(none)                                                       \
-    shared(xtest_block_size, n_blocks_test, block_rem_test, n_features, X_test,          \
-               n_queries, n_ind, n_dist, n_neigh, ldx_test, return_distance,             \
-               threading_error, xtrain_block_size, n_blocks_train, block_rem_train,      \
-               xtest_subblock, samplex_x_xtest_block,                                    \
-               xtest_block_x_n_neigh) private(private_status) num_threads(n_threads)
-    {
-        std::vector<T> thread_local_d;
-        try {
-            thread_local_d.resize(samplex_x_xtest_block);
-        } catch (std::bad_alloc const &) {
-#pragma omp atomic write
-            threading_error = 1;
-        }
-
-#pragma omp for schedule(dynamic)
-        for (da_int jblock = 0; jblock < n_blocks_test; jblock++) {
-            if (threading_error == 0) {
-                // Use thread-local buffer
-                private_status =
-                    neighbors<T>::kneighbors_brute_force_Xtest_kernel<XTRAIN_BLOCK>(
-                        xtrain_block_size, n_blocks_train, block_rem_train,
-                        xtest_subblock, n_features, X_test + jblock * xtest_block_size,
-                        ldx_test, thread_local_d.data(),
-                        n_ind + jblock * xtest_block_x_n_neigh,
-                        n_dist + jblock * xtest_block_x_n_neigh, n_neigh,
-                        return_distance);
-                if (private_status != da_status_success)
-#pragma omp atomic write
-                    threading_error = 1;
-            }
-        }
-    }
-
-    if (threading_error == 1)
-        return da_error(this->err, da_status_memory_error, "Memory allocation failed.");
-
-    // Do the remainder
-    if (block_rem_test > 0) {
-        std::vector<T> thread_local_d;
-        try {
-            thread_local_d.resize(this->n_samples * block_rem_test);
-        } catch (std::bad_alloc const &) {
-            return da_error(this->err, da_status_memory_error,
-                            "Memory allocation failed.");
-        }
-
-        private_status = neighbors<T>::kneighbors_brute_force_Xtest_kernel<XTRAIN_BLOCK>(
-            xtrain_block_size, n_blocks_train, block_rem_train, block_rem_test,
-            n_features, X_test + n_blocks_test * xtest_block_size, ldx_test,
-            thread_local_d.data(), n_ind + n_blocks_test * xtest_block_x_n_neigh,
-            n_dist + n_blocks_test * xtest_block_x_n_neigh, n_neigh, return_distance);
-
-        if (private_status != da_status_success)
-            return da_status_memory_error;
-    }
-
-    return da_status_success;
-}
-
-template <typename T> struct knn_block_sizes {
-    static constexpr da_int XTRAIN_BLOCK =
-        std::is_same<T, float>::value ? KNN_BLOCK_FLOAT : KNN_BLOCK_DOUBLE;
-    static constexpr da_int XTEST_BLOCK =
-        std::is_same<T, float>::value ? KNN_BLOCK_FLOAT : KNN_BLOCK_DOUBLE;
-
-    static constexpr da_int XTEST_BLOCK_SMALL = KNN_BLOCK_SMALL;
-    static constexpr da_int XTEST_BLOCK_MEDIUM = KNN_BLOCK_MEDIUM;
-};
-
 // Compute kernel for brute force algorithm
 template <typename T>
 da_status neighbors<T>::kneighbors_compute_brute_force(da_int n_queries,
@@ -756,28 +570,249 @@ da_status neighbors<T>::kneighbors_compute_brute_force(da_int n_queries,
                                                        da_int ldx_test, da_int *n_ind,
                                                        T *n_dist, da_int n_neigh,
                                                        bool return_distance) {
-    // Get blocking parameters for knn
-    constexpr da_int XTRAIN_BLOCK = knn_block_sizes<T>::XTRAIN_BLOCK;
-    constexpr da_int XTEST_BLOCK = knn_block_sizes<T>::XTEST_BLOCK;
-    constexpr da_int XTEST_BLOCK_SMALL = knn_block_sizes<T>::XTEST_BLOCK_SMALL;
-    constexpr da_int XTEST_BLOCK_MEDIUM = knn_block_sizes<T>::XTEST_BLOCK_MEDIUM;
-
-    if (n_features <= XTEST_BLOCK_SMALL) {
-        return neighbors<T>::kneighbors_brute_force_Xtest<XTRAIN_BLOCK,
-                                                          XTEST_BLOCK_SMALL>(
-            n_queries, n_features, X_test, ldx_test, n_ind, n_dist, n_neigh,
-            return_distance);
-
-    } else if (n_features <= XTEST_BLOCK_MEDIUM) {
-        return neighbors<T>::kneighbors_brute_force_Xtest<XTRAIN_BLOCK,
-                                                          XTEST_BLOCK_MEDIUM>(
-            n_queries, n_features, X_test, ldx_test, n_ind, n_dist, n_neigh,
-            return_distance);
+    // Block sizes matching knn_improvements for benchmarking
+    da_int xtrain_block_max, xtest_block_max;
+    if constexpr (std::is_same_v<T, float>) {
+        xtrain_block_max = KNN_BLOCK_FLOAT;
+        xtest_block_max = 1024;
     } else {
-        return neighbors<T>::kneighbors_brute_force_Xtest<XTRAIN_BLOCK, XTEST_BLOCK>(
-            n_queries, n_features, X_test, ldx_test, n_ind, n_dist, n_neigh,
-            return_distance);
+        xtrain_block_max = KNN_BLOCK_DOUBLE;
+        xtest_block_max = 1024;
     }
+
+    // 2D blocking scheme
+    da_int xtest_block_size = std::min(xtest_block_max, n_queries);
+    da_int xtest_n_blocks = 0, xtest_block_rem = 0;
+    da_utils::blocking_scheme(n_queries, xtest_block_size, xtest_n_blocks,
+                              xtest_block_rem);
+
+    da_int xtrain_block_size = std::min(xtrain_block_max, n_samples);
+    da_int xtrain_n_blocks = 0, xtrain_block_rem = 0;
+    da_utils::blocking_scheme(n_samples, xtrain_block_size, xtrain_n_blocks,
+                              xtrain_block_rem);
+
+    // Thread count based on total number of 2D block pairs
+    da_int n_threads = da_utils::get_n_threads_loop(xtest_n_blocks * xtrain_n_blocks);
+    da_int ldd = xtrain_block_size;
+    da_int threading_error = 0;
+
+    // Per-thread storage for D matrices, k-nearest indices/distances, and counts
+    std::vector<std::vector<T>> thread_D;
+    std::vector<std::vector<da_int>> thread_k_ind;
+    std::vector<std::vector<T>> thread_k_dist;
+    std::vector<std::vector<da_int>> thread_query_count;
+    try {
+        thread_D.resize(n_threads);
+        thread_k_ind.resize(n_threads);
+        thread_k_dist.resize(n_threads);
+        thread_query_count.resize(n_threads);
+    } catch (std::bad_alloc const &) {
+        return da_error(this->err, da_status_memory_error, "Memory allocation failed.");
+    }
+
+#pragma omp parallel num_threads(n_threads) default(none) shared(                        \
+        threading_error, xtrain_block_size, xtrain_block_rem, xtrain_n_blocks,           \
+            xtest_block_size, xtest_block_rem, xtest_n_blocks, n_samples, n_queries,     \
+            ldd, n_features, X_test, ldx_test, n_ind, n_dist, n_neigh, return_distance,  \
+            n_threads, thread_D, thread_k_ind, thread_k_dist, thread_query_count)
+    {
+        da_int this_thread = omp_get_thread_num();
+        da_int local_error = 0;
+        auto &this_D = thread_D[this_thread];
+
+        try {
+            this_D.resize(xtrain_block_size * xtest_block_size);
+            thread_k_ind[this_thread].resize(n_queries * n_neigh);
+            thread_k_dist[this_thread].resize(n_queries * n_neigh);
+            thread_query_count[this_thread].resize(n_queries, 0);
+        } catch (std::bad_alloc const &) {
+#pragma omp atomic write
+            threading_error = 1;
+        }
+
+#pragma omp for collapse(2) schedule(guided) nowait
+        for (da_int j = 0; j < xtest_n_blocks; j++) {
+            for (da_int i = 0; i < xtrain_n_blocks; i++) {
+#pragma omp atomic read
+                local_error = threading_error;
+                if (local_error == 0) {
+                    da_int local_xtest_size = xtest_block_size;
+                    if (j == xtest_n_blocks - 1 && xtest_block_rem > 0)
+                        local_xtest_size = xtest_block_rem;
+                    da_int local_xtrain_size = xtrain_block_size;
+                    if (i == xtrain_n_blocks - 1 && xtrain_block_rem > 0)
+                        local_xtrain_size = xtrain_block_rem;
+
+                    // Compute pairwise distances for this block pair
+                    da_status thd_status =
+                        da_metrics::pairwise_distances::pairwise_distance_kernel(
+                            column_major, local_xtrain_size, local_xtest_size, n_features,
+                            X_train + i * xtrain_block_size, ldx_train,
+                            X_test + j * xtest_block_size, ldx_test, this_D.data(), ldd,
+                            this->p, this->internal_metric);
+                    if (thd_status != da_status_success) {
+#pragma omp atomic write
+                        threading_error = 1;
+                    }
+
+                    // Clamp small negative values to zero for squared Euclidean GEMM
+                    // distances. The GEMM-based computation (||x||^2 - 2<x,y> + ||y||^2)
+                    // can produce small negatives from floating-point cancellation;
+                    // these would cause NaN after sqrt.
+                    if (this->internal_metric == da_sqeuclidean_gemm) {
+                        da_simd_math::clamp_nonneg_matrix(
+                            local_xtrain_size, local_xtest_size, this_D.data(), ldd);
+                    }
+
+                    // For each query in this X_test block, update the thread-local k-nearest
+                    da_int *my_k_ind = thread_k_ind[this_thread].data();
+                    T *my_k_dist = thread_k_dist[this_thread].data();
+
+                    for (da_int jj = 0; jj < local_xtest_size; jj++) {
+                        da_int j_local = jj + j * xtest_block_size;
+                        da_int *query_k_ind = my_k_ind + j_local * n_neigh;
+                        T *query_k_dist = my_k_dist + j_local * n_neigh;
+                        da_int &count = thread_query_count[this_thread][j_local];
+
+                        da_int ii = 0;
+                        // Phase 1: fill up initial k candidates
+                        for (; ii < local_xtrain_size && count < n_neigh; ii++) {
+                            query_k_ind[count] = ii + i * xtrain_block_size;
+                            query_k_dist[count] = this_D[ii + jj * ldd];
+                            count++;
+                        }
+                        // Phase 2: update k-nearest with remaining distances
+                        if (ii < local_xtrain_size) {
+                            if (this->metric != da_inner_product) {
+                                smaller_values_and_indices_vectorized(
+                                    local_xtrain_size - ii, this_D.data() + ii + jj * ldd,
+                                    n_neigh, query_k_ind, query_k_dist,
+                                    ii + i * xtrain_block_size);
+                            } else {
+                                larger_values_and_indices_vectorized(
+                                    local_xtrain_size - ii, this_D.data() + ii + jj * ldd,
+                                    n_neigh, query_k_ind, query_k_dist,
+                                    ii + i * xtrain_block_size);
+                            }
+                        }
+                    } // End of per-query update
+                }     // End of error check
+            }         // End of xtrain blocks
+        }             // End of xtest blocks
+
+        this_D = std::vector<T>{};
+
+        if (n_threads == 1) {
+            // Single-thread fast path: no merge needed, sort directly from thread 0
+#pragma omp atomic read
+            local_error = threading_error;
+            if (local_error == 0) {
+                std::vector<da_int> perm_vector;
+                try {
+                    perm_vector.resize(n_neigh);
+                } catch (std::bad_alloc const &) {
+#pragma omp atomic write
+                    threading_error = 1;
+                }
+                for (da_int q = 0; q < n_queries; q++) {
+                    sorted_n_dist_n_ind(n_neigh, thread_k_dist[0].data() + q * n_neigh,
+                                        thread_k_ind[0].data() + q * n_neigh,
+                                        return_distance ? n_dist + q * n_neigh : nullptr,
+                                        n_ind + q * n_neigh, perm_vector.data(),
+                                        return_distance, get_squares,
+                                        this->metric != da_inner_product);
+                }
+            }
+        } else {
+            // Multi-thread path: barrier, merge thread-local results, then sort
+#pragma omp barrier
+
+#pragma omp atomic read
+            local_error = threading_error;
+            if (local_error == 0) {
+                std::vector<da_int> perm_vector;
+                try {
+                    perm_vector.resize(n_neigh);
+                } catch (std::bad_alloc const &) {
+#pragma omp atomic write
+                    threading_error = 1;
+                }
+
+                // Merge thread-local k-nearest into thread 0's arrays, then sort
+#pragma omp for schedule(guided)
+                for (da_int q = 0; q < n_queries; q++) {
+                    da_int *q_k_ind = thread_k_ind[0].data() + q * n_neigh;
+                    T *q_k_dist = thread_k_dist[0].data() + q * n_neigh;
+                    da_int count = thread_query_count[0][q];
+
+                    for (da_int t = 1; t < n_threads; t++) {
+                        da_int other_count = thread_query_count[t][q];
+                        if (other_count == 0)
+                            continue;
+
+                        da_int *other_k_ind = thread_k_ind[t].data() + q * n_neigh;
+                        T *other_k_dist = thread_k_dist[t].data() + q * n_neigh;
+
+                        da_int oi = 0;
+                        // Fill phase: if thread 0 doesn't have n_neigh candidates yet
+                        for (; oi < other_count && count < n_neigh; oi++) {
+                            q_k_ind[count] = other_k_ind[oi];
+                            q_k_dist[count] = other_k_dist[oi];
+                            count++;
+                        }
+                        // Update phase: merge remaining candidates into top-k
+                        if (oi < other_count && count >= n_neigh) {
+                            if (this->metric != da_inner_product) {
+                                da_int max_idx = inline_iamax(n_neigh, q_k_dist);
+                                T max_val = q_k_dist[max_idx];
+                                for (; oi < other_count; oi++) {
+                                    if (other_k_dist[oi] <= max_val) {
+                                        q_k_ind[max_idx] = other_k_ind[oi];
+                                        q_k_dist[max_idx] = other_k_dist[oi];
+                                        max_idx = inline_iamax(n_neigh, q_k_dist);
+                                        max_val = q_k_dist[max_idx];
+                                    }
+                                }
+                            } else {
+                                da_int min_idx = inline_iamin(n_neigh, q_k_dist);
+                                T min_val = q_k_dist[min_idx];
+                                for (; oi < other_count; oi++) {
+                                    if (other_k_dist[oi] >= min_val) {
+                                        q_k_ind[min_idx] = other_k_ind[oi];
+                                        q_k_dist[min_idx] = other_k_dist[oi];
+                                        min_idx = inline_iamin(n_neigh, q_k_dist);
+                                        min_val = q_k_dist[min_idx];
+                                    }
+                                }
+                            }
+                        }
+                    }
+
+                    // Sort and copy to output
+                    sorted_n_dist_n_ind(n_neigh, q_k_dist, q_k_ind,
+                                        return_distance ? n_dist + q * n_neigh : nullptr,
+                                        n_ind + q * n_neigh, perm_vector.data(),
+                                        return_distance, get_squares,
+                                        this->metric != da_inner_product);
+                }
+            }
+        }
+
+        // Barrier ensures all threads finish merging before any thread frees its buffers.
+        // Without this, a thread that finishes early could free thread_k_ind[t] /
+        // thread_k_dist[t] while another thread is still reading them during the merge.
+#pragma omp barrier
+
+        thread_k_ind[this_thread] = std::vector<da_int>{};
+        thread_k_dist[this_thread] = std::vector<T>{};
+        thread_query_count[this_thread] = std::vector<da_int>{};
+    } // End of parallel region
+
+    if (threading_error != 0)
+        return da_error(this->err, da_status_memory_error, // LCOV_EXCL_LINE
+                        "Memory allocation failed.");
+
+    return da_status_success;
 }
 
 // Compute kernel for kd-tree algorithm
@@ -1133,6 +1168,14 @@ da_status neighbors<T>::predict_proba_compute_knn(da_int n_queries, da_int n_fea
                                                   T *proba) {
     da_status status = da_status_success;
 
+    // Distance-weighted voting uses 1/d, which is undefined for inner product
+    // (larger = more similar, values can be negative).
+    if (this->metric == da_inner_product &&
+        this->weights == da_neighbors_types::nn_weights::distance)
+        return da_error(this->err, da_status_incompatible_options,
+                        "The inner product metric is not compatible with "
+                        "weights=\"distance\". Use weights=\"uniform\" instead.");
+
     if (!this->classes_computed) {
         // From the input data y_train, find the available classes.
         status = neighbors<T>::available_classes();
@@ -1238,6 +1281,14 @@ da_status neighbors<T>::predict_proba_compute_rnn(da_int n_queries, da_int n_fea
                                                   const T *X_test, da_int ldx_test,
                                                   T *proba) {
     da_status status = da_status_success;
+
+    // Distance-weighted voting uses 1/d, which is undefined for inner product
+    // (larger = more similar, values can be negative).
+    if (this->metric == da_inner_product &&
+        this->weights == da_neighbors_types::nn_weights::distance)
+        return da_error(this->err, da_status_incompatible_options,
+                        "The inner product metric is not compatible with "
+                        "weights=\"distance\". Use weights=\"uniform\" instead.");
 
     if (!this->classes_computed) {
         // From the input data y_train, find the available classes.
@@ -1627,6 +1678,14 @@ neighbors<T>::predict_targets_knn(da_int n_queries, da_int n_features, const T *
 
     da_status status = da_status_success;
 
+    // Distance-weighted voting uses 1/d, which is undefined for inner product
+    // (larger = more similar, values can be negative).
+    if (this->metric == da_inner_product &&
+        this->weights == da_neighbors_types::nn_weights::distance)
+        return da_error(this->err, da_status_incompatible_options,
+                        "The inner product metric is not compatible with "
+                        "weights=\"distance\". Use weights=\"uniform\" instead.");
+
     // Allocate memory to set neighbors' indices and corresponding distances.
     // If n_ind and n_dist were returned in row order, then we need to transpose them
     try {
@@ -1705,6 +1764,14 @@ neighbors<T>::predict_targets_rnn(da_int n_queries, da_int n_features, const T *
                                   da_int ldx_test, T *y_test) {
 
     da_status status = da_status_success;
+
+    // Distance-weighted voting uses 1/d, which is undefined for inner product
+    // (larger = more similar, values can be negative).
+    if (this->metric == da_inner_product &&
+        this->weights == da_neighbors_types::nn_weights::distance)
+        return da_error(this->err, da_status_incompatible_options,
+                        "The inner product metric is not compatible with "
+                        "weights=\"distance\". Use weights=\"uniform\" instead.");
 
     if (this->outlier_handling ==
             da_neighbors_types::nn_outlier_handling::most_frequent &&
@@ -1870,6 +1937,14 @@ da_status neighbors<T>::radius_neighbors(da_int n_queries, da_int n_features,
     if (status != da_status_success)
         return status;
 
+    // inner product is a similarity measure without a meaningful radius threshold;
+    // use kneighbors instead.
+    if (this->metric == da_inner_product)
+        return da_error(this->err, da_status_incompatible_options,
+                        "The inner product metric is not compatible with radius "
+                        "neighbors. Use da_nn_kneighbors to find the k most similar "
+                        "training vectors by inner product.");
+
     const T *X_test_temp = nullptr;
     T *utility_ptr1 = nullptr;
     da_int ldx_test_temp = ldx_test;
@@ -1913,11 +1988,11 @@ da_status neighbors<T>::radius_neighbors_compute(
     bool sort_results, bool is_temp) {
     if (!is_temp) {
         // If radius neighbors were already computed, clean up memory of radius neighbors and (optionally) distances
-        if (this->radius_neighbors_computed) {
+        if (this->model_trained) {
             this->radius_neighbors_count.clear();
             this->radius_neighbors_indices.clear();
             this->radius_neighbors_distances.clear();
-            this->radius_neighbors_computed = false;
+            this->model_trained = false;
         }
     }
     // Allocate memory
@@ -1987,7 +2062,7 @@ da_status neighbors<T>::radius_neighbors_compute(
     }
 
     if (!is_temp) {
-        this->radius_neighbors_computed = true;
+        this->model_trained = true;
     }
     return status;
 }
@@ -2041,10 +2116,14 @@ da_status neighbors<T>::radius_neighbors_compute_brute_force(
     da_int threading_error = 0;
 
     // Local storage for neighbors to help avoid thread contention
-    std::vector<std::vector<da_vector::da_vector<da_int>>> neighbors_local_indices(
-        n_threads);
-    std::vector<std::vector<da_vector::da_vector<T>>> neighbors_local_distances(
-        n_threads);
+    std::vector<std::vector<da_vector::da_vector<da_int>>> neighbors_local_indices;
+    std::vector<std::vector<da_vector::da_vector<T>>> neighbors_local_distances;
+    try {
+        neighbors_local_indices.resize(n_threads);
+        neighbors_local_distances.resize(n_threads);
+    } catch (std::bad_alloc const &) {
+        return da_error(this->err, da_status_memory_error, "Memory allocation failed.");
+    }
 
 #pragma omp parallel num_threads(n_threads) default(none) shared(                        \
         threading_error, rnn_indices, rnn_distances, xtrain_block_size,                  \
@@ -2267,7 +2346,7 @@ template <typename T> da_status neighbors<T>::serialize(serialization_buffer &bu
     io_dispatch(this->classes_computed);
     io_dispatch(this->classes);
     io_dispatch(this->sort_results);
-    io_dispatch(this->radius_neighbors_computed);
+    io_dispatch(this->model_trained);
     io_dispatch(this->rnn_return_distances);
     io_dispatch(this->n_neighbors);
     io_dispatch(this->algo);
@@ -2389,31 +2468,6 @@ template <typename T> da_status neighbors<T>::load_model(serialization_buffer &b
 
     return status;
 }
-
-// Force specific template instantiations
-template da_status
-neighbors<float>::kneighbors_brute_force_Xtest<KNN_BLOCK_FLOAT, KNN_BLOCK_FLOAT>(
-    da_int, da_int, const float *, da_int, da_int *, float *, da_int, bool);
-
-template da_status
-neighbors<double>::kneighbors_brute_force_Xtest<KNN_BLOCK_DOUBLE, KNN_BLOCK_DOUBLE>(
-    da_int, da_int, const double *, da_int, da_int *, double *, da_int, bool);
-
-template da_status
-neighbors<float>::kneighbors_brute_force_Xtest<KNN_BLOCK_FLOAT, KNN_BLOCK_SMALL>(
-    da_int, da_int, const float *, da_int, da_int *, float *, da_int, bool);
-
-template da_status
-neighbors<double>::kneighbors_brute_force_Xtest<KNN_BLOCK_DOUBLE, KNN_BLOCK_SMALL>(
-    da_int, da_int, const double *, da_int, da_int *, double *, da_int, bool);
-
-template da_status
-neighbors<float>::kneighbors_brute_force_Xtest<KNN_BLOCK_FLOAT, KNN_BLOCK_MEDIUM>(
-    da_int, da_int, const float *, da_int, da_int *, float *, da_int, bool);
-
-template da_status
-neighbors<double>::kneighbors_brute_force_Xtest<KNN_BLOCK_DOUBLE, KNN_BLOCK_MEDIUM>(
-    da_int, da_int, const double *, da_int, da_int *, double *, da_int, bool);
 
 template class neighbors<double>;
 template class neighbors<float>;

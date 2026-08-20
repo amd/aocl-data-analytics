@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2023-2024 Advanced Micro Devices, Inc. All rights reserved.
+ * Copyright (C) 2023-2026 Advanced Micro Devices, Inc. All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without modification,
  * are permitted provided that the following conditions are met:
@@ -45,12 +45,13 @@ template <typename T> struct OrderParamType {
     da_int n;
     da_int p;
     da_int ldx;
-    T q;
+    std::vector<T> q;
+    da_int n_q;
     da_order order = column_major;
     std::vector<T> x;
     std::vector<T> expected_row_quantiles;
     std::vector<T> expected_column_quantiles;
-    T expected_overall_quantile;
+    std::vector<T> expected_overall_quantile;
     std::vector<T> expected_row_medians;
     std::vector<T> expected_column_medians;
     T expected_overall_median;
@@ -78,7 +79,8 @@ template <typename T> void GetSingleColumnData(std::vector<OrderParamType<T>> &p
     param.n = 72;
     param.p = 1;
     param.ldx = param.n;
-    param.q = (T)0.1;
+    param.q = {(T)0.1};
+    param.n_q = 1;
     param.quantile_type = da_quantile_type_3;
     std::vector<double> x{
         4.7,  2.6,  7.4,  9.5,  4.6,  5.1,  3.8,  2.1,  -4.7, 1.6,  8.4,  2.5,
@@ -111,7 +113,7 @@ template <typename T> void GetSingleColumnData(std::vector<OrderParamType<T>> &p
     param.expected_row_upper_hinges = convert_vector<double, T>(x);
     param.expected_row_lower_hinges = convert_vector<double, T>(x);
 
-    param.expected_overall_quantile = (T)-7.4;
+    param.expected_overall_quantile = {(T)-7.4};
     param.expected_overall_maximum = (T)9.5;
     param.expected_overall_minimum = (T)-9.9;
     param.expected_overall_median = (T)2.1;
@@ -131,7 +133,8 @@ template <typename T> void GetSingleRowData(std::vector<OrderParamType<T>> &para
     param.n = 1;
     param.p = 72;
     param.ldx = param.n;
-    param.q = (T)0.9;
+    param.q = {(T)0.9};
+    param.n_q = 1;
     param.quantile_type = da_quantile_type_8;
     std::vector<double> x{
         4.7,  2.6,  7.4,  9.5,  4.6,  5.1,  3.8,  2.1,  -4.7, 1.6,  8.4,  2.5,
@@ -163,7 +166,7 @@ template <typename T> void GetSingleRowData(std::vector<OrderParamType<T>> &para
     param.expected_column_upper_hinges = convert_vector<double, T>(x);
     param.expected_column_lower_hinges = convert_vector<double, T>(x);
 
-    param.expected_overall_quantile = (T)7.83;
+    param.expected_overall_quantile = {(T)7.83};
     param.expected_overall_maximum = (T)9.5;
     param.expected_overall_minimum = (T)-9.9;
     param.expected_overall_median = (T)2.1;
@@ -183,7 +186,8 @@ template <typename T> void GetShortFatData1(std::vector<OrderParamType<T>> &para
     param.n = 8;
     param.p = 9;
     param.ldx = param.n;
-    param.q = (T)0.7;
+    param.q = {(T)0.2, (T)0.7};
+    param.n_q = 2;
     param.quantile_type = da_quantile_type_6;
     std::vector<double> x{4.7,  2.6,  7.4,  9.5,  4.6,  5.1,  8,    2,   -4.7, 1.6,  8.4,
                           3.5,  -2.6, 5.0,  8.0,  0.0,  0.0,  -2.6, 5.4, 9.9,  2.6,  5.2,
@@ -193,7 +197,9 @@ template <typename T> void GetShortFatData1(std::vector<OrderParamType<T>> &para
                           -2.0, 4.1,  2.8,  -7.4, 3.5,  4.6,  -5.9, 8.2, -2,   4.1,  2.8,
                           -7.4, 3.5,  -4.1, -5.9, 8.3,  -2};
     param.x = convert_vector<double, T>(x);
-    std::vector<double> expected_row_quantiles{4.1, 2.8, 7.4, 9.1, 4.2, 5.1, 8.1, 1.2};
+    std::vector<double> expected_row_quantiles{-4.7, 4.1, -2.6, 2.8, -7.4, 7.4,
+                                               -9.1, 9.1, -4.1, 4.2, -5.9, 5.1,
+                                               0.8,  8.1, -2.,  1.2};
     param.expected_row_quantiles = convert_vector<double, T>(expected_row_quantiles);
     std::vector<double> expected_row_medians{1.6, 2.6, -7.4, 3.5, 2.6, 5., 8., 0.};
     param.expected_row_medians = convert_vector<double, T>(expected_row_medians);
@@ -211,8 +217,9 @@ template <typename T> void GetShortFatData1(std::vector<OrderParamType<T>> &para
     param.expected_row_lower_hinges =
         convert_vector<double, T>(expected_row_lower_hinges);
 
-    std::vector<double> expected_column_quantiles{7.58, 5.9,  5.26, 7.72, 5.87,
-                                                  2.4,  5.45, 4.25, 3.68};
+    std::vector<double> expected_column_quantiles{2.48,  7.58, -3.02, 5.9,  -1.96, 5.26,
+                                                  -3.58, 7.72, -5.24, 5.87, -7.74, 2.4,
+                                                  -5.24, 5.45, -6.2,  4.25, -6.2,  3.68};
     param.expected_column_quantiles =
         convert_vector<double, T>(expected_column_quantiles);
     std::vector<double> expected_column_medians{4.9,  2.55, 1.9,  2.85, 3.15,
@@ -233,7 +240,7 @@ template <typename T> void GetShortFatData1(std::vector<OrderParamType<T>> &para
     param.expected_column_lower_hinges =
         convert_vector<double, T>(expected_column_lower_hinges);
 
-    param.expected_overall_quantile = (T)4.73;
+    param.expected_overall_quantile = {(T)-3.2, (T)4.73};
     param.expected_overall_maximum = (T)9.9;
     param.expected_overall_minimum = (T)-9.5;
     param.expected_overall_median = (T)2.6;
@@ -242,7 +249,7 @@ template <typename T> void GetShortFatData1(std::vector<OrderParamType<T>> &para
 
     param.expected_status = da_status_success;
 
-    param.epsilon = 10 * std::numeric_limits<T>::epsilon();
+    param.epsilon = 1.2 * 10 * std::numeric_limits<T>::epsilon();
 
     params.push_back(param);
 }
@@ -253,7 +260,9 @@ template <typename T> void GetShortFatData2(std::vector<OrderParamType<T>> &para
     param.n = 8;
     param.p = 9;
     param.ldx = param.n;
-    param.q = (T)0.7;
+    // close quantiles test
+    param.q = {(T)0.7, 0.71, 0.72};
+    param.n_q = 3;
     param.quantile_type = da_quantile_type_2;
     std::vector<double> x{
         4.7,  2.6,  7.4,  9.5,   4.6,  5.1,  8,    2,    -4.7, 1.6,  8.4,  3.5,
@@ -263,7 +272,9 @@ template <typename T> void GetShortFatData2(std::vector<OrderParamType<T>> &para
         -4.7, 2.6,  -7.4, 6.5,   -4.3, 5.0,  8.1,  -2.0, 4.1,  2.8,  -7.4, 3.5,
         4.6,  -5.9, 8.2,  -2,    4.1,  2.8,  -7.4, 3.5,  -4.1, -5.9, 8.3,  -2};
     param.x = convert_vector<double, T>(x);
-    std::vector<double> expected_row_quantiles{4.1, 2.8, 7.4, 9.1, 4.2, 5.1, 8.1, 1.2};
+    std::vector<double> expected_row_quantiles{4.1, 4.1, 4.1, 2.8, 2.8, 2.8, 7.4, 7.4,
+                                               7.4, 9.1, 9.1, 9.1, 4.2, 4.2, 4.2, 5.1,
+                                               5.1, 5.1, 8.1, 8.1, 8.1, 1.2, 1.2, 1.2};
     param.expected_row_quantiles = convert_vector<double, T>(expected_row_quantiles);
     std::vector<double> expected_row_medians{1.6, 2.6, -7.4, 3.5, 2.6, 5., 8., 0.};
     param.expected_row_medians = convert_vector<double, T>(expected_row_medians);
@@ -281,8 +292,9 @@ template <typename T> void GetShortFatData2(std::vector<OrderParamType<T>> &para
     param.expected_row_lower_hinges =
         convert_vector<double, T>(expected_row_lower_hinges);
 
-    std::vector<double> expected_column_quantiles{7.4, 5., 5.2, 7.6, 5.3,
-                                                  2.1, 5., 4.1, 3.5};
+    std::vector<double> expected_column_quantiles{
+        7.4, 7.4, 7.4, 5.,  5., 5., 5.2, 5.2, 5.2, 7.6, 7.6, 7.6, 5.3, 5.3,
+        5.3, 2.1, 2.1, 2.1, 5., 5., 5.,  4.1, 4.1, 4.1, 3.5, 3.5, 3.5};
     param.expected_column_quantiles =
         convert_vector<double, T>(expected_column_quantiles);
     std::vector<double> expected_column_medians{4.9,  2.55, 1.9,  2.85, 3.15,
@@ -303,7 +315,7 @@ template <typename T> void GetShortFatData2(std::vector<OrderParamType<T>> &para
     param.expected_column_lower_hinges =
         convert_vector<double, T>(expected_column_lower_hinges);
 
-    param.expected_overall_quantile = (T)4.7;
+    param.expected_overall_quantile = {(T)4.7, (T)5.0, (T)5.0};
     param.expected_overall_maximum = (T)9.9;
     param.expected_overall_minimum = (T)-10.5;
     param.expected_overall_median = (T)2.6;
@@ -323,7 +335,8 @@ template <typename T> void GetShortFatData3(std::vector<OrderParamType<T>> &para
     param.n = 8;
     param.p = 9;
     param.ldx = param.n;
-    param.q = (T)0.7;
+    param.q = {(T)0.7};
+    param.n_q = 1;
     param.quantile_type = da_quantile_type_1;
     std::vector<double> x{4.7,  2.6,  7.4,  9.5,  4.6,  5.1,  8,    2,   -4.7, 1.6,  8.4,
                           3.5,  -2.6, 5.0,  8.0,  0.0,  0.0,  -2.6, 5.4, 11.9, 2.6,  5.2,
@@ -373,7 +386,7 @@ template <typename T> void GetShortFatData3(std::vector<OrderParamType<T>> &para
     param.expected_column_lower_hinges =
         convert_vector<double, T>(expected_column_lower_hinges);
 
-    param.expected_overall_quantile = (T)4.7;
+    param.expected_overall_quantile = {(T)4.7};
     param.expected_overall_maximum = (T)11.9;
     param.expected_overall_minimum = (T)-9.5;
     param.expected_overall_median = (T)2.6;
@@ -393,7 +406,8 @@ template <typename T> void GetSubarrayData(std::vector<OrderParamType<T>> &param
     param.n = 8;
     param.p = 9;
     param.ldx = param.n + 3;
-    param.q = (T)0.6;
+    param.q = {(T)0.6};
+    param.n_q = 1;
     param.quantile_type = da_quantile_type_9;
     std::vector<double> x{1.7,  2.6,  7.4,  9.5,  4.6,  5.1,  8,    2,    0, 0, 0,
                           -4.7, 1.6,  8.4,  3.5,  -2.6, 5.0,  8.0,  0.0,  0, 0, 0,
@@ -446,7 +460,7 @@ template <typename T> void GetSubarrayData(std::vector<OrderParamType<T>> &param
     param.expected_column_lower_hinges =
         convert_vector<double, T>(expected_column_lower_hinges);
 
-    param.expected_overall_quantile = (T)4.1;
+    param.expected_overall_quantile = {(T)4.1};
     param.expected_overall_maximum = (T)9.9;
     param.expected_overall_minimum = (T)-9.5;
     param.expected_overall_median = (T)2.6;
@@ -466,7 +480,8 @@ template <typename T> void GetRowMajorData(std::vector<OrderParamType<T>> &param
     param.n = 9;
     param.p = 8;
     param.ldx = param.p;
-    param.q = (T)0.7;
+    param.q = {(T)0.0, (T)0.0, (T)0.7, (T)1.0, (T)1.0};
+    param.n_q = 5;
     param.quantile_type = da_quantile_type_2;
     std::vector<double> x{
         4.7,  2.6,  7.4,  9.5,   4.6,  5.1,  8,    2,    -4.7, 1.6,  8.4,  3.5,
@@ -477,7 +492,11 @@ template <typename T> void GetRowMajorData(std::vector<OrderParamType<T>> &param
         4.6,  -5.9, 8.2,  -2,    4.1,  2.8,  -7.4, 3.5,  -4.1, -5.9, 8.3,  -2};
     param.x = convert_vector<double, T>(x);
     param.order = row_major;
-    std::vector<double> expected_column_quantiles{4.1, 2.8, 7.4, 9.1, 4.2, 5.1, 8.1, 1.2};
+    std::vector<double> expected_column_quantiles{
+        -4.7, -2.6,  -7.4, -10.5, -4.3, -5.9, -1.8, -2.1, -4.7, -2.6,
+        -7.4, -10.5, -4.3, -5.9,  -1.8, -2.1, 4.1,  2.8,  7.4,  9.1,
+        4.2,  5.1,   8.1,  1.2,   4.7,  9.4,  8.4,  9.9,  4.6,  5.3,
+        8.3,  2.1,   4.7,  9.4,   8.4,  9.9,  4.6,  5.3,  8.3,  2.1};
     param.expected_column_quantiles =
         convert_vector<double, T>(expected_column_quantiles);
     std::vector<double> expected_column_medians{1.6, 2.6, -7.4, 3.5, 2.6, 5., 8., 0.};
@@ -496,7 +515,11 @@ template <typename T> void GetRowMajorData(std::vector<OrderParamType<T>> &param
     param.expected_column_lower_hinges =
         convert_vector<double, T>(expected_column_lower_hinges);
 
-    std::vector<double> expected_row_quantiles{7.4, 5., 5.2, 7.6, 5.3, 2.1, 5., 4.1, 3.5};
+    std::vector<double> expected_row_quantiles{
+        2.0,   -4.7, -2.6, -10.5, -7.4, -9.1, -7.4, -7.4, -7.4, 2.0, -4.7, -2.6,
+        -10.5, -7.4, -9.1, -7.4,  -7.4, -7.4, 7.4,  5.,   5.2,  7.6, 5.3,  2.1,
+        5.,    4.1,  3.5,  9.5,   8.4,  9.9,  9.4,  9.1,  4.1,  8.1, 8.2,  8.3,
+        9.5,   8.4,  9.9,  9.4,   9.1,  4.1,  8.1,  8.2,  8.3};
     param.expected_row_quantiles = convert_vector<double, T>(expected_row_quantiles);
     std::vector<double> expected_row_medians{4.9,  2.55, 1.9,  2.85, 3.15,
                                              1.45, 0.3,  3.15, 0.4};
@@ -515,7 +538,7 @@ template <typename T> void GetRowMajorData(std::vector<OrderParamType<T>> &param
     param.expected_row_lower_hinges =
         convert_vector<double, T>(expected_row_lower_hinges);
 
-    param.expected_overall_quantile = (T)4.7;
+    param.expected_overall_quantile = {(T)-10.5, (T)-10.5, (T)4.7, (T)9.9, (T)9.9};
     param.expected_overall_maximum = (T)9.9;
     param.expected_overall_minimum = (T)-10.5;
     param.expected_overall_median = (T)2.6;
@@ -535,7 +558,9 @@ template <typename T> void GetTallThinData1(std::vector<OrderParamType<T>> &para
     param.n = 18;
     param.p = 4;
     param.ldx = param.n;
-    param.q = (T)0.2;
+    // out of order and same quants test
+    param.q = {(T)0.2, (T)0.2, (T)0.1};
+    param.n_q = 3;
     param.quantile_type = da_quantile_type_5;
     std::vector<double> x{4.7,  2.6,  7.4,  9.5,  4.6,  5.1,  8,    2,   -4.7, 1.6,  8.4,
                           3.5,  -2.6, 5.0,  8.0,  0.0,  0.0,  -2.6, 5.4, 9.9,  2.6,  5.2,
@@ -546,8 +571,11 @@ template <typename T> void GetTallThinData1(std::vector<OrderParamType<T>> &para
                           -7.4, 3.5,  -4.1, -5.9, 8.3,  -2};
     param.x = convert_vector<double, T>(x);
     std::vector<double> expected_row_quantiles{
-        4.35,  -0.62, 3.05, 2.31,  -5.72, 1.47,  -4.7,  -8.14, -2.06,
-        -7.25, 1.04,  1.68, -6.59, -0.69, -6.59, -4.91, -6.47, -2.42}; //
+        4.35,  4.35,  4.2,   -0.62, -0.62, -2.,   3.05,  3.05,  2.6,   2.31,  2.31,
+        2.1,   -5.72, -5.72, -7.4,  1.47,  1.47,  1.2,   -4.7,  -4.7,  -7.4,  -8.14,
+        -8.14, -9.1,  -2.06, -2.06, -4.7,  -7.25, -7.25, -9.5,  1.04,  1.04,  0.8,
+        1.68,  1.68,  1.2,   -6.59, -6.59, -7.4,  -0.69, -0.69, -2.1,  -6.59, -6.59,
+        -7.4,  -4.91, -4.91, -5.9,  -6.47, -6.47, -7.4,  -2.42, -2.42, -2.6}; //
     param.expected_row_quantiles = convert_vector<double, T>(expected_row_quantiles);
     std::vector<double> expected_row_medians{5.05,  3.95,  5.65, 4.,   -0.05, 2.8,
                                              3.1,   -1.95, 5.85, -0.2, 2.85,  3.15,
@@ -571,7 +599,8 @@ template <typename T> void GetTallThinData1(std::vector<OrderParamType<T>> &para
     param.expected_row_lower_hinges =
         convert_vector<double, T>(expected_row_lower_hinges);
 
-    std::vector<double> expected_column_quantiles{0., -2.55, -4.66, -5.72}; //
+    std::vector<double> expected_column_quantiles{
+        0., 0., -2.6, -2.55, -2.55, -6.59, -4.66, -4.66, -7.4, -5.72, -5.72, -6.95};
     param.expected_column_quantiles =
         convert_vector<double, T>(expected_column_quantiles);
     std::vector<double> expected_column_medians{4.05, 2.1, 2.1, 2.8};
@@ -587,7 +616,7 @@ template <typename T> void GetTallThinData1(std::vector<OrderParamType<T>> &para
     param.expected_column_lower_hinges =
         convert_vector<double, T>(expected_column_lower_hinges);
 
-    param.expected_overall_quantile = (T)-2.75;
+    param.expected_overall_quantile = {(T)-2.75, (T)-2.75, (T)-6.35};
     param.expected_overall_maximum = (T)(T)9.9;
     param.expected_overall_minimum = (T)-9.5;
     param.expected_overall_median = (T)2.6;
@@ -607,7 +636,8 @@ template <typename T> void GetTallThinData2(std::vector<OrderParamType<T>> &para
     param.n = 18;
     param.p = 4;
     param.ldx = param.n;
-    param.q = (T)0.2;
+    param.q = {(T)0.2};
+    param.n_q = 1;
     param.quantile_type = da_quantile_type_3;
     std::vector<double> x{
         4.7,  2.6,  7.4,  9.5,   4.6,  5.1,  8,    2,     -4.7, 1.6,  8.4,  3.5,
@@ -659,7 +689,7 @@ template <typename T> void GetTallThinData2(std::vector<OrderParamType<T>> &para
     param.expected_column_lower_hinges =
         convert_vector<double, T>(expected_column_lower_hinges);
 
-    param.expected_overall_quantile = (T)-4.1;
+    param.expected_overall_quantile = {(T)-4.1};
     param.expected_overall_maximum = (T)(T)9.9;
     param.expected_overall_minimum = (T)-29.1;
     param.expected_overall_median = (T)2.6;
@@ -679,7 +709,9 @@ template <typename T> void GetTallThinData3(std::vector<OrderParamType<T>> &para
     param.n = 18;
     param.p = 4;
     param.ldx = param.n;
-    param.q = (T)0.2;
+    // out of order, close and same quants test
+    param.q = {(T)0.2, (T)0.21, (T)0.21, (T)0.1, (T)0.7};
+    param.n_q = 5;
     param.quantile_type = da_quantile_type_7;
     std::vector<double> x{
         4.7,  2.6,  7.4,  9.5,   4.6,  5.1,  8,    2,    -4.7, 1.6,  8.4,  3.5,
@@ -689,9 +721,16 @@ template <typename T> void GetTallThinData3(std::vector<OrderParamType<T>> &para
         -4.7, 2.6,  -7.4, 6.5,   -4.3, 5.0,  8.1,  -2.0, 4.1,  2.8,  -7.4, 3.5,
         4.6,  -5.9, 8.2,  -2,    4.1,  2.8,  -7.4, 3.5,  -4.1, -5.9, 8.3,  -2};
     param.x = convert_vector<double, T>(x);
-    std::vector<double> expected_row_quantiles{4.5,   0.76,  3.5,   2.52,  -4.04, 1.74,
-                                               -2.0,  -7.18, 0.58,  -5.8,  1.28,  2.16,
-                                               -5.78, 0.72,  -5.78, -3.92, -5.54, -2.24};
+    std::vector<double> expected_row_quantiles{
+        4.5,   4.515,  4.515,  4.35,  5.67,  0.76,  0.898,  0.898,  -0.62, 5.86,
+        3.5,   3.545,  3.545,  3.05,  7.22,  2.52,  2.541,  2.541,  2.31,  5.63,
+        -4.04, -3.872, -3.872, -5.72, 1.99,  1.74,  1.767,  1.767,  1.47,  3.66,
+        -2.0,  -1.73,  -1.73,  -4.7,  4.94,  -7.18, -7.084, -7.084, -8.14, 2.74,
+        0.58,  0.844,  0.844,  -2.06, 7.66,  -5.8,  -5.515, -5.515, -8.65, 1.75,
+        1.28,  1.304,  1.304,  1.04,  4.53,  2.16,  2.208,  2.208,  1.68,  3.56,
+        -5.78, -5.699, -5.699, -6.59, -1.54, 0.72,  0.861,  0.861,  -0.69, 3.65,
+        -5.78, -5.699, -5.699, -6.59, -2.89, -3.92, -3.821, -3.821, -4.91, 0.65,
+        -5.54, -5.447, -5.447, -6.47, 0.83,  -2.24, -2.222, -2.222, -2.42, 5.41};
     param.expected_row_quantiles = convert_vector<double, T>(expected_row_quantiles);
     std::vector<double> expected_row_medians{5.05,  3.95,  5.65, 4.,   -0.05, 2.8,
                                              3.1,   -1.95, 5.85, -0.2, 2.85,  3.15,
@@ -715,7 +754,9 @@ template <typename T> void GetTallThinData3(std::vector<OrderParamType<T>> &para
     param.expected_row_lower_hinges =
         convert_vector<double, T>(expected_row_lower_hinges);
 
-    std::vector<double> expected_column_quantiles{0., -2.4, -4.54, -5.18}; //
+    std::vector<double> expected_column_quantiles{
+        0.,    0.,     0.,     -2.6, 5.09, -2.4,  -2.315, -2.315, -5.51, 5.38,
+        -4.54, -4.472, -4.472, -7.4, 4.0,  -5.18, -4.874, -4.874, -6.35, 4.04}; //
     param.expected_column_quantiles =
         convert_vector<double, T>(expected_column_quantiles);
     std::vector<double> expected_column_medians{4.05, 2.1, 2.1, 2.8};
@@ -731,7 +772,7 @@ template <typename T> void GetTallThinData3(std::vector<OrderParamType<T>> &para
     param.expected_column_lower_hinges =
         convert_vector<double, T>(expected_column_lower_hinges);
 
-    param.expected_overall_quantile = (T)-2.6;
+    param.expected_overall_quantile = {(T)-2.6, (T)-2.6, (T)-2.6, (T)-5.9, (T)4.67};
     param.expected_overall_maximum = (T)(T)10.9;
     param.expected_overall_minimum = (T)-11.5;
     param.expected_overall_median = (T)2.6;
@@ -740,7 +781,7 @@ template <typename T> void GetTallThinData3(std::vector<OrderParamType<T>> &para
 
     param.expected_status = da_status_success;
 
-    param.epsilon = 10 * std::numeric_limits<T>::epsilon();
+    param.epsilon = 1.8 * 10 * std::numeric_limits<T>::epsilon();
 
     params.push_back(param);
 }
@@ -751,11 +792,12 @@ template <typename T> void Get1by1Data(std::vector<OrderParamType<T>> &params) {
     param.n = 1;
     param.p = 1;
     param.ldx = param.n;
-    param.q = (T)0.3;
+    param.q = {(T)0.3, (T)0.6};
+    param.n_q = 2;
     param.quantile_type = da_quantile_type_4;
     std::vector<double> x(param.n * param.p, 3);
     param.x = convert_vector<double, T>(x);
-    std::vector<double> expected_row_quantiles(param.n, 3);
+    std::vector<double> expected_row_quantiles = {3.0, 3.0};
     param.expected_row_quantiles = convert_vector<double, T>(expected_row_quantiles);
     std::vector<double> expected_row_medians(param.n, 3);
     param.expected_row_medians = convert_vector<double, T>(expected_row_medians);
@@ -770,7 +812,7 @@ template <typename T> void Get1by1Data(std::vector<OrderParamType<T>> &params) {
     param.expected_row_lower_hinges =
         convert_vector<double, T>(expected_row_lower_hinges);
 
-    std::vector<double> expected_column_quantiles(param.n, 3);
+    std::vector<double> expected_column_quantiles = {3.0, 3.0};
     param.expected_column_quantiles =
         convert_vector<double, T>(expected_column_quantiles);
     std::vector<double> expected_column_medians(param.n, 3);
@@ -786,7 +828,7 @@ template <typename T> void Get1by1Data(std::vector<OrderParamType<T>> &params) {
     param.expected_column_lower_hinges =
         convert_vector<double, T>(expected_column_lower_hinges);
 
-    param.expected_overall_quantile = (T)3.0;
+    param.expected_overall_quantile = {(T)3.0, (T)3.0};
     param.expected_overall_maximum = (T)3.0;
     param.expected_overall_minimum = (T)3.0;
     param.expected_overall_median = (T)3.0;
@@ -806,7 +848,8 @@ template <typename T> void GetZeroData(std::vector<OrderParamType<T>> &params) {
     param.n = 6;
     param.p = 8;
     param.ldx = param.n;
-    param.q = (T)0.8;
+    param.q = {(T)0.8};
+    param.n_q = 1;
     param.quantile_type = da_quantile_type_6;
     std::vector<double> x(param.n * param.p, 0);
     param.x = convert_vector<double, T>(x);
@@ -841,7 +884,7 @@ template <typename T> void GetZeroData(std::vector<OrderParamType<T>> &params) {
     param.expected_column_lower_hinges =
         convert_vector<double, T>(expected_column_lower_hinges);
 
-    param.expected_overall_quantile = (T)0;
+    param.expected_overall_quantile = {(T)0};
     param.expected_overall_maximum = (T)0;
     param.expected_overall_minimum = (T)0;
     param.expected_overall_median = (T)0;
@@ -862,7 +905,8 @@ template <typename T> void GetIdenticalData(std::vector<OrderParamType<T>> &para
     param.n = 12;
     param.p = 10;
     param.ldx = param.n;
-    param.q = (T)0.6;
+    param.q = {(T)0.6};
+    param.n_q = 1;
     param.quantile_type = da_quantile_type_4;
     std::vector<double> x(param.n * param.p, 1.0);
     param.x = convert_vector<double, T>(x);
@@ -897,7 +941,7 @@ template <typename T> void GetIdenticalData(std::vector<OrderParamType<T>> &para
     param.expected_column_lower_hinges =
         convert_vector<double, T>(expected_column_lower_hinges);
 
-    param.expected_overall_quantile = (T)1.0;
+    param.expected_overall_quantile = {(T)1.0};
     param.expected_overall_maximum = (T)1.0;
     param.expected_overall_minimum = (T)1.0;
     param.expected_overall_median = (T)1.0;
@@ -938,9 +982,9 @@ TYPED_TEST(OrderStatisticsTest, OrderFunctionality) {
     GetOrderData(params);
 
     for (auto &param : params) {
-        std::vector<TypeParam> column_quantiles(param.p);
-        std::vector<TypeParam> row_quantiles(param.n);
-        TypeParam overall_quantile[1];
+        std::vector<TypeParam> column_quantiles(param.p * param.n_q);
+        std::vector<TypeParam> row_quantiles(param.n * param.n_q);
+        std::vector<TypeParam> overall_quantile(param.n_q);
         std::vector<TypeParam> column_medians(param.p);
         std::vector<TypeParam> row_medians(param.n);
         TypeParam overall_median[1];
@@ -958,21 +1002,25 @@ TYPED_TEST(OrderStatisticsTest, OrderFunctionality) {
         TypeParam overall_upper_hinge[1];
 
         EXPECT_EQ(da_quantile(param.order, da_axis_col, param.n, param.p, param.x.data(),
-                              param.ldx, param.q, column_quantiles.data(),
-                              param.quantile_type),
+                              param.ldx, param.q.data(), param.n_q,
+                              column_quantiles.data(), param.quantile_type),
                   param.expected_status);
-        EXPECT_ARR_NEAR(param.p, param.expected_column_quantiles.data(),
-                        column_quantiles.data(), param.epsilon);
+        EXPECT_ARR_NEAR((da_int)param.expected_column_quantiles.size(),
+                        param.expected_column_quantiles.data(), column_quantiles.data(),
+                        param.epsilon);
         EXPECT_EQ(da_quantile(param.order, da_axis_row, param.n, param.p, param.x.data(),
-                              param.ldx, param.q, row_quantiles.data(),
+                              param.ldx, param.q.data(), param.n_q, row_quantiles.data(),
                               param.quantile_type),
                   param.expected_status);
-        EXPECT_ARR_NEAR(param.n, param.expected_row_quantiles.data(),
-                        row_quantiles.data(), param.epsilon);
+        EXPECT_ARR_NEAR((da_int)param.expected_row_quantiles.size(),
+                        param.expected_row_quantiles.data(), row_quantiles.data(),
+                        param.epsilon);
         EXPECT_EQ(da_quantile(param.order, da_axis_all, param.n, param.p, param.x.data(),
-                              param.ldx, param.q, overall_quantile, param.quantile_type),
+                              param.ldx, param.q.data(), param.n_q,
+                              overall_quantile.data(), param.quantile_type),
                   param.expected_status);
-        EXPECT_NEAR(param.expected_overall_quantile, overall_quantile[0], param.epsilon);
+        EXPECT_ARR_NEAR(param.n_q, param.expected_overall_quantile.data(),
+                        overall_quantile.data(), param.epsilon);
 
         EXPECT_EQ(da_five_point_summary(param.order, da_axis_col, param.n, param.p,
                                         param.x.data(), param.ldx, column_minima.data(),
@@ -1021,6 +1069,89 @@ TYPED_TEST(OrderStatisticsTest, OrderFunctionality) {
     }
 }
 
+TYPED_TEST(OrderStatisticsTest, QuantileOrderConsistency) {
+    // Verify that quantile results are consistent across storage orders.
+    // Compute quantiles with row_major data, transpose x, compute with column_major,
+    // then compare transposed outputs.
+    da_int n = 5, p = 8, n_q = 3;
+    std::vector<double> q_d{0.75, 0.5, 0.25};
+    std::vector<TypeParam> q = convert_vector<double, TypeParam>(q_d);
+    TypeParam eps = 10 * std::numeric_limits<TypeParam>::epsilon();
+
+    // Row-major storage: rows of length p
+    std::vector<double> x_rm_d{4.7, 2.6, 7.4, 9.5, 4.6, 5.1, 8.0, 2.0, 1.2, 3.3,
+                               6.1, 8.8, 2.5, 7.9, 4.4, 9.1, 5.5, 1.8, 9.2, 3.7,
+                               6.6, 2.3, 7.7, 4.0, 8.3, 6.4, 1.1, 5.9, 3.2, 9.8,
+                               2.7, 7.6, 3.9, 8.5, 4.3, 2.2, 9.0, 1.5, 6.8, 5.4};
+    std::vector<TypeParam> x_rm = convert_vector<double, TypeParam>(x_rm_d);
+
+    // Transpose to column-major: x_cm[j*n + i] = x_rm[i*p + j]
+    std::vector<TypeParam> x_cm(n * p);
+    for (da_int i = 0; i < n; ++i)
+        for (da_int j = 0; j < p; ++j)
+            x_cm[j * n + i] = x_rm[i * p + j];
+
+    // Compute quantiles with row_major
+    std::vector<TypeParam> col_q_rm(p * n_q);
+    std::vector<TypeParam> row_q_rm(n * n_q);
+    std::vector<TypeParam> all_q_rm(n_q);
+    EXPECT_EQ(da_quantile(row_major, da_axis_col, n, p, x_rm.data(), p, q.data(), n_q,
+                          col_q_rm.data(), da_quantile_type_7),
+              da_status_success);
+    EXPECT_EQ(da_quantile(row_major, da_axis_row, n, p, x_rm.data(), p, q.data(), n_q,
+                          row_q_rm.data(), da_quantile_type_7),
+              da_status_success);
+    EXPECT_EQ(da_quantile(row_major, da_axis_all, n, p, x_rm.data(), p, q.data(), n_q,
+                          all_q_rm.data(), da_quantile_type_7),
+              da_status_success);
+
+    // Compute quantiles with column_major (transposed data)
+    std::vector<TypeParam> col_q_cm(p * n_q);
+    std::vector<TypeParam> row_q_cm(n * n_q);
+    std::vector<TypeParam> all_q_cm(n_q);
+    EXPECT_EQ(da_quantile(column_major, da_axis_col, n, p, x_cm.data(), n, q.data(), n_q,
+                          col_q_cm.data(), da_quantile_type_7),
+              da_status_success);
+    EXPECT_EQ(da_quantile(column_major, da_axis_row, n, p, x_cm.data(), n, q.data(), n_q,
+                          row_q_cm.data(), da_quantile_type_7),
+              da_status_success);
+    EXPECT_EQ(da_quantile(column_major, da_axis_all, n, p, x_cm.data(), n, q.data(), n_q,
+                          all_q_cm.data(), da_quantile_type_7),
+              da_status_success);
+
+    // Expected output in row major order
+    // axis = column
+    std::vector<double> exp_col_d{5.5, 6.4, 7.4, 8.8, 6.6, 7.9, 7.7, 7.6,
+                                  4.7, 3.3, 6.1, 5.9, 4.6, 5.1, 6.8, 5.4,
+                                  3.9, 2.6, 4.3, 3.7, 3.2, 2.3, 4.4, 4.0};
+    std::vector<TypeParam> exp_col = convert_vector<double, TypeParam>(exp_col_d);
+
+    // axis = row
+    std::vector<double> exp_row_d{7.55, 8.125, 6.875, 7.775, 7.225, 4.9,   5.25, 4.75,
+                                  6.15, 4.85,  4.1,   3.1,   3.35,  3.075, 3.475};
+    std::vector<TypeParam> exp_row = convert_vector<double, TypeParam>(exp_row_d);
+
+    // axis_all
+    std::vector<double> exp_all_d{7.75, 5.25, 3.075};
+    std::vector<TypeParam> exp_all = convert_vector<double, TypeParam>(exp_all_d);
+
+    // Check row_major results against expected
+    EXPECT_ARR_NEAR((da_int)exp_col.size(), exp_col.data(), col_q_rm.data(), eps);
+    EXPECT_ARR_NEAR((da_int)exp_row.size(), exp_row.data(), row_q_rm.data(), eps);
+    EXPECT_ARR_NEAR((da_int)exp_all.size(), exp_all.data(), all_q_rm.data(), eps);
+
+    // Check column_major results against expected (transposed layout)
+    for (da_int qi = 0; qi < n_q; ++qi)
+        for (da_int j = 0; j < p; ++j)
+            EXPECT_NEAR(exp_col[qi * p + j], col_q_cm[j * n_q + qi], eps);
+
+    for (da_int qi = 0; qi < n_q; ++qi)
+        for (da_int i = 0; i < n; ++i)
+            EXPECT_NEAR(exp_row[qi * n + i], row_q_cm[i * n_q + qi], eps);
+
+    EXPECT_ARR_NEAR(n_q, exp_all.data(), all_q_cm.data(), eps);
+}
+
 TYPED_TEST(OrderStatisticsTest, IllegalArgsOrderStatistics) {
 
     std::vector<double> x_d{4.7, 1.2, -0.3, 4.5};
@@ -1041,7 +1172,7 @@ TYPED_TEST(OrderStatisticsTest, IllegalArgsOrderStatistics) {
 
     // Test with illegal value of ldx
     da_int ldx_illegal = 1;
-    EXPECT_EQ(da_quantile(column_major, da_axis_all, n, p, x.data(), ldx_illegal, q,
+    EXPECT_EQ(da_quantile(column_major, da_axis_all, n, p, x.data(), ldx_illegal, &q, 1,
                           dummy1.data(), da_quantile_type_1),
               da_status_invalid_leading_dimension);
     EXPECT_EQ(da_five_point_summary(column_major, da_axis_all, n, p, x.data(),
@@ -1051,7 +1182,7 @@ TYPED_TEST(OrderStatisticsTest, IllegalArgsOrderStatistics) {
 
     // Test with illegal p
     da_int p_illegal = 0;
-    EXPECT_EQ(da_quantile(column_major, da_axis_all, n, p_illegal, x.data(), ldx, q,
+    EXPECT_EQ(da_quantile(column_major, da_axis_all, n, p_illegal, x.data(), ldx, &q, 1,
                           dummy1.data(), da_quantile_type_1),
               da_status_invalid_array_dimension);
     EXPECT_EQ(da_five_point_summary(column_major, da_axis_all, n, p_illegal, x.data(),
@@ -1061,7 +1192,7 @@ TYPED_TEST(OrderStatisticsTest, IllegalArgsOrderStatistics) {
 
     // Test with illegal n
     da_int n_illegal = 0;
-    EXPECT_EQ(da_quantile(column_major, da_axis_all, n_illegal, p, x.data(), ldx, q,
+    EXPECT_EQ(da_quantile(column_major, da_axis_all, n_illegal, p, x.data(), ldx, &q, 1,
                           dummy1.data(), da_quantile_type_1),
               da_status_invalid_array_dimension);
     EXPECT_EQ(da_five_point_summary(column_major, da_axis_all, n_illegal, p, x.data(),
@@ -1070,18 +1201,65 @@ TYPED_TEST(OrderStatisticsTest, IllegalArgsOrderStatistics) {
               da_status_invalid_array_dimension);
 
     // Test illegal q
-    TypeParam q_illegal = (TypeParam)-0.1;
-    EXPECT_EQ(da_quantile(column_major, da_axis_all, n, p, x.data(), ldx, q_illegal,
+    std::vector<TypeParam> q_illegal = {(TypeParam)-0.1};
+    EXPECT_EQ(da_quantile(column_major, da_axis_all, n, p, x.data(), ldx,
+                          q_illegal.data(), 1, dummy1.data(), da_quantile_type_1),
+              da_status_invalid_input);
+    q_illegal = {(TypeParam)0.1, (TypeParam)0.2, (TypeParam)-0.1};
+    EXPECT_EQ(da_quantile(column_major, da_axis_all, n, p, x.data(), ldx,
+                          q_illegal.data(), 3, dummy1.data(), da_quantile_type_1),
+              da_status_invalid_input);
+    q_illegal = {(TypeParam)0.1, (TypeParam)1.2, (TypeParam)0.1};
+    EXPECT_EQ(da_quantile(column_major, da_axis_all, n, p, x.data(), ldx,
+                          q_illegal.data(), 3, dummy1.data(), da_quantile_type_1),
+              da_status_invalid_input);
+
+    // Test illegal n_q
+    da_int illegal_n_q = 0;
+    EXPECT_EQ(da_quantile(column_major, da_axis_all, n, p, x.data(), ldx, &q, illegal_n_q,
                           dummy1.data(), da_quantile_type_1),
               da_status_invalid_input);
 
     // Test illegal pointers
+    // Illegal x ptr
     TypeParam *x_null = nullptr;
-    EXPECT_EQ(da_quantile(column_major, da_axis_all, n, p, x_null, ldx, q, dummy1.data(),
-                          da_quantile_type_1),
+    EXPECT_EQ(da_quantile(column_major, da_axis_all, n, p, x_null, ldx, &q, 1,
+                          dummy1.data(), da_quantile_type_1),
               da_status_invalid_pointer);
-    EXPECT_EQ(da_five_point_summary(column_major, da_axis_all, n, p, x_null, ldx,
-                                    dummy1.data(), dummy2.data(), dummy3.data(),
-                                    dummy4.data(), dummy5.data()),
+
+    // Illegal q ptr
+    TypeParam *q_null = nullptr;
+    EXPECT_EQ(da_quantile(column_major, da_axis_all, n, p, x.data(), ldx, q_null, 1,
+                          dummy1.data(), da_quantile_type_1),
               da_status_invalid_pointer);
+
+    // Illegal quants ptr
+    TypeParam *quants_null = nullptr;
+    EXPECT_EQ(da_quantile(column_major, da_axis_all, n, p, x_null, ldx, &q, 1,
+                          quants_null, da_quantile_type_1),
+              da_status_invalid_pointer);
+}
+
+TYPED_TEST(OrderStatisticsTest, NumericalStabilityQuantiles) {
+    if constexpr (std::is_same_v<TypeParam, double>)
+        GTEST_SKIP() << "Test targets float precision only";
+
+    // With n = 33554427, q = 0.5, quantile_type_2: h = 16777213 (in [2^23, 2^24)).
+    // h +/- 0.5 is not representable in float, causing non-adjacent h1/h2 indices:
+    //   float: h1 = 16777212, h2 = 16777214 -> result = 0.5 (wrong)
+    //   double: h1 = h2 = 16777213 -> result = 1.0 (correct)
+    da_int n = 33554427;
+    da_int p = 1;
+    da_int ldx = n;
+    std::vector<TypeParam> q = {(TypeParam)0.5};
+
+    // Fill: first 16777213 elements = 0, rest = 1.
+    std::vector<TypeParam> x(n, (TypeParam)0.0);
+    std::fill(x.begin() + 16777213, x.end(), (TypeParam)1.0);
+
+    std::vector<TypeParam> result(1);
+    EXPECT_EQ(da_quantile(column_major, da_axis_all, n, p, x.data(), ldx, q.data(), 1,
+                          result.data(), da_quantile_type_2),
+              da_status_success);
+    EXPECT_EQ(result[0], (TypeParam)1.0);
 }

@@ -1,5 +1,5 @@
 /* ************************************************************************
- * Copyright (c) 2024-2025 Advanced Micro Devices, Inc.
+ * Copyright (c) 2024-2026 Advanced Micro Devices, Inc.
  *
  * Permission is hereby granted, free of charge, to any person obtaining a copy
  * of this software and associated documentation files (the "Software"), to deal
@@ -31,37 +31,23 @@
 
 da_errors::error_bypass_t *nosave_utils(nullptr);
 
-da_status da_check_data_d(da_order order, da_int n_rows, da_int n_cols, const double *X,
-                          da_int ldx) {
+template <typename T>
+da_status da_check_data(da_order order, da_int n_rows, da_int n_cols, const T *X,
+                        da_int ldx) {
     DISPATCHER(nosave_utils,
                return (da_utils::check_data(order, n_rows, n_cols, X, ldx)));
 }
 
-da_status da_check_data_s(da_order order, da_int n_rows, da_int n_cols, const float *X,
-                          da_int ldx) {
-    DISPATCHER(nosave_utils,
-               return (da_utils::check_data(order, n_rows, n_cols, X, ldx)));
-}
-
-da_status da_switch_order_copy_d(da_order order, da_int n_rows, da_int n_cols,
-                                 const double *X, da_int ldx, double *Y, da_int ldy) {
-    DISPATCHER(nosave_utils, return (da_utils::switch_order_copy(order, n_rows, n_cols, X,
-                                                                 ldx, Y, ldy)));
-}
-da_status da_switch_order_copy_s(da_order order, da_int n_rows, da_int n_cols,
-                                 const float *X, da_int ldx, float *Y, da_int ldy) {
+template <typename T>
+da_status da_switch_order_copy(da_order order, da_int n_rows, da_int n_cols, const T *X,
+                               da_int ldx, T *Y, da_int ldy) {
     DISPATCHER(nosave_utils, return (da_utils::switch_order_copy(order, n_rows, n_cols, X,
                                                                  ldx, Y, ldy)));
 }
 
-da_status da_switch_order_in_place_d(da_order order_X_in, da_int n_rows, da_int n_cols,
-                                     double *X, da_int ldx_in, da_int ldx_out) {
-    DISPATCHER(nosave_utils, return (da_utils::switch_order_in_place(
-                                 order_X_in, n_rows, n_cols, X, ldx_in, ldx_out)));
-}
-
-da_status da_switch_order_in_place_s(da_order order_X_in, da_int n_rows, da_int n_cols,
-                                     float *X, da_int ldx_in, da_int ldx_out) {
+template <typename T>
+da_status da_switch_order_in_place(da_order order_X_in, da_int n_rows, da_int n_cols,
+                                   T *X, da_int ldx_in, da_int ldx_out) {
     DISPATCHER(nosave_utils, return (da_utils::switch_order_in_place(
                                  order_X_in, n_rows, n_cols, X, ldx_in, ldx_out)));
 }
@@ -104,11 +90,19 @@ da_status da_get_arch_info(da_int *len = nullptr, char *arch = nullptr,
         Arch = "generic_avx512";
         break;
     case zen2:
+        Arch = "zen2";
+        break;
     case zen3:
+        Arch = "zen3";
+        break;
     case zen4:
+        Arch = "zen4";
+        break;
     case zen5:
-        // assuming ->arch matches with zen generation...
-        Arch = "zen" + std::to_string(context::get_context()->arch);
+        Arch = "zen5";
+        break;
+    case zen6:
+        Arch = "zen6";
         break;
     default:
         // Probably new zen model
@@ -132,52 +126,20 @@ da_status da_get_arch_info(da_int *len = nullptr, char *arch = nullptr,
     return da_status_success;
 }
 
-da_status da_get_shuffled_indices_int(da_int m, da_int seed, da_int train_size,
-                                      da_int test_size, da_int fp_precision,
-                                      const da_int *classes, da_int *shuffle_array) {
+template <typename T>
+da_status da_get_shuffled_indices(da_int m, da_int seed, da_int train_size,
+                                  da_int test_size, da_int fp_precision, const T *classes,
+                                  da_int *shuffle_array) {
     DISPATCHER(nosave_utils, return (da_utils::get_shuffled_indices(
                                  m, seed, train_size, test_size, fp_precision, classes,
                                  shuffle_array)));
 }
 
-da_status da_get_shuffled_indices_s(da_int m, da_int seed, da_int train_size,
-                                    da_int test_size, da_int fp_precision,
-                                    const float *classes, da_int *shuffle_array) {
-    DISPATCHER(nosave_utils, return (da_utils::get_shuffled_indices(
-                                 m, seed, train_size, test_size, fp_precision, classes,
-                                 shuffle_array)));
-}
-
-da_status da_get_shuffled_indices_d(da_int m, da_int seed, da_int train_size,
-                                    da_int test_size, da_int fp_precision,
-                                    const double *classes, da_int *shuffle_array) {
-    DISPATCHER(nosave_utils, return (da_utils::get_shuffled_indices(
-                                 m, seed, train_size, test_size, fp_precision, classes,
-                                 shuffle_array)));
-}
-
-da_status da_train_test_split_int(da_order order, da_int m, da_int n, const da_int *X,
-                                  da_int ldx, da_int train_size, da_int test_size,
-                                  const da_int *shuffle_array, da_int *X_train,
-                                  da_int ldx_train, da_int *X_test, da_int ldx_test) {
-    DISPATCHER(nosave_utils, return (da_utils::train_test_split(
-                                 order, m, n, X, ldx, train_size, test_size,
-                                 shuffle_array, X_train, ldx_train, X_test, ldx_test)));
-}
-
-da_status da_train_test_split_s(da_order order, da_int m, da_int n, const float *X,
-                                da_int ldx, da_int train_size, da_int test_size,
-                                const da_int *shuffle_array, float *X_train,
-                                da_int ldx_train, float *X_test, da_int ldx_test) {
-    DISPATCHER(nosave_utils, return (da_utils::train_test_split(
-                                 order, m, n, X, ldx, train_size, test_size,
-                                 shuffle_array, X_train, ldx_train, X_test, ldx_test)));
-}
-
-da_status da_train_test_split_d(da_order order, da_int m, da_int n, const double *X,
-                                da_int ldx, da_int train_size, da_int test_size,
-                                const da_int *shuffle_array, double *X_train,
-                                da_int ldx_train, double *X_test, da_int ldx_test) {
+template <typename T>
+da_status da_train_test_split(da_order order, da_int m, da_int n, const T *X, da_int ldx,
+                              da_int train_size, da_int test_size,
+                              const da_int *shuffle_array, T *X_train, da_int ldx_train,
+                              T *X_test, da_int ldx_test) {
     DISPATCHER(nosave_utils, return (da_utils::train_test_split(
                                  order, m, n, X, ldx, train_size, test_size,
                                  shuffle_array, X_train, ldx_train, X_test, ldx_test)));
@@ -256,3 +218,42 @@ da_status da_debug_get(const char *key, da_int lvalue, char *value) {
     value[len] = '\0'; // null-terminate
     return da_status_success;
 }
+
+da_status da_print_model_metadata(const char *filename) {
+    if (filename == nullptr)
+        return da_status_invalid_pointer;
+
+    std::string filename_str{filename};
+    return da_model_persistence::print_model_metadata(filename_str);
+};
+
+da_status da_print_model_metadata(const std::vector<char> &file_data) {
+    return da_model_persistence::print_model_metadata(file_data);
+};
+
+template da_status da_check_data<float>(da_order, da_int, da_int, const float *, da_int);
+template da_status da_check_data<double>(da_order, da_int, da_int, const double *,
+                                         da_int);
+template da_status da_switch_order_copy<float>(da_order, da_int, da_int, const float *,
+                                               da_int, float *, da_int);
+template da_status da_switch_order_copy<double>(da_order, da_int, da_int, const double *,
+                                                da_int, double *, da_int);
+template da_status da_switch_order_in_place<float>(da_order, da_int, da_int, float *,
+                                                   da_int, da_int);
+template da_status da_switch_order_in_place<double>(da_order, da_int, da_int, double *,
+                                                    da_int, da_int);
+template da_status da_get_shuffled_indices<float>(da_int, da_int, da_int, da_int, da_int,
+                                                  const float *, da_int *);
+template da_status da_get_shuffled_indices<double>(da_int, da_int, da_int, da_int, da_int,
+                                                   const double *, da_int *);
+template da_status da_get_shuffled_indices<da_int>(da_int, da_int, da_int, da_int, da_int,
+                                                   const da_int *, da_int *);
+template da_status da_train_test_split<float>(da_order, da_int, da_int, const float *,
+                                              da_int, da_int, da_int, const da_int *,
+                                              float *, da_int, float *, da_int);
+template da_status da_train_test_split<double>(da_order, da_int, da_int, const double *,
+                                               da_int, da_int, da_int, const da_int *,
+                                               double *, da_int, double *, da_int);
+template da_status da_train_test_split<da_int>(da_order, da_int, da_int, const da_int *,
+                                               da_int, da_int, da_int, const da_int *,
+                                               da_int *, da_int, da_int *, da_int);

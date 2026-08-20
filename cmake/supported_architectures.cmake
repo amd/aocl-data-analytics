@@ -53,15 +53,23 @@ function(extract_native_namespace NATIVE_NAMESPACE)
     set(NATIVE_NAMESPACE
         "generic_avx512"
         PARENT_SCOPE)
-    message(
-      WARNING
-        "Unable to find native Zen architecture but AVX-512 detected; using generic AVX-512 build."
-    )
+    get_property(_arch_notice_shown GLOBAL PROPERTY _NATIVE_ARCH_NOTICE_SHOWN)
+    if(NOT _arch_notice_shown)
+      set_property(GLOBAL PROPERTY _NATIVE_ARCH_NOTICE_SHOWN TRUE)
+      message(
+        WARNING
+          "Unable to find native Zen architecture but AVX-512 detected; using generic AVX-512 build."
+      )
+    endif()
   else()
-    message(
-      WARNING
-        "Architecture is either non-AMD or Zen 1 and AVX-512 not detected; defaulting to generic AVX2 build."
-    )
+    get_property(_arch_notice_shown GLOBAL PROPERTY _NATIVE_ARCH_NOTICE_SHOWN)
+    if(NOT _arch_notice_shown)
+      set_property(GLOBAL PROPERTY _NATIVE_ARCH_NOTICE_SHOWN TRUE)
+      message(
+        NOTICE
+          "Architecture is either non-AMD or pre-Zen 2 and AVX-512 not detected; defaulting to generic AVX2 build."
+      )
+    endif()
   endif()
 
 endfunction()
@@ -83,7 +91,7 @@ function(supported_architectures ARCHITECTURES DEFINITIONS)
   set(ARCH_TEMP generic generic_avx512)
   set(DEF_TEMP generic_AVAILABLE generic_avx512_AVAILABLE)
 
-  set(CANDIDATE_ARCHS znver2 znver3 znver4 znver5)
+  set(CANDIDATE_ARCHS znver2 znver3 znver4 znver5 znver6)
 
   foreach(arch IN LISTS CANDIDATE_ARCHS)
     check_cxx_compiler_flag("-march=${arch}" SUPPORTED_${arch})

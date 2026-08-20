@@ -15,7 +15,7 @@ tags
 '.*/[lL]icen[sc]e\.txt'
 '.*.rst'
 '.*.bib'
-'.*.md'
+'.*\.md'
 '.*.jinja'
 tools/pr\.html
 doc/Doxyfile
@@ -41,4 +41,6 @@ source/core/csv/char_to_num.hpp
 'python_interface/.pep8'
 'License'
 'Notices'
+'LICENSE'
+'NOTICE'
 '\.github/.*'

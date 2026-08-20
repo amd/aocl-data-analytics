@@ -52,6 +52,7 @@ extern "C" {
 #include "aoclda_pca.h"
 #include "aoclda_result.h"
 #include "aoclda_svm.h"
+#include "aoclda_tsne.h"
 #include "aoclda_types.h"
 #include "aoclda_utils.h"
 

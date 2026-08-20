@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2024-2025 Advanced Micro Devices, Inc. All rights reserved.
+ * Copyright (C) 2024-2026 Advanced Micro Devices, Inc. All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without modification,
  * are permitted provided that the following conditions are met:
@@ -29,11 +29,15 @@
 #include "aoclda_types.h"
 #include "da_cblas.hh"
 #include "da_error.hpp"
+#include "da_simd_math.hpp"
+#include "da_std.hpp"
 #include "da_syrk.hpp"
 #include "da_utils.hpp"
+#include "fp16_helpers.hpp"
 #include "macros.h"
 #include "pairwise_distances.hpp"
 #include <iostream>
+#include <type_traits>
 #include <vector>
 
 namespace ARCH {
@@ -63,7 +67,7 @@ void euclidean_gemm_distance(da_order order, da_int m, da_int n, da_int k, const
     // If needed, compute the squared norms of the rows of X and Y
     if (compute_X_norms == 2) {
         for (da_int i = 0; i < m; i++) {
-            X_norms[i] = 0.0;
+            X_norms[i] = (T)0.0;
         }
         if (order == column_major) {
             for (da_int j = 0; j < k; j++) {
@@ -82,7 +86,7 @@ void euclidean_gemm_distance(da_order order, da_int m, da_int n, da_int k, const
 
     if (compute_Y_norms == 2 && !(X_is_Y)) {
         for (da_int i = 0; i < n; i++) {
-            Y_norms[i] = 0.0;
+            Y_norms[i] = (T)0.0;
         }
         if (order == column_major) {
             for (da_int j = 0; j < k; j++) {
@@ -101,8 +105,8 @@ void euclidean_gemm_distance(da_order order, da_int m, da_int n, da_int k, const
 
     if (!X_is_Y) {
 
-        da_blas::cblas_gemm(cblas_order, CblasNoTrans, CblasTrans, m, n, k, -2.0, X, ldx,
-                            Y, ldy, 0.0, D, ldd);
+        da_blas::cblas_gemm(cblas_order, CblasNoTrans, CblasTrans, m, n, k, (T)-2.0, X,
+                            ldx, Y, ldy, (T)0.0, D, ldd);
 
         // A few different cases to check depending on the boolean inputs
         if (compute_X_norms > 0 && compute_Y_norms == 0) {
@@ -150,23 +154,32 @@ void euclidean_gemm_distance(da_order order, da_int m, da_int n, da_int k, const
         }
 
         if (!square) {
-            if (order == column_major) {
-                for (da_int j = 0; j < n; j++) {
-                    for (da_int i = 0; i < m; i++) {
-                        D[i + j * ldd] = std::sqrt(D[i + j * ldd]);
-                    }
+            if constexpr (std::is_same_v<T, _Float16>) {
+                if (order == column_major) {
+                    for (da_int j = 0; j < n; j++)
+                        for (da_int i = 0; i < m; i++)
+                            D[i + j * ldd] = da_std::sqrt(D[i + j * ldd]);
+                } else {
+                    for (da_int i = 0; i < m; i++)
+                        for (da_int j = 0; j < n; j++)
+                            D[i * ldd + j] = da_std::sqrt(D[i * ldd + j]);
                 }
             } else {
-                for (da_int i = 0; i < m; i++) {
-                    for (da_int j = 0; j < n; j++) {
-                        D[i * ldd + j] = std::sqrt(D[i * ldd + j]);
-                    }
+                if (order == column_major) {
+                    da_simd_math::sqrt_matrix(m, n, D, ldd);
+                } else {
+                    da_simd_math::sqrt_matrix(n, m, D, ldd);
                 }
             }
         }
     } else {
         // Special case when computing upper triangle of symmetric distance matrix
-        da_syrk(order, da_upper, da_no_trans, m, k, (T)-2.0, X, ldx, (T)0.0, D, ldd);
+        if constexpr (std::is_same_v<T, _Float16>) {
+            da_blas::cblas_gemm(cblas_order, CblasNoTrans, CblasTrans, m, m, k,
+                                (_Float16)-2.0, X, ldx, X, ldx, (_Float16)0.0, D, ldd);
+        } else {
+            da_syrk(order, da_upper, da_no_trans, m, k, (T)-2.0, X, ldx, (T)0.0, D, ldd);
+        }
 
         if (compute_X_norms) {
             if (order == column_major) {
@@ -188,20 +201,28 @@ void euclidean_gemm_distance(da_order order, da_int m, da_int n, da_int k, const
             if (order == column_major) {
                 for (da_int j = 0; j < m; j++) {
                     if (!square) {
-                        for (da_int i = 0; i < j; i++) {
-                            D[i + j * ldd] = std::sqrt(D[i + j * ldd]);
+                        if constexpr (std::is_same_v<T, _Float16>) {
+                            for (da_int idx = 0; idx < j; idx++)
+                                D[idx + j * ldd] = da_std::sqrt(D[idx + j * ldd]);
+                        } else {
+                            da_simd_math::sqrt_vec(D + j * ldd, j);
                         }
                     }
-                    D[j + j * ldd] = 0.0;
+                    D[j + j * ldd] = (T)0.0;
                 }
             } else {
-                for (da_int j = 0; j < m; j++) {
-                    if (!square) {
-                        for (da_int i = 0; i < j; i++) {
-                            D[i * ldd + j] = std::sqrt(D[i * ldd + j]);
+                for (da_int i = 0; i < m; i++) {
+                    da_int len = m - i - 1;
+                    if (len > 0 && !square) {
+                        if constexpr (std::is_same_v<T, _Float16>) {
+                            for (da_int idx = 0; idx < len; idx++)
+                                D[i * ldd + (i + 1) + idx] =
+                                    da_std::sqrt(D[i * ldd + (i + 1) + idx]);
+                        } else {
+                            da_simd_math::sqrt_vec(D + i * ldd + (i + 1), len);
                         }
                     }
-                    D[j + j * ldd] = 0.0;
+                    D[i * ldd + i] = (T)0.0;
                 }
             }
         }
@@ -222,6 +243,16 @@ template void euclidean_gemm_distance<double>(da_order order, da_int m, da_int n
                                               da_int compute_X_norms, double *Y_norms,
                                               da_int compute_Y_norms, bool square,
                                               bool X_is_Y);
+
+#ifdef __AVX512FP16__
+template void euclidean_gemm_distance<_Float16>(da_order order, da_int m, da_int n,
+                                                da_int k, const _Float16 *X, da_int ldx,
+                                                const _Float16 *Y, da_int ldy,
+                                                _Float16 *D, da_int ldd,
+                                                _Float16 *X_norms, da_int compute_X_norms,
+                                                _Float16 *Y_norms, da_int compute_Y_norms,
+                                                bool square, bool X_is_Y);
+#endif
 
 namespace da_metrics {
 namespace pairwise_distances {
@@ -279,6 +310,12 @@ template da_status euclidean_gemm<double>(da_order order, da_int m, da_int n, da
                                           const double *X, da_int ldx, const double *Y,
                                           da_int ldy, double *D, da_int ldd,
                                           bool square_distances);
+#ifdef __AVX512FP16__
+template da_status euclidean_gemm<_Float16>(da_order order, da_int m, da_int n, da_int k,
+                                            const _Float16 *X, da_int ldx,
+                                            const _Float16 *Y, da_int ldy, _Float16 *D,
+                                            da_int ldd, bool square_distances);
+#endif
 
 } // namespace pairwise_distances
 } // namespace da_metrics

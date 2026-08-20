@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2024-2025 Advanced Micro Devices, Inc. All rights reserved.
+ * Copyright (C) 2024-2026 Advanced Micro Devices, Inc. All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without modification,
  * are permitted provided that the following conditions are met:
@@ -35,7 +35,14 @@
 #include <list>
 
 // taken from  "da_kernel_utils.hpp"
-enum vectorization_type { scalar = 0, avx = 2, avx2 = 5, avx512 = 11 };
+enum vectorization_type : da_int {
+    undefined = -1,
+    scalar = 1,
+    avx = 2,
+    avx2 = 3,
+    avx512 = 4,
+    count = 4
+};
 
 template <typename T> class KernelFunctionTest : public testing::Test {
   public:

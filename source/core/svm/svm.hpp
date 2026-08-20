@@ -34,6 +34,7 @@
 #include "macros.h"
 #include "model_persistence.hpp"
 #include "options.hpp"
+#include "svm_tuning_tables.hpp"
 #include "svm_types.hpp"
 #include <algorithm>
 #include <functional>
@@ -98,6 +99,7 @@ static void polynomial_wrapper(da_order order, da_int m, da_int n, da_int k, con
 namespace da_svm {
 
 using namespace da_svm_types;
+using namespace da_svm_tuning_tables;
 
 // This forward declaration is here to allow for "friending" it with base_svm few lines below
 template <typename T> class svm;
@@ -147,18 +149,18 @@ template <typename T> class base_svm {
     da_int pos_class = 0, neg_class = 0;
 
     // Kernel function to use for computation
-    da_int kernel_function = rbf;
+    da_int kernel_function = svm_kernel::rbf;
     kernel_f_type<T> kernel_f = nullptr;
     // Kernel specific parameters
-    T gamma = 1.0;
+    T gamma = (T)1.0;
     da_int degree = 3;
-    T coef0 = 0.0;
+    T coef0 = (T)0.0;
     // Regularisation parameters
-    T C = 1, eps = 0.1, nu = 0.5;
+    T C = (T)1, eps = (T)0.1, nu = (T)0.5;
     // Working set parameter tau, value of the denominator if kernel is not positive semi definite (safe eps)
     T tau = 2 * std::numeric_limits<T>::epsilon();
     // Convergence tolerance
-    T tol = 1.0e-3;
+    T tol = (T)1.0e-3;
     da_int iter = 0, max_iter = 0, max_ws_size = 0;
     bool cache_smaller_than_ws = false;
     da_int padding = 0;
@@ -171,6 +173,13 @@ template <typename T> class base_svm {
 
     // Variables for result handling
     std::vector<T> gradient, alpha, response;
+
+    // Raw alpha saved after the Thunder loop, before set_bias/set_sv modify it.
+    // Used for extracting warm-start alpha in iterative refinement.
+    std::vector<T> raw_alpha;
+    bool save_raw_alpha = false;
+    bool has_warm_start = false;
+
     da_int n_support = 0;                // Number of support vectors
     std::vector<da_int> support_indexes, // Indexes of support vectors
         n_support_per_class;
@@ -195,13 +204,16 @@ template <typename T> class base_svm {
 
   public:
     // This friend is here to allow following "svm" class to set protected members of "base_svm" class, such as kernel_function, X or y.
-    friend class svm<T>;
+    template <class> friend class svm;
+    template <class> friend class base_svm;
+
     base_svm(const T *XUSR, const T *yusr, da_int n, da_int p, da_int ldx_train);
     base_svm() = default;
     virtual ~base_svm(); // Virtual to remove warnings
 
     // Main functions
     da_status compute();
+    da_status compute_warm_start(std::vector<T> &initial_alpha);
     da_status predict(da_int nsamples, da_int nfeat, const T *X_test, da_int ldx_test,
                       T *decision_values);
     da_status decision_function(da_int nsamples, da_int nfeat, const T *X_test,
@@ -228,6 +240,8 @@ template <typename T> class base_svm {
     void update_gradient(T *gradient, std::vector<T> &gradient_threads,
                          std::vector<T> &alpha_diff, da_int &nrow, da_int &ncol,
                          const T *kernel_data, da_int stride);
+    da_status recompute_gradient(std::vector<T> &alpha, std::vector<T> &response,
+                                 std::vector<T> &gradient, da_cache::LRUCache<T> &cache);
     void kernel_compute(std::vector<da_int> &idx, da_int &idx_size,
                         std::vector<T> &X_temp, da_vector::da_vector<T> &kernel_temp,
                         std::vector<T *> &ptr_kernel_col, da_cache::LRUCache<T> &cache);
@@ -266,11 +280,24 @@ template <typename T> class base_svm {
                                std::vector<T> &response, da_int &size, T &bias) = 0;
     virtual da_status set_sv(std::vector<T> &alpha, da_int &n_support) = 0;
 
+  protected:
+    da_status compute_impl(const std::vector<T> *initial_alpha);
     virtual da_status serialize(da_model_persistence::serialization_buffer &buffer);
 };
 
 template <typename T> class svm : public basic_handle<T> {
+
+    // Lower precision type used for mixed precision iterative refinement:
+    //   double -> float, float -> _Float16.
+    using lp_type =
+        typename std::conditional<std::is_same_v<T, double>, float, _Float16>::type;
+
   private:
+    std::unique_ptr<base_svm<lp_type>>
+    create_low_precision_classifier(const lp_type *X_lp, const lp_type *y_lp, da_int n,
+                                    da_int p, da_int ldx);
+    void copy_classifier_metadata(const base_svm<T> &src, base_svm<lp_type> &dst);
+
     // Pointers to SVM problem class that will be specialised
     std::vector<std::unique_ptr<base_svm<T>>> classifiers;
 
@@ -292,8 +319,7 @@ template <typename T> class svm : public basic_handle<T> {
 
     // Set true when user data is loaded
     bool loadingdone = false;
-    // Set true when SVM is computed successfully
-    bool iscomputed = false;
+
     bool ismulticlass = false;
     da_int predict_proba_opt = false;
 
@@ -303,7 +329,7 @@ template <typename T> class svm : public basic_handle<T> {
     std::vector<da_int> is_sv; // only used for multiclass (boolean type)
     da_int n_sv = 0;
     std::vector<T> support_coefficients, support_vectors, bias, probaA, probaB;
-    std::vector<da_int> support_indexes, n_sv_per_class, n_iteration;
+    std::vector<da_int> support_indexes, n_sv_per_class, n_iteration, lp_n_iteration;
 
   public:
     svm(da_errors::da_error_t &err);
@@ -466,12 +492,6 @@ template <class T, vectorization_type U>
 void wssj_kernel(da_int *I_low, T *gradient, T *K_ith_row, T *K_diagonal, T &K_ii,
                  da_int &max_grad_idx, T &max_grad_value, T &min_grad, T &max_fun,
                  T &delta, T &tau, da_int ws_size);
-
-template <class T>
-void select_simd_size_wss(da_int ws_size, da_int &padding,
-                          vectorization_type &kernel_type_wssi,
-                          vectorization_type &kernel_type_wssj);
-void select_ws_size(da_int n, da_svm_types::svm_kernel kernel, da_int &ws_size);
 
 } // namespace da_svm
 

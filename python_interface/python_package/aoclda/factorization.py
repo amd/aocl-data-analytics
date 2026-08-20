@@ -28,8 +28,9 @@ aoclda.factorization module
 """
 
 import pickle
-from ._aoclda.factorization import pybind_PCA
+from ._aoclda.factorization import pybind_PCA, pybind_KernelPCA
 from ._internal_utils import check_convert_data
+import numpy as np
 
 
 class PCA():
@@ -56,14 +57,19 @@ class PCA():
               value decomposition.
 
         solver (str, optional): Which LAPACK solver to use to compute the underlying singular value
-            decomposition, allowed values: 'auto', 'gesdd', 'gesvd', 'gesvdx', 'syevd'.
+            decomposition, allowed values: 'auto', 'gesdd', 'gesvd', 'gesvdx', 'syevd',
+            'randomized'.
             If ``solver = 'syevd'`` then then the SVD will be found by explicitly forming the
             covariance or correlation matrix and performing an eigendecomposition. This is very fast
             for tall, thin data matrices but for wider matrices it requires a lot of memory. The
             method is also more susceptible to ill-conditioning so must be used with care. It is
             incompatible with the 'store_U' option.
-            If ``solver = 'auto'`` then 'gesdd' will be used unless internal heuristics determine
-            that eigendecomposition using syevd is quicker.
+            If ``solver = 'auto'`` then internal heuristics will be used to choose from one of
+            `gesdd`, `syevd` or `randomized`.
+            If ``solver = 'randomized'`` then a randomized SVD algorithm is used. This can be
+            significantly faster for large matrices when only a small number of components is
+            required. See ``n_oversamples``, ``power_iterations``, and
+            ``power_normalization`` to control accuracy.
             Default='auto'.
 
         store_U (bool, optional): Controls whether to store the matrix ``U`` from the singular
@@ -71,12 +77,31 @@ class PCA():
             principal components, at the expense of some extra computation. This option cannot be
             used if ``solver = 'syevd'``. Default = False.
 
-        check_data (bool, optional): Whether to check the data for NaNs. Default = False.
-
         whiten (bool, optional): Whether to whiten the data upon transformation.
             This divides each principal component by its corresponding singular value and
             multiplies the component by a dimensional factor so the transformed data, specifically
             that data used to fit the PCA, has a unit diagonal covariance matrix. Default = False.
+
+        n_oversamples (int, optional): Number of extra columns used in the randomized SVD to
+            improve numerical accuracy. Higher values give better results at the cost of more
+            computation. Only used when ``solver='randomized'``. Default = 10.
+
+        power_iterations (int, optional): Number of power iterations performed by the randomized
+            SVD. Higher values improve accuracy for matrices whose singular values decay slowly.
+            ``-1`` selects an automatic heuristic. Only used when ``solver='randomized'``.
+            Default = -1.
+
+        power_normalization (str, optional): Normalization method used during power
+            iterations in the randomized SVD. ``'QR'`` uses QR decomposition (numerically
+            stable); ``'LU'`` uses LU decomposition (faster, slightly less stable);
+            ``'none'`` skips normalization entirely (fastest, least stable). Only used
+            when ``solver='randomized'``. Default = 'QR'.
+
+        seed (int, optional): Seed for random number generation. Set to ``-1`` for
+            non-deterministic results. Only used when ``solver='randomized'``.
+            Default = -1.
+
+        check_data (bool, optional): Whether to check the data for NaNs. Default = False.
     """
 
     def __init__(
@@ -87,6 +112,10 @@ class PCA():
             solver='auto',
             store_U=False,
             whiten=False,
+            n_oversamples=10,
+            power_iterations=-1,
+            power_normalization='QR',
+            seed=-1,
             check_data=False):
         self.pca_double = pybind_PCA(
             n_components,
@@ -96,6 +125,10 @@ class PCA():
             store_U,
             'double',
             whiten,
+            n_oversamples,
+            power_iterations,
+            power_normalization.lower(),
+            seed,
             check_data)
         self.pca_single = pybind_PCA(
             n_components,
@@ -105,6 +138,10 @@ class PCA():
             store_U,
             'single',
             whiten,
+            n_oversamples,
+            power_iterations,
+            power_normalization.lower(),
+            seed,
             check_data)
         self.pca = self.pca_double
         self.order = 'A'
@@ -272,3 +309,287 @@ class PCA():
                 "model. Expected 'float32' or 'float64'."
             )
         return
+
+    def print_model_versions(self):
+        return self.pca.pybind_print_model_versions()
+
+
+class KernelPCA():
+    """
+    Kernel principal component analysis (kernel PCA).
+
+    Performs nonlinear dimensionality reduction using kernels.
+
+    Args:
+        n_components (int, optional): Number of components to keep.
+            If 0, all non-zero components are kept. Default = 0.
+
+        kernel (str, optional): Kernel function to use. Possible values:
+            ``'linear'``, ``'poly'``, ``'rbf'``, ``'sigmoid'``, ``'precomputed'``.
+            Default = ``'linear'``.
+
+        eigensolver (str, optional): Method to use for eigendecomposition of the kernel matrix.
+            Possible values: ``'auto'``, ``'syevd'``, ``'randomized'``.
+            If ``eigensolver = 'auto'``, then internal heuristics are used to choose between
+            ``syevd`` and ``randomized``.
+            If ``eigensolver = 'randomized'`` then a randomized eigendecomposition algorithm is
+            used. This can be significantly faster for large kernel matrices when only a small
+            number of components is required. See ``n_oversamples``, ``power_iterations``, and
+            ``power_normalization`` to control accuracy. Default = ``'auto'``.
+
+        gamma (float, optional): Kernel coefficient for ``'rbf'``, ``'poly'``, and
+            ``'sigmoid'`` kernels. If ``-1.0``, it is set to ``1 / n_features``.
+            Default = ``-1.0``.
+
+        degree (int, optional): Degree for the polynomial kernel. Default = 3.
+
+        coef0 (float, optional): Independent term for ``'poly'`` and ``'sigmoid'``
+            kernels. Default = ``1.0``.
+
+        fit_inverse_transform (bool, optional): Whether to learn the approximate
+            inverse transform during ``fit``, enabling ``inverse_transform``.
+            Cannot be used with a precomputed kernel. Default = ``False``.
+
+        alpha (float, optional): Ridge regularization parameter for the inverse
+            transform. Must be positive. Default = ``1.0``.
+
+        remove_zero_eig (bool, optional): Whether to remove components whose
+            eigenvalue is zero. Default = ``False``.
+
+        copy_X (bool, optional): Whether to store a copy of the user data.
+            Default = ``True``.
+
+        n_oversamples (int, optional): Number of extra columns used in the randomized
+            eigendecomposition to improve numerical accuracy. Higher values give better results
+            at the cost of more computation. Only used when ``eigensolver='randomized'``.
+            Default = 10.
+
+        power_iterations (int, optional): Number of power iterations performed by the randomized
+            eigendecomposition. Higher values improve accuracy for kernel matrices whose
+            eigenvalues decay slowly. ``-1`` selects an automatic heuristic. Only used when
+            ``eigensolver='randomized'``. Default = -1.
+
+        power_normalization (str, optional): Normalization method used during power
+            iterations in the randomized eigendecomposition. ``'QR'`` uses QR decomposition
+            (numerically stable); ``'LU'`` uses LU decomposition (faster, slightly less stable);
+            ``'none'`` skips normalization entirely (fastest, least stable).
+            Only used when ``eigensolver='randomized'``. Default = 'QR'.
+
+        seed (int, optional): Seed for random number generation. Set to ``-1`` for
+            non-deterministic results. Only used when ``eigensolver='randomized'``.
+            Default = -1.
+
+        check_data (bool, optional): Whether to check the data for NaNs prior to
+            computation. Default = ``False``.
+    """
+
+    def __init__(
+            self,
+            n_components=0,
+            kernel='linear',
+            eigensolver='syevd',
+            gamma=-1.0,
+            degree=3,
+            coef0=1.0,
+            fit_inverse_transform=False,
+            alpha=1.0,
+            remove_zero_eig=False,
+            copy_X=True,
+            n_oversamples=10,
+            power_iterations=-1,
+            power_normalization='QR',
+            seed=-1,
+            check_data=False):
+        self.kpca_double = pybind_KernelPCA(
+            n_components,
+            kernel,
+            eigensolver,
+            degree,
+            fit_inverse_transform,
+            remove_zero_eig,
+            'double',
+            copy_X,
+            n_oversamples,
+            power_iterations,
+            power_normalization.lower(),
+            seed,
+            check_data)
+        self.kpca_single = pybind_KernelPCA(
+            n_components,
+            kernel,
+            eigensolver,
+            degree,
+            fit_inverse_transform,
+            remove_zero_eig,
+            'single',
+            copy_X,
+            n_oversamples,
+            power_iterations,
+            power_normalization.lower(),
+            seed,
+            check_data)
+        self.kpca = self.kpca_double
+        self.gamma = gamma
+        self.coef0 = coef0
+        self.alpha = alpha
+        self.order = 'A'
+        self.dtype = 'float'
+        self.copy_X = copy_X
+
+    @property
+    def eigenvalues(self):
+        r"""numpy.ndarray of shape (:nref:`n_components`, ): Eigenvalues
+            :math:`\lambda_1 \ge \cdots \ge \lambda_{n_\mathrm{components}}` of the centered
+            kernel matrix."""
+        return self.kpca.get_eigenvalues()
+
+    @property
+    def eigenvectors(self):
+        r"""numpy.ndarray of shape (:nref:`n_samples`, :nref:`n_components`): Eigenvectors
+            :math:`V` of the centered kernel matrix."""
+        return self.kpca.get_eigenvectors()
+
+    @property
+    def scores(self):
+        r"""numpy.ndarray of shape (:nref:`n_samples`, :nref:`n_components`): The kernel
+            PCA scores, :math:`Z = V \cdot \mathrm{diag}(\sqrt{\lambda_i})`"""
+        return self.kpca.get_scores()
+
+    @property
+    def dual_coef(self):
+        r"""numpy.ndarray of shape (:nref:`n_samples`, :nref:`n_features`): Dual
+            coefficients from the kernel ridge regression inverse transform. Only
+            available when ``fit_inverse_transform=True``."""
+        return self.kpca.get_dual_coef()
+
+    @property
+    def X_fit_(self):
+        r"""numpy.ndarray of shape (:nref:`n_samples`, :nref:`n_features`): The training
+            data used to fit the kernel PCA, tight-packed in the fitted storage order."""
+        return self.kpca.get_X_fit()
+
+    @property
+    def gamma_(self):
+        """float: The resolved gamma parameter used in the computation.
+            When gamma is set to a value less than 0, this returns 1 / n_features."""
+        return self.kpca.get_gamma().item()
+
+    @property
+    def n_samples(self):
+        """int: The number of samples in the data matrix used to compute the kernel PCA."""
+        return self.kpca.get_n_samples()
+
+    @property
+    def n_features(self):
+        """int: The number of features in the data matrix used to compute the kernel PCA."""
+        return self.kpca.get_n_features()
+
+    @property
+    def n_components(self):
+        """int: The number of components found in the kernel PCA."""
+        return self.kpca.get_n_components()
+
+    def fit(self, A):
+        r"""
+        Computes the kernel principal component analysis on the supplied data matrix.
+
+        Args:
+            A (array-like): The data matrix with which to compute the kernel PCA. It has
+              shape (:nref:`n_samples`, :nref:`n_features`).
+
+        Returns:
+            self (object): Returns the instance itself.
+        """
+        A, self.order, self.dtype = check_convert_data(
+            A, order=self.order, dtype=self.dtype, force_dtype=True
+        )
+
+        if self.dtype == "float32":
+            self.kpca = self.kpca_single
+            self.kpca_double = None
+            precision = np.float32
+        else:
+            precision = np.float64
+
+        self.kpca.pybind_fit(
+            A,
+            precision(self.gamma),
+            precision(self.coef0),
+            precision(self.alpha))
+        return self
+
+    def transform(self, X):
+        r"""
+        Transform a data matrix into the kernel PCA feature space.
+
+        Args:
+            X (array-like): The data matrix to be transformed. It has shape
+              (m_samples, m_features). Note that m\_features must match :nref:`n_features`,
+              the number of features in the data matrix originally supplied to ``fit``.
+
+        Returns:
+            numpy.ndarray of shape (m_samples, :nref:`n_components`): The transformed
+              matrix.
+        """
+        X, _, _ = check_convert_data(
+            X, order=self.order, dtype=self.dtype, force_dtype=True
+        )
+        return self.kpca.pybind_transform(X)
+
+    def inverse_transform(self, Y):
+        r"""
+        Transform data from the kernel PCA feature space back to the original space.
+
+        Requires ``fit_inverse_transform=True`` to have been set before calling ``fit``.
+
+        Args:
+             Y (array-like): The data matrix to be transformed. It has shape
+              (k_samples, k_features). Note that k\_features must match n\_components,
+              the number of principal components computed by ``fit``.
+
+        Returns:
+            numpy.ndarray of shape (k_samples, :nref:`n_features`): The reconstructed
+              matrix.
+        """
+        Y, _, _ = check_convert_data(
+            Y, order=self.order, dtype=self.dtype, force_dtype=True
+        )
+        return self.kpca.pybind_inverse_transform(Y)
+
+    def __getstate__(self):
+        """Support for pickle serialization."""
+        return {
+            'pybind_state': pickle.dumps(self.kpca),
+            'order': self.order,
+            'dtype': self.dtype,
+            'gamma': self.gamma,
+            'coef0': self.coef0,
+            'alpha': self.alpha,
+            'copy_X': self.copy_X,
+        }
+
+    def __setstate__(self, state):
+        """Support for pickle deserialization."""
+        self.kpca = pickle.loads(state['pybind_state'])
+        self.order = state['order']
+        self.dtype = state['dtype']
+        self.gamma = state['gamma']
+        self.coef0 = state['coef0']
+        self.alpha = state['alpha']
+        self.copy_X = state['copy_X']
+
+        if self.dtype == 'float64':
+            self.kpca_double = self.kpca
+            self.kpca_single = None
+        elif self.dtype == 'float32':
+            self.kpca_double = None
+            self.kpca_single = self.kpca
+        else:
+            raise ValueError(
+                f"Invalid dtype '{self.dtype}' when loading " +
+                "model. Expected 'float32' or 'float64'."
+            )
+        return
+
+    def print_model_versions(self):
+        return self.kpca.pybind_print_model_versions()

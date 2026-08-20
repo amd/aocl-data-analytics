@@ -198,6 +198,21 @@ da_status da_get_shuffled_indices_d(da_int m, da_int seed, da_int train_size,
                                     const double *classes, da_int *shuffle_array);
 
 /**
+ * \brief Print the metadata of a serialized model file.
+ *
+ * Reads the metadata header from a previously saved model file and prints
+ * its contents to standard output. No model is loaded into memory.
+ *
+ * \param[in] filename path to the serialized model file. Constraint: \p filename must not be \p null.
+ * \return \ref da_status. The function returns:
+ * - \ref da_status_success - the operation was successfully completed.
+ * - \ref da_status_invalid_pointer - \p filename was \p null.
+ * - \ref da_status_io_error - the file could not be opened or read.
+ * - \ref da_status_invalid_file_data - the file was empty or corrupted.
+ */
+da_status da_print_model_metadata(const char *filename);
+
+/**
  * @brief returns a char* array describing the da_int integer used by the library
  *
  * '32' if da_int = int32_t

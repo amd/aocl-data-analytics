@@ -380,7 +380,7 @@ RALFit solver exposes the finite-differences machinery as a stand-alone service.
 
         :p Type(jacobian_handle) handle [Inout]: Handle object.
 
-The ``jacobian.f90`` example showcases how to call RALFit's finite difference machinery.
+The ``jacobian.F90`` example showcases how to call RALFit's finite difference machinery.
 
 .. _data_types:
 
@@ -429,6 +429,8 @@ The derived data type for holding options
    **Stopping rules**
 
    :f integer maxit [default=100]: |maxit|
+
+   :f real maxtime [default=1.0e6]: |maxtime|
 
    :f real stop_g_absolute [default=1e-5]: |stop_g_absolute|
 

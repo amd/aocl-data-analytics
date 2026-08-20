@@ -97,14 +97,14 @@ TEST_F(HandleSerializationErrorTest, SaveToBufferClearsGarbage) {
     ASSERT_EQ(da_pca_compute_d(handle), da_status_success);
 
     // Buffer with garbage data
-    std::vector<char> buffer(500, 0xAB);
+    std::vector<char> buffer(500, static_cast<char>(0x7F));
     ASSERT_FALSE(buffer.empty());
 
     // Save should clear garbage and produce valid data
     ASSERT_EQ(da_handle_save_model(handle, buffer), da_status_success);
 
     // Buffer should not start with garbage anymore
-    EXPECT_NE(buffer[0], static_cast<char>(0xAB));
+    EXPECT_NE(buffer[0], static_cast<char>(0x1A));
 
     // Verify the saved data can be loaded
     da_handle loaded = nullptr;
@@ -118,7 +118,7 @@ TEST_F(HandleSerializationErrorTest, SaveToBufferClearsGarbage) {
 // ==================== LOAD ERRORS ====================
 
 TEST_F(HandleSerializationErrorTest, LoadFromNullPtrHandleBufferPath) {
-    std::vector<char> buffer(100, 0xFF);
+    std::vector<char> buffer(100, 0x3F);
     EXPECT_EQ(da_handle_load_model(nullptr, buffer.data(), buffer.size()),
               da_status_invalid_pointer);
 }
@@ -164,7 +164,7 @@ TEST_F(HandleSerializationErrorTest, LoadFromNullFilename) {
 
 TEST_F(HandleSerializationErrorTest, LoadFromBufferZeroSize) {
     da_handle handle = nullptr;
-    std::vector<char> buffer(100, 0xFF);
+    std::vector<char> buffer(100, 0x2F);
     EXPECT_EQ(da_handle_load_model(&handle, buffer.data(), 0), da_status_invalid_input);
     EXPECT_EQ(handle, nullptr);
 }
@@ -200,7 +200,7 @@ TEST_F(HandleSerializationErrorTest, LoadFromEmptyFile) {
 
 TEST_F(HandleSerializationErrorTest, LoadFromCorruptBuffer) {
     da_handle handle = nullptr;
-    std::vector<char> buffer(3, 0xFF);
+    std::vector<char> buffer(3, 0x1F);
     da_status status = da_handle_load_model(&handle, buffer.data(), buffer.size());
     EXPECT_EQ(status, da_status_invalid_file_data);
     EXPECT_EQ(handle, nullptr);
@@ -211,19 +211,23 @@ TEST_F(HandleSerializationErrorTest, LoadCorruptedFileMetadataValidation) {
     //   Bytes 0-7:    magic_keyword size (int64_t = 19)
     //   Bytes 8-26:   magic_keyword string "AOCLDA_STORED_MODEL" (19 bytes)
     //   Bytes 27-34:  da_int_size (int64_t, must be 8 or 4)
-    //   Bytes 35-42:  lib_version (int64_t, must equal da_model_persistence::min_library_version)
+    //   Bytes 35-42:  saved_serialization_version (int64_t, must be >= model_persistence_min_version)
     //   Bytes 43-50:  algorithm (da_handle_type enum as int64_t)
     //   Bytes 51-58:  precision (int64_t, must be 4 or 8)
+    //   Bytes 59-66:  aoclda_version string size (int64_t)
+    //   Bytes 67+:    aoclda_version string content
     // Valid values
     const std::string_view valid_magic = "AOCLDA_STORED_MODEL";
-    constexpr int64_t valid_lib_version = 50100;
+    constexpr int64_t valid_lib_version = 50301; // model_persistence_min_version
     constexpr int64_t valid_int_size = 4;
     constexpr int64_t valid_algorithm = static_cast<int64_t>(da_handle_pca);
     constexpr int64_t valid_precision = 8; // sizeof(double)
+    const std::string valid_aoclda_version = "5.3.1";
 
-    // Build metadata buffer with configurable magic keyword
-    auto build_metadata = [](std::string_view magic, int64_t int_size, int64_t lib_ver,
-                             int64_t algo, int64_t prec) {
+    // Build metadata buffer with configurable fields
+    auto build_metadata = [&valid_aoclda_version](std::string_view magic,
+                                                  int64_t int_size, int64_t lib_ver,
+                                                  int64_t algo, int64_t prec) {
         std::vector<char> buf;
         // Serialize magic keyword: size + content
         int64_t magic_size = static_cast<int64_t>(magic.size());
@@ -239,7 +243,12 @@ TEST_F(HandleSerializationErrorTest, LoadCorruptedFileMetadataValidation) {
         buf.insert(buf.end(), algo_bytes, algo_bytes + sizeof(algo));
         auto *prec_bytes = reinterpret_cast<const char *>(&prec);
         buf.insert(buf.end(), prec_bytes, prec_bytes + sizeof(prec));
-        // Pad to ensure sufficient size
+        // Serialize aoclda_version string: size + content
+        int64_t ver_size = static_cast<int64_t>(valid_aoclda_version.size());
+        auto *ver_size_bytes = reinterpret_cast<const char *>(&ver_size);
+        buf.insert(buf.end(), ver_size_bytes, ver_size_bytes + sizeof(ver_size));
+        buf.insert(buf.end(), valid_aoclda_version.begin(), valid_aoclda_version.end());
+        // Pad to ensure sufficient size for algorithm deserialization attempts
         buf.resize(buf.size() + 50, 0x00);
         return buf;
     };
@@ -286,10 +295,29 @@ TEST_F(HandleSerializationErrorTest, LoadCorruptedFileMetadataValidation) {
     }
 #endif // AOCLDA_ILP64
 
-    // Test 3: Invalid library version (version mismatch) (must be bigger than current lib version)
+    // Test 3: serialization_version larger than algo's version
+    // (passes deserialize_metadata since >= min_version, but fails exact match in load_model)
     {
         auto metadata = build_metadata(valid_magic, valid_int_size, 90000,
                                        valid_algorithm, valid_precision);
+        std::ofstream ofs(corrupt_file, std::ios::binary);
+        ofs.write(metadata.data(), metadata.size());
+        ASSERT_TRUE(ofs.good());
+        ofs.close();
+
+        handle = nullptr;
+        status = da_handle_load_model(&handle, corrupt_file.c_str());
+        EXPECT_EQ(status, da_status_version_mismatch);
+        EXPECT_NE(handle, nullptr);
+        da_handle_destroy(&handle);
+        std::remove(corrupt_file.c_str());
+    }
+
+    // Test 4: serialization_version smaller than model_persistence_min_version
+    // (rejected at deserialize_metadata level, handle never created)
+    {
+        auto metadata = build_metadata(valid_magic, valid_int_size, 100, valid_algorithm,
+                                       valid_precision);
         std::ofstream ofs(corrupt_file, std::ios::binary);
         ofs.write(metadata.data(), metadata.size());
         ASSERT_TRUE(ofs.good());
@@ -302,7 +330,7 @@ TEST_F(HandleSerializationErrorTest, LoadCorruptedFileMetadataValidation) {
         std::remove(corrupt_file.c_str());
     }
 
-    // Test 4: Invalid precision (not 4 or 8)
+    // Test 5: Invalid precision (not 4 or 8)
     {
         auto metadata = build_metadata(valid_magic, valid_int_size, valid_lib_version,
                                        valid_algorithm, 2);
@@ -318,7 +346,7 @@ TEST_F(HandleSerializationErrorTest, LoadCorruptedFileMetadataValidation) {
         std::remove(corrupt_file.c_str());
     }
 
-    // Test 5: Invalid magic keyword size
+    // Test 6: Invalid magic keyword size
     {
         std::vector<char> buf;
         // Invalid magic keyword size (5 instead of 19)
@@ -348,7 +376,7 @@ TEST_F(HandleSerializationErrorTest, LoadCorruptedFileMetadataValidation) {
         std::remove(corrupt_file.c_str());
     }
 
-    // Test 6: Invalid magic keyword string (wrong content)
+    // Test 7: Invalid magic keyword string (wrong content)
     {
         auto buf = build_metadata("WRONG_MAGIC_KEYWORD", valid_int_size,
                                   valid_lib_version, valid_algorithm, valid_precision);
@@ -378,4 +406,89 @@ TEST_F(HandleSerializationErrorTest, LoadCorruptedFileTooSmall) {
     EXPECT_EQ(status, da_status_invalid_file_data);
     // Handle should still be nullptr after failure
     EXPECT_EQ(handle, nullptr);
+}
+
+// ==================== PRINT MODEL VERSIONS ERRORS ====================
+
+TEST_F(HandleSerializationErrorTest, PrintModelVersionsNullHandle) {
+    EXPECT_EQ(da_handle_print_model_versions(nullptr), da_status_invalid_pointer);
+}
+
+TEST_F(HandleSerializationErrorTest, PrintModelVersionsNotLoadedSingle) {
+    da_handle handle = nullptr;
+    ASSERT_EQ(da_handle_init_s(&handle, da_handle_pca), da_status_success);
+
+    testing::internal::CaptureStdout();
+    EXPECT_EQ(da_handle_print_model_versions(handle), da_status_invalid_input);
+    testing::internal::GetCapturedStdout();
+
+    da_handle_destroy(&handle);
+}
+
+TEST_F(HandleSerializationErrorTest, PrintModelVersionsNotLoadedDouble) {
+    da_handle handle = nullptr;
+    ASSERT_EQ(da_handle_init_d(&handle, da_handle_pca), da_status_success);
+
+    testing::internal::CaptureStdout();
+    EXPECT_EQ(da_handle_print_model_versions(handle), da_status_invalid_input);
+    testing::internal::GetCapturedStdout();
+
+    da_handle_destroy(&handle);
+}
+
+TEST_F(HandleSerializationErrorTest, PrintModelVersionsFittedButNotLoaded) {
+    da_handle handle = nullptr;
+    ASSERT_EQ(da_handle_init_d(&handle, da_handle_pca), da_status_success);
+
+    // Fit a model (but never save/load it)
+    std::vector<double> X = {1.0, 2.0, 3.0, 4.0, 5.0, 6.0};
+    da_int n_samples = 3, n_features = 2;
+    ASSERT_EQ(da_pca_set_data_d(handle, n_samples, n_features, X.data(), n_samples),
+              da_status_success);
+    ASSERT_EQ(da_options_set_int(handle, "n_components", 2), da_status_success);
+    ASSERT_EQ(da_pca_compute_d(handle), da_status_success);
+
+    testing::internal::CaptureStdout();
+    EXPECT_EQ(da_handle_print_model_versions(handle), da_status_invalid_input);
+    testing::internal::GetCapturedStdout();
+
+    da_handle_destroy(&handle);
+}
+
+// ==================== PRINT MODEL METADATA ERRORS ====================
+
+TEST_F(HandleSerializationErrorTest, PrintModelMetadataNullFilename) {
+    EXPECT_EQ(da_print_model_metadata(nullptr), da_status_invalid_pointer);
+}
+
+TEST_F(HandleSerializationErrorTest, PrintModelMetadataNonExistentFile) {
+    EXPECT_EQ(da_print_model_metadata("invalid_file_name.bin"), da_status_io_error);
+}
+
+TEST_F(HandleSerializationErrorTest, PrintModelMetadataEmptyFile) {
+    std::ofstream ofs(empty_file, std::ios::binary);
+    ofs.close();
+
+    EXPECT_EQ(da_print_model_metadata(empty_file.c_str()), da_status_invalid_file_data);
+}
+
+TEST_F(HandleSerializationErrorTest, PrintModelMetadataCorruptFile) {
+    std::ofstream ofs(corrupt_file, std::ios::binary);
+    char garbage[] = {0x01, 0x02, 0x03};
+    ofs.write(garbage, sizeof(garbage));
+    ofs.close();
+
+    EXPECT_EQ(da_print_model_metadata(corrupt_file.c_str()), da_status_invalid_file_data);
+}
+
+// --- Buffer overload ---
+
+TEST_F(HandleSerializationErrorTest, PrintModelMetadataEmptyBuffer) {
+    std::vector<char> buffer;
+    EXPECT_EQ(da_print_model_metadata(buffer), da_status_invalid_file_data);
+}
+
+TEST_F(HandleSerializationErrorTest, PrintModelMetadataCorruptBuffer) {
+    std::vector<char> buffer(3, 0x1F);
+    EXPECT_EQ(da_print_model_metadata(buffer), da_status_invalid_file_data);
 }

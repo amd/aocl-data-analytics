@@ -41,6 +41,7 @@ Unless otherwise stated, the algorithms in this section can be accessed through 
    basic_statistics/basic_stats
    clustering/clustering
    trees_forests/trees_forest
+   dimension_reduction/dimension_reduction
    metrics/metrics
    interpolation/interpolation
    kernel_functions/kernel_functions

@@ -99,6 +99,9 @@ class decision_forest():
             from all the others while 'ordered' will try to split the smaller categorical from the
             bigger ones. Can be set to "one-vs-all" or "ordered". Default = "ordered".
 
+        max_tree_threads (int, optional): Maximum number of threads allocated to each
+            tree for parallel feature evaluation. 0 means no cap. Default = 0.
+
         check_data (bool, optional): Whether to check the data for NaNs. Default = False.
     """
 
@@ -121,6 +124,7 @@ class decision_forest():
             maximum_bins=256,
             block_size=256,
             category_split_strategy="ordered",
+            max_tree_threads=0,
             check_data=False):
 
         self._samples_factor = samples_factor
@@ -144,6 +148,7 @@ class decision_forest():
             maximum_bins=maximum_bins,
             block_size=block_size,
             category_split_strategy=category_split_strategy,
+            max_tree_threads=max_tree_threads,
             check_data=check_data)
         self._decision_forest_single = pybind_decision_forest(
             n_trees=n_trees,
@@ -159,12 +164,14 @@ class decision_forest():
             maximum_bins=maximum_bins,
             block_size=block_size,
             category_split_strategy=category_split_strategy,
+            max_tree_threads=max_tree_threads,
             check_data=check_data)
 
         self._decision_forest = self._decision_forest_double
         self._max_features = max_features
         self._features_selection = features_selection
         self._proportion_features = proportion_features
+        self._max_tree_threads = max_tree_threads
 
     @property
     def max_features(self):
@@ -333,6 +340,7 @@ class decision_forest():
             'features_selection': self._features_selection,
             'proportion_features': self._proportion_features,
             'samples_factor': self._samples_factor,
+            'max_tree_threads': self._max_tree_threads,
         }
 
     def __setstate__(self, state):
@@ -347,6 +355,7 @@ class decision_forest():
         self._features_selection = state['features_selection']
         self._proportion_features = state['proportion_features']
         self._samples_factor = state['samples_factor']
+        self._max_tree_threads = state['max_tree_threads']
 
         if self._dtype == 'float64':
             self._decision_forest_double = self._decision_forest
@@ -360,3 +369,6 @@ class decision_forest():
                 "model. Expected 'float32' or 'float64'."
             )
         return
+
+    def print_model_versions(self):
+        return self._decision_forest.pybind_print_model_versions()

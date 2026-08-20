@@ -1,5 +1,5 @@
 /* ************************************************************************
- * Copyright (c) 2024 Advanced Micro Devices, Inc.
+ * Copyright (c) 2024-2026 Advanced Micro Devices, Inc.
  *
  * Permission is hereby granted, free of charge, to any person obtaining a copy
  * of this software and associated documentation files (the "Software"), to deal
@@ -151,6 +151,148 @@ da_status da_pca_inverse_transform_d(da_handle handle, da_int k_samples,
 da_status da_pca_inverse_transform_s(da_handle handle, da_int k_samples,
                                      da_int k_features, const float *Y, da_int ldy,
                                      float *Y_inv_transform, da_int ldy_inv_transform);
+/** \} */
+
+/** \{
+ * \brief Pass a data matrix to the \ref da_handle object in preparation for computing the kernel PCA.
+ *
+ * When \p kernel is set to \a precomputed, the matrix \p A is the precomputed kernel matrix
+ * (n_samples @f$\times@f$ n_samples), and \p n_features must equal \p n_samples.
+ *
+ * \param[inout] handle a \ref da_handle object, initialized using \ref da_handle_init_s "da_handle_init_?" with type \ref da_handle_kernel_pca.
+ * \param[in] n_samples the number of rows of the data matrix, \p A. Constraint: \p n_samples @f$\ge@f$ 1.
+ * \param[in] n_features the number of columns of the data matrix, \p A. Constraint: \p n_features @f$\ge@f$ 1.
+ * \param[in] A the \p n_samples @f$\times@f$ \p n_features data matrix. By default, it should be stored in column-major order, unless you have set the <em>storage order</em> option to <em>row-major</em>.
+ * \param[in] lda the leading dimension of the data matrix.
+ * \return \ref da_status. The function returns:
+ * - \ref da_status_success - the operation was successfully completed.
+ * - \ref da_status_wrong_type - the handle may have been initialized using the wrong precision.
+ * - \ref da_status_invalid_handle_type - the handle was not initialized with type \ref da_handle_kernel_pca.
+ * - \ref da_status_handle_not_initialized - the handle has not been initialized.
+ * - \ref da_status_invalid_pointer - \p A is null.
+ * - \ref da_status_invalid_array_dimension - \p n_samples or \p n_features was less than 1.
+ * - \ref da_status_invalid_leading_dimension - the constraint on \p lda was violated.
+ * - \ref da_status_invalid_input - one of the arguments had an invalid value.
+ * - \ref da_status_memory_error - a memory allocation failed.
+ * - \ref da_status_incompatible_options - \p n_components exceeds the maximum possible and has been clamped.
+ */
+da_status da_kernel_pca_set_data_d(da_handle handle, da_int n_samples, da_int n_features,
+                                   const double *A, da_int lda);
+
+da_status da_kernel_pca_set_data_s(da_handle handle, da_int n_samples, da_int n_features,
+                                   const float *A, da_int lda);
+/** \} */
+
+/** \{
+ * \brief Compute kernel PCA
+ *
+ * Builds and centers the kernel matrix, performs the eigendecomposition, and computes
+ * the kernel PCA scores. Optionally fits the inverse transform via kernel ridge regression
+ * when the <em>fit inverse transform</em> option is set to 1.
+ *
+ * \param[inout] handle a \ref da_handle object, initialized with type \ref da_handle_kernel_pca and with data passed in via \ref da_kernel_pca_set_data_s "da_kernel_pca_set_data_?".
+ * \return \ref da_status. The function returns:
+ * - \ref da_status_success - the operation was successfully completed.
+ * - \ref da_status_wrong_type - the handle may have been initialized using the wrong precision.
+ * - \ref da_status_handle_not_initialized - the handle has not been initialized.
+ * - \ref da_status_no_data - \ref da_kernel_pca_set_data_s "da_kernel_pca_set_data_?" has not been called prior to this function call.
+ * - \ref da_status_invalid_input - one of the arguments had an invalid value. You can obtain further information using \ref da_handle_print_error_message.
+ * - \ref da_status_numerical_difficulties - the eigenvalue decomposition or inverse transform factorization failed numerically.
+ * \post
+ * After successful execution, \ref da_handle_get_result_s "da_handle_get_result_?" can be queried with the following enums:
+ * - \p da_rinfo - return an array of size 2 containing \p n_samples, \p n_features.
+ * - \p da_kernel_pca_gamma - return an array of size \p 1 containing the resolved \p gamma value.
+ * - \p da_kernel_pca_eigenvalues - return an array of size \p n_components containing the eigenvalues @f$\lambda_1 \ge \cdots \ge \lambda_{n_\mathrm{components}}@f$ of the centered kernel matrix.
+ * - \p da_kernel_pca_eigenvectors - return an array of size \p n_samples @f$\times@f$ \p n_components containing the eigenvectors @f$V@f$ of the centered kernel matrix.
+ * - \p da_kernel_pca_scores - return an array of size \p n_samples @f$\times@f$ \p n_components containing the scores @f$Z = V \cdot \mathrm{diag}(\sqrt{\lambda_i})@f$.
+ * - \p da_kernel_pca_dual_coef - return an array of size \p n_samples @f$\times@f$ \p n_features containing the dual coefficients from the kernel ridge regression. Only available when <em>fit inverse transform</em> is set to 1.
+ * 
+ * In addition \ref da_handle_get_result_int can be queried with the following enums:
+ * - \p da_kernel_pca_n_components - return an array of size \p 1 containing \p n_components, the number of principal components found.
+ */
+da_status da_kernel_pca_compute_d(da_handle handle);
+
+da_status da_kernel_pca_compute_s(da_handle handle);
+/** \} */
+
+/** \{
+ * \brief Transform a data matrix into the kernel PCA feature space
+ *
+ * Projects \p m_samples new points into the reduced kernel PCA space previously computed
+ * via \ref da_kernel_pca_compute_s "da_kernel_pca_compute_?". A cross-kernel matrix is
+ * built between the new data and the stored training data, centered using training statistics,
+ * and projected onto the kernel principal components.
+ *
+ * When \p kernel is set to \a precomputed, \p X is the (m_samples @f$\times@f$ n_samples_train)
+ * cross-kernel matrix and \p m_features must equal \p n_samples from the training call.
+ *
+ * \param[inout] handle a \ref da_handle object, with a kernel PCA previously computed via \ref da_kernel_pca_compute_s "da_kernel_pca_compute_?".
+ * \param[in] m_samples the number of rows of the data matrix, \p X. Constraint: \p m_samples @f$\ge@f$ 1.
+ * \param[in] m_features the number of columns of the data matrix, \p X.
+ * \param[in] X the \p m_samples @f$\times@f$ \p m_features data matrix.
+ * \param[in] ldx the leading dimension of the data matrix.
+ * \param[out] X_transform an array in which the transformed data will be stored.
+ * \param[in] ldx_transform the leading dimension of \p X_transform.
+ * \return \ref da_status. The function returns:
+ * - \ref da_status_success - the operation was successfully completed.
+ * - \ref da_status_wrong_type - the handle may have been initialized using the wrong precision.
+ * - \ref da_status_invalid_handle_type - the handle was not initialized with type \ref da_handle_kernel_pca.
+ * - \ref da_status_handle_not_initialized - the handle has not been initialized.
+ * - \ref da_status_invalid_pointer - one of the arrays is null.
+ * - \ref da_status_no_data - \ref da_kernel_pca_compute_s "da_kernel_pca_compute_?" has not been called prior to this function call.
+ * - \ref da_status_invalid_input - one of the arguments had an invalid value. You can obtain further information using \ref da_handle_print_error_message.
+ * - \ref da_status_invalid_array_dimension - \p m_samples was less than 1.
+ * - \ref da_status_invalid_leading_dimension - the constraint on \p ldx or \p ldx_transform was violated.
+ * - \ref da_status_incompatible_options - kernel options have been modified since the model was fitted.
+ * - \ref da_status_memory_error - a memory allocation failed.
+ * - \ref da_status_internal_error - an unexpected internal error occurred.
+ */
+da_status da_kernel_pca_transform_d(da_handle handle, da_int m_samples, da_int m_features,
+                                    const double *X, da_int ldx, double *X_transform,
+                                    da_int ldx_transform);
+
+da_status da_kernel_pca_transform_s(da_handle handle, da_int m_samples, da_int m_features,
+                                    const float *X, da_int ldx, float *X_transform,
+                                    da_int ldx_transform);
+/** \} */
+
+/** \{
+ * \brief Map points from the kernel PCA space back to the original feature space
+ *
+ * Applies the approximate pre-image mapping learned during \ref da_kernel_pca_compute_s "da_kernel_pca_compute_?"
+ * (when the <em>fit inverse transform</em> option was set to 1) to reconstruct data in the
+ * original feature space. This operation is incompatible with \p kernel set to \a precomputed.
+ *
+ * \param[inout] handle a \ref da_handle object, with a kernel PCA previously computed with <em>fit inverse transform</em> = 1.
+ * \param[in] k_samples the number of rows of the data matrix, \p Y. Constraint: \p k_samples @f$\ge@f$ 1.
+ * \param[in] k_components the number of columns of the data matrix, \p Y. Constraint: \p k_components @f$=@f$ \p n_components.
+ * \param[in] Y the \p k_samples @f$\times@f$ \p k_components data matrix in the reduced kernel PCA space.
+ * \param[in] ldy the leading dimension of \p Y.
+ * \param[out] Y_inv_transform an array in which the reconstructed data will be stored.
+ * \param[in] ldy_inv_transform the leading dimension of \p Y_inv_transform.
+ * \return \ref da_status. The function returns:
+ * - \ref da_status_success - the operation was successfully completed.
+ * - \ref da_status_wrong_type - the handle may have been initialized using the wrong precision.
+ * - \ref da_status_invalid_handle_type - the handle was not initialized with type \ref da_handle_kernel_pca.
+ * - \ref da_status_handle_not_initialized - the handle has not been initialized.
+ * - \ref da_status_invalid_pointer - one of the arrays is null.
+ * - \ref da_status_no_data - \ref da_kernel_pca_compute_s "da_kernel_pca_compute_?" has not been called, or <em>fit inverse transform</em> was not set to 1.
+ * - \ref da_status_invalid_input - one of the arguments had an invalid value. You can obtain further information using \ref da_handle_print_error_message.
+ * - \ref da_status_invalid_array_dimension - \p k_samples was less than 1.
+ * - \ref da_status_invalid_leading_dimension - the constraint on \p ldy or \p ldy_inv_transform was violated.
+ * - \ref da_status_incompatible_options - kernel options have been modified since the model was fitted.
+ * - \ref da_status_memory_error - a memory allocation failed.
+ * - \ref da_status_internal_error - an unexpected internal error occurred.
+ */
+da_status da_kernel_pca_inverse_transform_d(da_handle handle, da_int k_samples,
+                                            da_int k_components, const double *Y,
+                                            da_int ldy, double *Y_inv_transform,
+                                            da_int ldy_inv_transform);
+
+da_status da_kernel_pca_inverse_transform_s(da_handle handle, da_int k_samples,
+                                            da_int k_components, const float *Y,
+                                            da_int ldy, float *Y_inv_transform,
+                                            da_int ldy_inv_transform);
 /** \} */
 
 #endif

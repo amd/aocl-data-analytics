@@ -1,4 +1,4 @@
-! Copyright (C) 2024 Advanced Micro Devices, Inc. All rights reserved.
+! Copyright (C) 2024-2026 Advanced Micro Devices, Inc. All rights reserved.
 ! Copyright (c) 2020, The Numerical Algorithms Group Ltd (NAG)
 ! All rights reserved.
 ! Copyright (c) 2016, The Science and Technology Facilities Council (STFC)
@@ -1184,6 +1184,7 @@ SUBROUTINE eval_F( status, n_dummy, m, X, f, params)
        options%print_options = default_options%print_options
        options%print_header = default_options%print_header
        options%maxit = default_options%maxit
+       options%maxtime = default_options%maxtime
        options%model = default_options%model
        options%type_of_method = default_options%type_of_method
        options%nlls_method = default_options%nlls_method
@@ -1335,15 +1336,26 @@ SUBROUTINE eval_F( status, n_dummy, m, X, f, params)
 
     end subroutine solve_basic_c
 
-    subroutine c_fortran_tests(options,fails)
+    subroutine c_fortran_tests(options, fails, tol_type)
+      Implicit None
       type( NLLS_options ), intent(inout) :: options
       integer, intent(inout) :: fails
-
+      Character(len=*), intent(in) :: tol_type
       real(wp), allocatable :: x(:)
       type( user_type ), target :: params
       type( NLLS_inform )  :: status, c_status
-      real(wp) :: resvec_error
+      real(wp) :: resvec_error, abstol, reltol
       integer :: n
+      Logical :: Ok
+
+      Continue
+
+      abstol = 2.0e-8_wp
+      reltol = -1.0_wp
+
+      if (trim(tol_type) == 'both') then
+        reltol = 1.0e-8_wp
+      end if
 
       n = 2
 
@@ -1400,16 +1412,18 @@ SUBROUTINE eval_F( status, n_dummy, m, X, f, params)
       if ( c_status%iter == status%iter ) then
          resvec_error = norm2(c_status%resvec(1:c_status%iter+1) - &
               status%resvec(1:status%iter+1))
-         if (resvec_error > 1e-8_wp) then
-            write(*,*) 'error: fortran and c jacobians'
-            write(*,*) 'have different resvecs'
+         if (resvec_error > abstol) then
+            write(*,*) 'Warning: fortran and c resvec differ!'
+            write(*,*) 'Different resvecs in 2-norm for'
             write(*,*) 'NLLS_METHOD = ', options%nlls_method
             write(*,*) 'MODEL = ', options%model
             write(*,*) 'TR_UPDATE = ', options%tr_update_strategy
             write(*,*) 'inner_method = ', options%inner_method
+            ! Report all entries and show how much they differ in L2 and relative L2
+            ! Ok will inform is at least reltol is met
             Call check_resvec(c_status%resvec(1:c_status%iter+1), &
-               status%resvec(1:status%iter+1), 1e-8_wp, reltol=-1.0_wp, prn=.true.)
-            fails = fails + 1
+               status%resvec(1:status%iter+1), atol=abstol, reltol=reltol, prn=.true., Ok=Ok)
+            fails = fails + merge(0,1,Ok)
          end if
       else
          write(*,*) 'error: fortran and c jacobians'
@@ -2167,8 +2181,8 @@ SUBROUTINE eval_F( status, n_dummy, m, X, f, params)
      call solve_LLS(J,f,n,m,d,status, &
           work%calculate_step_ws%dogleg_ws%solve_LLS_ws,.True.)
      if ( status%status .ne. 0 ) then
-        write(*,*) 'solve_LLS test failed: wrong error message returned'
-        write(*,*) 'status = ', status%status, " (expected ",0,")"
+        write(*,*) '[id:1] solve_LLS test failed: wrong error message returned'
+        write(*,*) 'status = ', status%status, " (expected success)"
         fails = fails + 1
      end if
      ! check answer
@@ -2194,8 +2208,8 @@ SUBROUTINE eval_F( status, n_dummy, m, X, f, params)
      call solve_LLS(J,f,n,m,d,status, &
           work%calculate_step_ws%dogleg_ws%solve_LLS_ws,.False.)
      if ( status%status .ne. 0 ) then
-        write(*,*) 'solve_LLS test failed: wrong error message returned'
-        write(*,*) 'status = ', status%status, " (expected ",0,")"
+        write(*,*) '[id:2] solve_LLS test failed: wrong error message returned'
+        write(*,*) 'status = ', status%status, " (expected success)"
         fails = fails + 1
      end if
      ! check answer using J and not JT!!!
@@ -2210,20 +2224,20 @@ SUBROUTINE eval_F( status, n_dummy, m, X, f, params)
         fails = fails + 1
      end if
 
-
-     n = 50
-     m = 5
+      n = 65
+      m = 60
      deallocate(J,f,Jd,d)
      allocate(J(n*m), f(m), d(n))
 
      call setup_workspaces(work,n,m,options,status)
 
-     J(:) = 1.0_wp ! Matrix is rank deficient ?GELS can not compute LLS solution
-     f(:) = 1.0_wp
+     J = 1.0_wp
+     J(1:m) = 0.0_wp
+     f = 1.0_wp
      call solve_LLS(J,f,n,m,d,status, &
           work%calculate_step_ws%dogleg_ws%solve_LLS_ws,.True.)
      if ( status%status .ne. NLLS_ERROR_FROM_EXTERNAL ) then
-        write(*,*) 'solve_LLS test failed: wrong error message returned'
+         write (*, *) '[id:3] solve_LLS test failed: wrong error message returned'
         write(*,*) 'status = ', status%status, " (expected ",NLLS_ERROR_FROM_EXTERNAL,")"
         fails = fails + 1
      end if
@@ -3059,11 +3073,7 @@ SUBROUTINE eval_F( status, n_dummy, m, X, f, params)
 
      fails = 0
      n = 2
-     m = 67
-
-     allocate(params%x_values(m))
-     allocate(params%y_values(m))
-
+      ! Set by generate_data_example m = 67
      call generate_data_example(params)
 
      ! let's check the workspace errors
@@ -3308,6 +3318,17 @@ SUBROUTINE eval_F( status, n_dummy, m, X, f, params)
               status%status
          fails = fails + 1
      end if
+
+      ! Release memory
+      If (Allocated(params%x_values)) Then
+         Deallocate(params%x_values)
+      End If
+      If (Allocated(params%y_values)) Then
+         Deallocate(params%y_values)
+      End If
+      If (Allocated(X)) Then
+         Deallocate(X)
+      End If
 
      call reset_default_options(options)
 

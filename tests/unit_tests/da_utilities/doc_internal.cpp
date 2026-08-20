@@ -48,6 +48,7 @@ namespace {
 // Add new ones here
 const static std::map<da_handle_type, std::string> htypes{
     {da_handle_pca, "Principal Component Analysis"},
+    {da_handle_tsne, "t-SNE"},
     {da_handle_linmod, "Linear Models"},
     {da_handle_kmeans, "k-means Clustering"},
     {da_handle_dbscan, "DBSCAN clustering"},
@@ -59,7 +60,9 @@ const static std::map<da_handle_type, std::string> htypes{
 #endif
     {da_handle_svm, "Support Vector Machines"},
     {da_handle_approx_nn, "Approximate Nearest Neighbors"},
-    {da_handle_interpolation, "Interpolation"}};
+    {da_handle_interpolation, "Interpolation"},
+    {da_handle_kernel_pca, "Kernel Principal Component Analysis"},
+};
 
 void options_print(da_handle_type htype) {
     da_handle handle = nullptr;

@@ -1,4 +1,4 @@
-# Copyright (C) 2024-2025 Advanced Micro Devices, Inc. All rights reserved.
+# Copyright (C) 2024-2026 Advanced Micro Devices, Inc. All rights reserved.
 #
 # Redistribution and use in source and binary forms, with or without modification,
 # are permitted provided that the following conditions are met:
@@ -126,3 +126,39 @@ def test_metrics_errors():
             euclidean_distance_XX = pairwise_distances(X, Y)
 
     undo_skpatch()
+
+
+@pytest.mark.parametrize("precision", [np.float64, np.float32])
+@pytest.mark.parametrize("numpy_order", ['C', 'F'])
+def test_metrics_inner_product(precision, numpy_order):
+    """
+    Test inner_product metric via the sklearn patch.
+    sklearn has no inner_product equivalent, so correctness is verified
+    against hand-computed expected values (D[i,j] = dot(X[i], Y[j])).
+    """
+    X = np.array([[1., 2.],
+                  [3., 4.],
+                  [5., 6.]], dtype=precision, order=numpy_order)
+
+    Y = np.array([[7., 8.],
+                  [9., 10.]], dtype=precision, order=numpy_order)
+
+    # Expected: D[i,j] = dot(X[i], Y[j])
+    expected_XY = np.array([[23., 29.],
+                            [53., 67.],
+                            [83., 105.]], dtype=precision)
+    # Expected XX: gram matrix X * X^T
+    expected_XX = np.array([[5., 11., 17.],
+                            [11., 25., 39.],
+                            [17., 39., 61.]], dtype=precision)
+
+    skpatch()
+    from sklearn.metrics.pairwise import pairwise_distances
+    with pytest.warns(RuntimeWarning):
+        da_distance_XY = pairwise_distances(X, Y, metric='inner_product')
+        da_distance_XX = pairwise_distances(X, metric='inner_product')
+    undo_skpatch()
+
+    tol = np.finfo(precision).eps
+    assert da_distance_XY == pytest.approx(expected_XY, abs=tol)
+    assert da_distance_XX == pytest.approx(expected_XX, abs=tol)

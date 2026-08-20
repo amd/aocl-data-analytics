@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2025 Advanced Micro Devices, Inc. All rights reserved.
+ * Copyright (C) 2025-2026 Advanced Micro Devices, Inc. All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without modification,
  * are permitted provided that the following conditions are met:
@@ -133,64 +133,64 @@ template <class T> void train_test_split_test_validation(const params pr) {
     }
 
     // test invalid X pointer
-    EXPECT_EQ(da_train_test_split(pr.order, m, n, nullptr, ldx, pr.train_size,
-                                  pr.test_size, nullptr, X_train.data(), pr.ldx_train,
-                                  X_test.data(), pr.ldx_test),
+    EXPECT_EQ(da_train_test_split<T>(pr.order, m, n, nullptr, ldx, pr.train_size,
+                                     pr.test_size, nullptr, X_train.data(), pr.ldx_train,
+                                     X_test.data(), pr.ldx_test),
               da_status_invalid_pointer);
     // test invalid X_train pointer
-    EXPECT_EQ(da_train_test_split(pr.order, m, n, X.data(), ldx, pr.train_size,
-                                  pr.test_size, nullptr, nullptr, pr.ldx_train,
-                                  X_test.data(), pr.ldx_test),
+    EXPECT_EQ(da_train_test_split<T>(pr.order, m, n, X.data(), ldx, pr.train_size,
+                                     pr.test_size, nullptr, nullptr, pr.ldx_train,
+                                     X_test.data(), pr.ldx_test),
               da_status_invalid_pointer);
     // test invalid X_test pointer
-    EXPECT_EQ(da_train_test_split(pr.order, m, n, X.data(), ldx, pr.train_size,
-                                  pr.test_size, nullptr, X_train.data(), pr.ldx_train,
-                                  nullptr, pr.ldx_test),
+    EXPECT_EQ(da_train_test_split<T>(pr.order, m, n, X.data(), ldx, pr.train_size,
+                                     pr.test_size, nullptr, X_train.data(), pr.ldx_train,
+                                     nullptr, pr.ldx_test),
               da_status_invalid_pointer);
     // test invalid ldx
-    EXPECT_EQ(da_train_test_split(pr.order, m, n, X.data(), 4, pr.train_size,
-                                  pr.test_size, nullptr, X_train.data(), pr.ldx_train,
-                                  X_test.data(), pr.ldx_test),
+    EXPECT_EQ(da_train_test_split<T>(pr.order, m, n, X.data(), 4, pr.train_size,
+                                     pr.test_size, nullptr, X_train.data(), pr.ldx_train,
+                                     X_test.data(), pr.ldx_test),
               da_status_invalid_leading_dimension);
     // test invalid ldx_train
-    EXPECT_EQ(da_train_test_split(pr.order, m, n, X.data(), ldx, pr.train_size,
-                                  pr.test_size, nullptr, X_train.data(), 1, X_test.data(),
-                                  pr.ldx_test),
+    EXPECT_EQ(da_train_test_split<T>(pr.order, m, n, X.data(), ldx, pr.train_size,
+                                     pr.test_size, nullptr, X_train.data(), 1,
+                                     X_test.data(), pr.ldx_test),
               da_status_invalid_leading_dimension);
     // test invalid ldx_test
-    EXPECT_EQ(da_train_test_split(pr.order, m, n, X.data(), ldx, pr.train_size,
-                                  pr.test_size, nullptr, X_train.data(), pr.ldx_train,
-                                  X_test.data(), 1),
+    EXPECT_EQ(da_train_test_split<T>(pr.order, m, n, X.data(), ldx, pr.train_size,
+                                     pr.test_size, nullptr, X_train.data(), pr.ldx_train,
+                                     X_test.data(), 1),
               da_status_invalid_leading_dimension);
     // test invalid dimension m
-    EXPECT_EQ(da_train_test_split(pr.order, 0, n, X.data(), ldx, pr.train_size,
-                                  pr.test_size, nullptr, X_train.data(), pr.ldx_train,
-                                  X_test.data(), pr.ldx_test),
+    EXPECT_EQ(da_train_test_split<T>(pr.order, 0, n, X.data(), ldx, pr.train_size,
+                                     pr.test_size, nullptr, X_train.data(), pr.ldx_train,
+                                     X_test.data(), pr.ldx_test),
               da_status_invalid_array_dimension);
     // test invalid dimension n
-    EXPECT_EQ(da_train_test_split(pr.order, m, 0, X.data(), ldx, pr.train_size,
-                                  pr.test_size, nullptr, X_train.data(), pr.ldx_train,
-                                  X_test.data(), pr.ldx_test),
+    EXPECT_EQ(da_train_test_split<T>(pr.order, m, 0, X.data(), ldx, pr.train_size,
+                                     pr.test_size, nullptr, X_train.data(), pr.ldx_train,
+                                     X_test.data(), pr.ldx_test),
               da_status_invalid_array_dimension);
     // test invalid train_size
-    EXPECT_EQ(da_train_test_split(pr.order, m, n, X.data(), ldx, 0, pr.test_size, nullptr,
-                                  X_train.data(), pr.ldx_train, X_test.data(),
-                                  pr.ldx_test),
+    EXPECT_EQ(da_train_test_split<T>(pr.order, m, n, X.data(), ldx, 0, pr.test_size,
+                                     nullptr, X_train.data(), pr.ldx_train, X_test.data(),
+                                     pr.ldx_test),
               da_status_invalid_input);
     // test invalid test_size
-    EXPECT_EQ(da_train_test_split(pr.order, m, n, X.data(), ldx, pr.train_size, 0,
-                                  nullptr, X_train.data(), pr.ldx_train, X_test.data(),
-                                  pr.ldx_test),
+    EXPECT_EQ(da_train_test_split<T>(pr.order, m, n, X.data(), ldx, pr.train_size, 0,
+                                     nullptr, X_train.data(), pr.ldx_train, X_test.data(),
+                                     pr.ldx_test),
               da_status_invalid_input);
     // test invalid train_size + test_size
     if (pr.order == column_major) {
-        EXPECT_EQ(da_train_test_split(pr.order, m, n, X.data(), ldx, 6, 6, nullptr,
-                                      X_train.data(), 6, X_test.data(), 6),
+        EXPECT_EQ(da_train_test_split<T>(pr.order, m, n, X.data(), ldx, 6, 6, nullptr,
+                                         X_train.data(), 6, X_test.data(), 6),
                   da_status_invalid_input);
     } else if (pr.order == row_major) {
-        EXPECT_EQ(da_train_test_split(pr.order, m, n, X.data(), ldx, 6, 6, nullptr,
-                                      X_train.data(), pr.ldx_train, X_test.data(),
-                                      pr.ldx_test),
+        EXPECT_EQ(da_train_test_split<T>(pr.order, m, n, X.data(), ldx, 6, 6, nullptr,
+                                         X_train.data(), pr.ldx_train, X_test.data(),
+                                         pr.ldx_test),
                   da_status_invalid_input);
     }
 }

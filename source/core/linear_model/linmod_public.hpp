@@ -65,7 +65,7 @@ da_status linmod_fit_start(da_handle handle, da_int ncoefs, const T *coefs) {
 template <typename linmod_class, typename T>
 da_status linmod_evaluate_model(da_handle handle, da_int nsamples, da_int nfeat,
                                 const T *Xeval, da_int ldXeval, T *predictions,
-                                T *observations, T *loss) {
+                                const T *observations, T *loss) {
     linmod_class *linmod = dynamic_cast<linmod_class *>(handle->get_alg_handle<T>());
     if (linmod == nullptr)
         return da_error(handle->err, da_status_invalid_handle_type,

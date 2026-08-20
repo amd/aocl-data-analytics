@@ -126,6 +126,7 @@ da_status _da_handle::load_handle(da_handle &handle, const char *buffer_data,
 
         status = handle->alg_handle_d->load_model(buffer);
     }
+
     if (status != da_status_success ||
         (handle->alg_handle_s == nullptr && handle->alg_handle_d == nullptr)) {
         da_status return_status =
@@ -169,6 +170,35 @@ da_status _da_handle::load_handle(da_handle &handle, const std::string &file_nam
 
     return status;
 }
+
+da_status _da_handle::print_model_versions() {
+    da_status status = da_status_internal_error;
+    if (precision == da_single) {
+        if (alg_handle_s == nullptr)
+            return da_status_handle_not_initialized;
+        status = alg_handle_s->print_model_versions();
+    } else {
+        if (alg_handle_d == nullptr)
+            return da_status_handle_not_initialized;
+        status = alg_handle_d->print_model_versions();
+    }
+    return status;
+}
+
+template <typename T> da_status _da_handle::check_precision() {
+    constexpr da_precision data_prec = std::is_same_v<T, double> ? da_double : da_single;
+    if (this->precision != data_prec) {
+        std::string user_t_str = std::is_same_v<T, float> ? "float" : "double";
+        return da_error(
+            this->err, da_status_wrong_type,
+            "The handle was initialized with a different precision type than " +
+                user_t_str + ".");
+    }
+    return da_status_success;
+}
+
+template da_status _da_handle::check_precision<float>();
+template da_status _da_handle::check_precision<double>();
 
 template <> basic_handle<double> *_da_handle::get_alg_handle<double>() {
     return alg_handle_d;

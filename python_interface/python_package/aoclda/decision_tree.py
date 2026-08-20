@@ -326,6 +326,9 @@ class decision_tree():
             )
         return
 
+    def print_model_versions(self):
+        return self.decision_tree.pybind_print_model_versions()
+
     @property
     def n_samples(self):
         """int: The number of samples used in the trained tree"""
@@ -367,6 +370,13 @@ class decision_tree():
         if self._model_info is None:
             self.update_model_info()
         return self._model_info["n_leaves"]
+
+    @property
+    def n_threads(self):
+        """int: The number of threads used by the classifier"""
+        if self._model_info is None:
+            self.update_model_info()
+        return self._model_info["n_threads"]
 
     def _get_max_features_opt(self):
         """getter for the C++ internal option value - purely for internal use"""

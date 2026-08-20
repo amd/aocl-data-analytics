@@ -274,6 +274,8 @@ void dforest_serialization_test(const dforest_serial_params &pr, da_int n_sample
                   da_status_success);
         EXPECT_EQ(seed_loaded, pr.seed);
 
+        model_persistence_test_utils::test_print_model_versions(handle_loaded);
+
         da_handle_destroy(&handle_loaded);
     }
 }

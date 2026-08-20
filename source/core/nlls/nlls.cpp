@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2025 Advanced Micro Devices, Inc. All rights reserved.
+ * Copyright (C) 2025-2026 Advanced Micro Devices, Inc. All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without modification,
  * are permitted provided that the following conditions are met:
@@ -68,9 +68,7 @@ da_status nlls<T>::get_result(da_result query, da_int *dim, T *result) {
     return da_optimization<T>::get_result(query, dim, result);
 };
 template <typename T>
-da_status nlls<T>::get_result([[maybe_unused]] da_result query,
-                              [[maybe_unused]] da_int *dim,
-                              [[maybe_unused]] da_int *result) {
+da_status nlls<T>::get_result(da_result query, da_int *dim, da_int *result) {
     return da_optimization<T>::get_result(query, dim, result);
 };
 

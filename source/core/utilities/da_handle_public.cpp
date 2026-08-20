@@ -31,7 +31,8 @@
 #include "parser.hpp"
 
 /* Create (and populate with defaults) */
-da_status da_handle_init_d(da_handle *handle, da_handle_type handle_type) {
+template <typename T>
+da_status da_handle_init(da_handle *handle, da_handle_type handle_type) {
 
     try {
         *handle = new _da_handle;
@@ -45,68 +46,77 @@ da_status da_handle_init_d(da_handle *handle, da_handle_type handle_type) {
     }
 
     (*handle)->handle_type = handle_type;
-    (*handle)->precision = da_double;
+
+    constexpr bool is_double = std::is_same_v<T, double>;
+    (*handle)->precision = is_double ? da_double : da_single;
+
+    basic_handle<T> *alg_handle = nullptr;
+
     da_status status = da_status_success;
 
     try {
         switch (handle_type) {
         case da_handle_linmod:
             DISPATCHER((*handle)->err,
-                       (*handle)->alg_handle_d =
-                           new da_linmod::linear_model<double>(*(*handle)->err));
+                       alg_handle = new da_linmod::linear_model<T>(*(*handle)->err));
             status = (*handle)->err->get_status();
             if (status != da_status_success) {
-                (*handle)->alg_handle_s = nullptr;
+                alg_handle = nullptr;
                 return status;
             }
             break;
         case da_handle_pca:
-            DISPATCHER((*handle)->err, (*handle)->alg_handle_d =
-                                           new da_pca::pca<double>(*(*handle)->err));
+            DISPATCHER((*handle)->err, alg_handle = new da_pca::pca<T>(*(*handle)->err));
             status = (*handle)->err->get_status();
             if (status != da_status_success) {
-                (*handle)->alg_handle_d = nullptr;
+                alg_handle = nullptr;
+                return status;
+            }
+            break;
+        case da_handle_tsne:
+            DISPATCHER((*handle)->err,
+                       alg_handle = new da_tsne::tsne<T>(*(*handle)->err));
+            status = (*handle)->err->get_status();
+            if (status != da_status_success) {
+                alg_handle = nullptr;
                 return status;
             }
             break;
         case da_handle_kmeans:
             DISPATCHER((*handle)->err,
-                       (*handle)->alg_handle_d =
-                           new da_kmeans::kmeans<double>(*(*handle)->err));
+                       alg_handle = new da_kmeans::kmeans<T>(*(*handle)->err));
             status = (*handle)->err->get_status();
             if (status != da_status_success) {
-                (*handle)->alg_handle_d = nullptr;
+                alg_handle = nullptr;
                 return status;
             }
             break;
         case da_handle_dbscan:
             DISPATCHER((*handle)->err,
-                       (*handle)->alg_handle_d =
-                           new da_dbscan::dbscan<double>(*(*handle)->err));
+                       alg_handle = new da_dbscan::dbscan<T>(*(*handle)->err));
             status = (*handle)->err->get_status();
             if (status != da_status_success) {
-                (*handle)->alg_handle_d = nullptr;
+                alg_handle = nullptr;
                 return status;
             }
             break;
         case da_handle_decision_tree:
-            DISPATCHER((*handle)->err, (*handle)->alg_handle_d =
-                                           new da_decision_forest::decision_tree<double>(
-                                               *(*handle)->err));
+            DISPATCHER((*handle)->err,
+                       alg_handle =
+                           new da_decision_forest::decision_tree<T>(*(*handle)->err));
             status = (*handle)->err->get_status();
             if (status != da_status_success) {
-                (*handle)->alg_handle_d = nullptr;
+                alg_handle = nullptr;
                 return status;
             }
             break;
         case da_handle_decision_forest:
-            DISPATCHER(
-                (*handle)->err,
-                (*handle)->alg_handle_d =
-                    new da_decision_forest::decision_forest<double>(*(*handle)->err));
+            DISPATCHER((*handle)->err,
+                       alg_handle =
+                           new da_decision_forest::decision_forest<T>(*(*handle)->err));
             status = (*handle)->err->get_status();
             if (status != da_status_success) {
-                (*handle)->alg_handle_d = nullptr;
+                alg_handle = nullptr;
                 return status;
             }
             break;
@@ -117,51 +127,55 @@ da_status da_handle_init_d(da_handle *handle, da_handle_type handle_type) {
                             "implementation");
 #endif
             DISPATCHER((*handle)->err,
-                       (*handle)->alg_handle_d =
-                           new da_nlls::nlls<double>(status, *(*handle)->err));
-            // status = (*handle)->err->get_status();
+                       alg_handle = new da_nlls::nlls<T>(status, *(*handle)->err));
             if (status != da_status_success) {
-                (*handle)->alg_handle_d = nullptr;
+                alg_handle = nullptr;
                 return status;
             }
             break;
         case da_handle_nn:
             DISPATCHER((*handle)->err,
-                       (*handle)->alg_handle_d =
-                           new da_neighbors::neighbors<double>(*(*handle)->err));
+                       alg_handle = new da_neighbors::neighbors<T>(*(*handle)->err));
             status = (*handle)->err->get_status();
             if (status != da_status_success) {
-                (*handle)->alg_handle_d = nullptr;
+                alg_handle = nullptr;
                 return status;
             }
             break;
         case da_handle_svm:
-            DISPATCHER((*handle)->err, (*handle)->alg_handle_d =
-                                           new da_svm::svm<double>(*(*handle)->err));
+            DISPATCHER((*handle)->err, alg_handle = new da_svm::svm<T>(*(*handle)->err));
             status = (*handle)->err->get_status();
             if (status != da_status_success) {
-                (*handle)->alg_handle_d = nullptr;
+                alg_handle = nullptr;
                 return status;
             }
             break;
         case da_handle_interpolation:
-            DISPATCHER((*handle)->err, (*handle)->alg_handle_d =
-                                           new da_interpolation::interpolation_p<double>(
-                                               *(*handle)->err));
+            DISPATCHER((*handle)->err,
+                       alg_handle =
+                           new da_interpolation::interpolation_p<T>(*(*handle)->err));
             status = (*handle)->err->get_status();
             if (status != da_status_success) {
-                (*handle)->alg_handle_d = nullptr;
+                alg_handle = nullptr;
                 return status;
             }
             break;
         case da_handle_approx_nn:
-            DISPATCHER(
-                (*handle)->err,
-                (*handle)->alg_handle_d =
-                    new da_approx_nn::approximate_neighbors<double>(*(*handle)->err));
+            DISPATCHER((*handle)->err,
+                       alg_handle =
+                           new da_approx_nn::approximate_neighbors<T>(*(*handle)->err));
             status = (*handle)->err->get_status();
             if (status != da_status_success) {
-                (*handle)->alg_handle_d = nullptr;
+                alg_handle = nullptr;
+                return status;
+            }
+            break;
+        case da_handle_kernel_pca:
+            DISPATCHER((*handle)->err,
+                       alg_handle = new da_kernel_pca::kernel_pca<T>(*(*handle)->err));
+            status = (*handle)->err->get_status();
+            if (status != da_status_success) {
+                alg_handle = nullptr;
                 return status;
             }
             break;
@@ -172,141 +186,12 @@ da_status da_handle_init_d(da_handle *handle, da_handle_type handle_type) {
         return da_error((*handle)->err, da_status_memory_error, // LCOV_EXCL_LINE
                         "Memory allocation error");             // LCOV_EXCL_LINE
     }
-    return da_status_success;
-}
 
-da_status da_handle_init_s(da_handle *handle, da_handle_type handle_type) {
+    if constexpr (is_double)
+        (*handle)->alg_handle_d = alg_handle;
+    else
+        (*handle)->alg_handle_s = alg_handle;
 
-    try {
-        *handle = new _da_handle;
-    } catch (std::bad_alloc &) {
-        return da_status_memory_error;
-    }
-    try {
-        (*handle)->err = new da_errors::da_error_t(da_errors::action_t::DA_RECORD);
-    } catch (std::bad_alloc &) {
-        return da_status_memory_error;
-    }
-
-    (*handle)->handle_type = handle_type;
-    (*handle)->precision = da_single;
-    da_status status = da_status_success;
-
-    try {
-        switch (handle_type) {
-        case da_handle_linmod:
-            DISPATCHER((*handle)->err,
-                       (*handle)->alg_handle_s =
-                           new da_linmod::linear_model<float>(*(*handle)->err));
-            status = (*handle)->err->get_status();
-            if (status != da_status_success) {
-                (*handle)->alg_handle_s = nullptr;
-                return status;
-            }
-            break;
-        case da_handle_pca:
-            DISPATCHER((*handle)->err,
-                       (*handle)->alg_handle_s = new da_pca::pca<float>(*(*handle)->err));
-            status = (*handle)->err->get_status();
-            if (status != da_status_success) {
-                (*handle)->alg_handle_s = nullptr;
-                return status;
-            }
-            break;
-        case da_handle_kmeans:
-            DISPATCHER((*handle)->err, (*handle)->alg_handle_s =
-                                           new da_kmeans::kmeans<float>(*(*handle)->err));
-            status = (*handle)->err->get_status();
-            if (status != da_status_success) {
-                (*handle)->alg_handle_s = nullptr;
-                return status;
-            }
-            break;
-        case da_handle_dbscan:
-            DISPATCHER((*handle)->err, (*handle)->alg_handle_s =
-                                           new da_dbscan::dbscan<float>(*(*handle)->err));
-            status = (*handle)->err->get_status();
-            if (status != da_status_success) {
-                (*handle)->alg_handle_s = nullptr;
-                return status;
-            }
-            break;
-        case da_handle_decision_tree:
-            DISPATCHER((*handle)->err,
-                       (*handle)->alg_handle_s =
-                           new da_decision_forest::decision_tree<float>(*(*handle)->err));
-            status = (*handle)->err->get_status();
-            if (status != da_status_success) {
-                (*handle)->alg_handle_s = nullptr;
-                return status;
-            }
-            break;
-        case da_handle_decision_forest:
-            DISPATCHER((*handle)->err, (*handle)->alg_handle_s =
-                                           new da_decision_forest::decision_forest<float>(
-                                               *(*handle)->err));
-            status = (*handle)->err->get_status();
-            if (status != da_status_success) {
-                (*handle)->alg_handle_s = nullptr;
-                return status;
-            }
-            break;
-        case da_handle_nlls:
-            DISPATCHER((*handle)->err, (*handle)->alg_handle_s = new da_nlls::nlls<float>(
-                                           status, *(*handle)->err));
-            // status = (*handle)->err->get_status();
-            if (status != da_status_success) {
-                (*handle)->alg_handle_s = nullptr;
-                return status;
-            }
-            break;
-        case da_handle_nn:
-            DISPATCHER((*handle)->err,
-                       (*handle)->alg_handle_s =
-                           new da_neighbors::neighbors<float>(*(*handle)->err));
-            status = (*handle)->err->get_status();
-            if (status != da_status_success) {
-                (*handle)->alg_handle_s = nullptr;
-                return status;
-            }
-            break;
-        case da_handle_svm:
-            DISPATCHER((*handle)->err,
-                       (*handle)->alg_handle_s = new da_svm::svm<float>(*(*handle)->err));
-            status = (*handle)->err->get_status();
-            if (status != da_status_success) {
-                (*handle)->alg_handle_s = nullptr;
-                return status;
-            }
-            break;
-        case da_handle_interpolation:
-            DISPATCHER((*handle)->err,
-                       (*handle)->alg_handle_s =
-                           new da_interpolation::interpolation_p<float>(*(*handle)->err));
-            status = (*handle)->err->get_status();
-            if (status != da_status_success) {
-                (*handle)->alg_handle_s = nullptr;
-                return status;
-            }
-            break;
-        case da_handle_approx_nn:
-            DISPATCHER((*handle)->err, (*handle)->alg_handle_s =
-                                           new da_approx_nn::approximate_neighbors<float>(
-                                               *(*handle)->err));
-            status = (*handle)->err->get_status();
-            if (status != da_status_success) {
-                (*handle)->alg_handle_s = nullptr;
-                return status;
-            }
-            break;
-
-        default:
-            break;
-        }
-    } catch (std::bad_alloc &) {
-        return da_error((*handle)->err, da_status_memory_error, // LCOV_EXCL_LINE
-                        "Memory allocation error");             // LCOV_EXCL_LINE
-    }
     return da_status_success;
 }
 
@@ -345,65 +230,9 @@ void da_handle_destroy(da_handle *handle) {
 /* Get results out of the handle
  * Defines are in aoclda_result.h
  */
-
-da_status da_handle_get_result_d(da_handle handle, da_result query, da_int *dim,
-                                 double *result) {
-    if (!handle)
-        return da_status_handle_not_initialized;
-    handle->clear(); // Clean up handle logs
-    if (handle->precision != da_double)
-        return da_error(handle->err, da_status_wrong_type,
-                        "The handle was initialized with a different precision type than "
-                        "double precision floating point type.");
-
-    if (dim == nullptr)
-        return da_error(handle->err, da_status_invalid_input, "dim has not been defined");
-    else if (result == nullptr)
-        return da_error(handle->err, da_status_invalid_input,
-                        "The result array has not been allocated");
-
-    // Currently there can only be a SINGLE valid internal handle pointer,
-    // so we cycle through them and query to see if the result is
-    // provided by it.
-    if (handle->alg_handle_d != nullptr)
-        return handle->alg_handle_d->get_result(query, dim, result);
-
-    // handle was not initialized with
-    return da_error(handle->err, da_status_handle_not_initialized,
-                    "The handle does not have any results to export. Have you "
-                    "initialized the handle and performed any calculation?");
-}
-
-da_status da_handle_get_result_s(da_handle handle, da_result query, da_int *dim,
-                                 float *result) {
-    if (!handle)
-        return da_status_handle_not_initialized;
-    handle->clear(); // Clean up handle logs
-    if (handle->precision != da_single)
-        return da_error(handle->err, da_status_wrong_type,
-                        "The handle was initialized with a different precision type than "
-                        "single precision floating point type.");
-
-    if (dim == nullptr)
-        return da_error(handle->err, da_status_invalid_input, "dim has not been defined");
-    else if (result == nullptr)
-        return da_error(handle->err, da_status_invalid_input,
-                        "The result array has not been allocated");
-
-    // Currently there can only be a SINGLE valid internal handle pointer,
-    // so we cycle through them and query to see if the result is
-    // provided by it.
-    if (handle->alg_handle_s != nullptr)
-        return handle->alg_handle_s->get_result(query, dim, result);
-
-    // handle was not initialized
-    return da_error(handle->err, da_status_handle_not_initialized,
-                    "The handle does not have any results to export. Have you "
-                    "initialized the handle and performed any calculation?");
-}
-
-da_status da_handle_get_result_int(da_handle handle, da_result query, da_int *dim,
-                                   da_int *result) {
+template <typename T>
+da_status da_handle_get_result(da_handle handle, da_result query, da_int *dim,
+                               T *result) {
     if (!handle)
         return da_status_handle_not_initialized;
     handle->clear(); // Clean up handle logs
@@ -414,13 +243,21 @@ da_status da_handle_get_result_int(da_handle handle, da_result query, da_int *di
         return da_error(handle->err, da_status_invalid_input,
                         "The result array has not been allocated");
 
-    // Currently there can only be a SINGLE valid internal handle pointer,
-    // so we cycle through them and query to see if the result is
-    // provided by it.
-    if (handle->alg_handle_d != nullptr)
-        return handle->alg_handle_d->get_result(query, dim, result);
-    else if (handle->alg_handle_s != nullptr)
-        return handle->alg_handle_s->get_result(query, dim, result);
+    if constexpr (std::is_same_v<da_int, T>) {
+        if (handle->alg_handle_d != nullptr)
+            return handle->alg_handle_d->get_result(query, dim, result);
+        else if (handle->alg_handle_s != nullptr)
+            return handle->alg_handle_s->get_result(query, dim, result);
+    } else {
+        da_status status = handle->check_precision<T>();
+        if (status != da_status_success)
+            return da_error_trace(handle->err, status, "Wrong precision type.");
+
+        basic_handle<T> *alg = handle->get_alg_handle<T>();
+        if (alg != nullptr) {
+            return alg->get_result(query, dim, result);
+        }
+    }
 
     // handle was not initialized
     return da_error(handle->err, da_status_handle_not_initialized,
@@ -505,3 +342,16 @@ da_status da_handle_load_model(da_handle *handle, const char *file_name) {
 
     return _da_handle::load_handle(*handle, std::string(file_name));
 }
+
+/* Print saved versions of AOCL-DA and model serialization. */
+da_status da_handle_print_model_versions(da_handle handle) {
+    if (handle == nullptr)
+        return da_status_invalid_pointer;
+    return handle->print_model_versions();
+}
+
+template da_status da_handle_init<float>(da_handle *, da_handle_type);
+template da_status da_handle_init<double>(da_handle *, da_handle_type);
+template da_status da_handle_get_result<float>(da_handle, da_result, da_int *, float *);
+template da_status da_handle_get_result<double>(da_handle, da_result, da_int *, double *);
+template da_status da_handle_get_result<da_int>(da_handle, da_result, da_int *, da_int *);

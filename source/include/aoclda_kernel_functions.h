@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2024-2025 Advanced Micro Devices, Inc. All rights reserved.
+ * Copyright (C) 2024-2026 Advanced Micro Devices, Inc. All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without modification,
  * are permitted provided that the following conditions are met:
@@ -80,7 +80,7 @@ da_status da_rbf_kernel_s(da_order order, da_int m, da_int n, da_int k, const fl
  *
  * This function computes the linear kernel between the rows of \p X (size \p m @f$\times@f$ \p k) and \p Y (size \p n @f$\times@f$ \p k) if provided.
  * If \p Y is null, the kernel is computed between the rows of \p X, (@f$XX^T@f$). The results are stored in \p D.
- * 
+ *
  * The linear kernel is given by:
  * @f[
  * K(x, y) = x \cdot y.
@@ -117,7 +117,7 @@ da_status da_linear_kernel_s(da_order order, da_int m, da_int n, da_int k, const
  *
  * This function computes the polynomial kernel between the rows of \p X (size \p m @f$\times@f$ \p k) and \p Y (size \p n @f$\times@f$ \p k) if provided.
  * If \p Y is null, the kernel is computed between the rows of \p X, (@f$XX^T@f$). The results are stored in \p D.
- * 
+ *
  * The polynomial kernel is given by:
  * @f[
  * K(x, y) = (\gamma x \cdot y + c)^d.
@@ -134,7 +134,7 @@ da_status da_linear_kernel_s(da_order order, da_int m, da_int n, da_int k, const
  * @param[out] D the resulting kernel matrix of size \p m @f$\times@f$ \p n if \p Y is not null, or \p m @f$\times@f$ \p m otherwise.
  * @param[in] ldd the leading dimension of the matrix \p D. Constraint: \p ldd @f$\ge@f$ \p m, if \p Y is nullptr or \p order = \p column_major, and \p ldd @f$\ge@f$ \p n, otherwise.
  * @param[in] gamma the scale factor used in polynomial kernel. Constraint: \p gamma @f$\ge@f$ 0.
- * @param[in] degree the degree of the polynomial kernel.  Constraint: \p degree @f$\ge@f$ 0.
+ * @param[in] degree the degree of the polynomial kernel.  Constraint: \p degree @f$\ge@f$ 1.
  * @param[in] coef0 the independent term in the polynomial kernel.
  * @return @ref da_status
  * - @ref da_status_success - operation completed successfully.
@@ -165,7 +165,7 @@ da_status da_polynomial_kernel_s(da_order order, da_int m, da_int n, da_int k,
  * @f[
  * K(x, y) = \tanh(\gamma x \cdot y + c).
  * @f]
- * 
+ *
  * @param[in] order @ref da_order enum specifying column-major or row-major layout.
  * @param[in] m the number of rows of matrix X. Constraint: @p m @f$\ge@f$ 1.
  * @param[in] n the number of rows of matrix Y. Constraint: @p n @f$\ge@f$ 1.

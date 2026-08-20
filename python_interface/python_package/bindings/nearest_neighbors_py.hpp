@@ -71,14 +71,17 @@ class nearest_neighbors : public pyda_handle {
             algo = "ball tree";
         status = da_options_set(handle, "algorithm", algo.c_str());
         exception_check(status);
-        status = da_options_set(handle, "metric", metric.c_str());
+        std::string met = metric;
+        if (metric == "inner_product")
+            met = "inner product";
+        status = da_options_set(handle, "metric", met.c_str());
         exception_check(status);
         status = da_options_set(handle, "leaf size", leaf_size);
         exception_check(status);
 
         if (check_data == true) {
             std::string yes_str = "yes";
-            status = da_options_set(handle, "check data", yes_str.data());
+            status = da_options_set(handle, "check data", yes_str.c_str());
             exception_check(status);
         }
     }
@@ -184,8 +187,8 @@ class nearest_neighbors : public pyda_handle {
         }
 
         auto k_ind = py::array_t<da_int>(shape, strides);
-        status = da_nn_kneighbors(handle, n_queries, n_features, X.data(), ldx,
-                                  k_ind.mutable_data(), nullptr, req_neigh, 0);
+        status = da_nn_kneighbors<T>(handle, n_queries, n_features, X.data(), ldx,
+                                     k_ind.mutable_data(), nullptr, req_neigh, 0);
         exception_check(status);
         return k_ind;
     }

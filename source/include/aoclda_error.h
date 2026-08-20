@@ -100,6 +100,10 @@ enum da_status_ {
     da_status_invalid_file_data, ///< File data is invalid or corrupted (bad magic, too small)
     da_status_version_mismatch, ///< Model file version is incompatible (future-proofing)
 
+    // Clustering errors 900-999
+    da_status_empty_clusters =
+        900, ///< One or more clusters became empty during the k-means algorithm.
+
 };
 
 /** @brief Alias for the \ref da_status_ enum. */

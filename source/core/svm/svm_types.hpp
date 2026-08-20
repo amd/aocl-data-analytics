@@ -23,11 +23,12 @@
 
 #ifndef SVM_TYPES_HPP
 #define SVM_TYPES_HPP
+#include "kernel_functions_types.hpp"
 #include <functional>
 
 namespace da_svm_types {
 
-enum svm_kernel { rbf = 0, linear, polynomial, sigmoid };
+using svm_kernel = da_kernel_functions_types::kernel_type;
 
 template <typename T> struct meta_kernel_f {
     using type = std::function<void(

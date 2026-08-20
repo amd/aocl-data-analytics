@@ -39,6 +39,7 @@ namespace ARCH {
 namespace da_neighbors {
 
 /* nearest neighbors class */
+/* To check whether radius neighbors have been computed, use basic_handle::model_trained */
 template <typename T> class neighbors : public basic_handle<T> {
   private:
     // Set true when initialization is complete by set_params() function
@@ -49,7 +50,6 @@ template <typename T> class neighbors : public basic_handle<T> {
     bool istrained_targets = false;
     // Set true if the available classes have been computed via a call to available_classes()
     bool classes_computed = false;
-    bool radius_neighbors_computed = false;
     bool sort_results = false;
     bool rnn_return_distances = false;
     // Set true if most_frequent_label has been computed
@@ -114,8 +114,7 @@ template <typename T> class neighbors : public basic_handle<T> {
 
     /* get_result (required to be defined by basic_handle) */
     da_status get_result(da_result query, da_int *dim, T *result) override;
-    da_status get_result([[maybe_unused]] da_result query, [[maybe_unused]] da_int *dim,
-                         [[maybe_unused]] da_int *result) override;
+    da_status get_result(da_result query, da_int *dim, da_int *result) override;
     // Set input parameters
     da_status set_params();
     // Chose the appropriate algorithm for kNN if auto is selected
@@ -159,20 +158,6 @@ template <typename T> class neighbors : public basic_handle<T> {
                                            da_int *n_ind, T *n_dist, da_int n_neigh,
                                            bool return_distance);
 
-    // Computational kernel that computes kneighbors using blocking on Xtest for overall algorithm.
-    // In addition, it uses blocking for Xtrain only for the distance computation.
-    template <da_int XTRAIN_BLOCK, da_int XTEST_BLOCK>
-    inline da_status kneighbors_brute_force_Xtest(da_int n_queries, da_int n_features,
-                                                  const T *X_test, da_int ldx_test,
-                                                  da_int *n_ind, T *n_dist,
-                                                  da_int n_neigh, bool return_distance);
-    // Compute the k-nearest neighbors and optionally the corresponding distances
-    // Inlining is performance-critical for this function
-    template <da_int XTRAIN_BLOCK>
-    inline da_status kneighbors_brute_force_Xtest_kernel(
-        da_int xtrain_block_size, da_int n_blocks_train, da_int block_rem_train,
-        da_int n_queries, da_int n_features, const T *X_test, da_int ldx_test, T *D,
-        da_int *n_ind, T *n_dist, da_int k, bool return_distance);
     // Compute probability estimates for provided test data
     da_status predict_proba(da_int n_queries, da_int n_features, const T *X_test,
                             da_int ldx_test, T *proba, da_nn_search_mode search_mode);

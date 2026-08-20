@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2024-2025 Advanced Micro Devices, Inc. All rights reserved.
+ * Copyright (C) 2024-2026 Advanced Micro Devices, Inc. All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without modification,
  * are permitted provided that the following conditions are met:
@@ -52,7 +52,8 @@ static std::list<std::tuple<std::string, da_metric>> MetricExactResultsType = {
     {"da_cosine", da_cosine},
     {"da_minkowski", da_minkowski},
     {"da_euclidean_gemm", da_euclidean_gemm},
-    {"da_sqeuclidean_gemm", da_sqeuclidean_gemm}};
+    {"da_sqeuclidean_gemm", da_sqeuclidean_gemm},
+    {"da_inner_product", da_inner_product}};
 
 template <typename T> class PairwiseDistanceTest : public testing::Test {
   public:
@@ -184,9 +185,9 @@ template <typename T> std::vector<T> test_distance(PairwiseDistanceParamType<T> 
         EXPECT_EQ(status, da_status_success);
     } else {
         D.resize(data.ldd * data.m, T{0.0});
-        auto status = da_pairwise_distances(column_major, data.m, data.n, data.k,
-                                            data.X.data(), data.ldx, nullptr, data.ldy,
-                                            D.data(), data.ldd, p, data.metric);
+        auto status = da_pairwise_distances<T>(column_major, data.m, data.n, data.k,
+                                               data.X.data(), data.ldx, nullptr, data.ldy,
+                                               D.data(), data.ldd, p, data.metric);
         EXPECT_EQ(status, da_status_success);
     }
 
@@ -251,8 +252,9 @@ TYPED_TEST(PairwiseDistanceTest, zero_data) {
                ", ldx=" + std::to_string(ldx) + ", ldd=" + std::to_string(ldd) +
                ", metric=" + std::get<0>(metric) + ", XX";
         std::cout << "Testing for data = " << name << std::endl;
-        auto status = da_pairwise_distances(column_major, m, n, k, X.data(), ldx, nullptr,
-                                            0, D.data(), ldd, p, std::get<1>(metric));
+        auto status = da_pairwise_distances<TypeParam>(column_major, m, n, k, X.data(),
+                                                       ldx, nullptr, 0, D.data(), ldd, p,
+                                                       std::get<1>(metric));
         EXPECT_EQ(status, da_status_success);
 
         EXPECT_ARR_EQ(da_int(D.size()), D.data(), D_exp.data(), 1, 1, 0, 0);
@@ -325,6 +327,8 @@ TYPED_TEST(PairwiseDistanceTest, FixedData_XY) {
         } else if ((std::get<1>(metric) == da_minkowski)) {
             D_exp_row = {6.254413691636758, 5.124034794569624, 3.009451461921273, 2,
                          4.001734793974489, 3.1055785043917186};
+        } else if ((std::get<1>(metric) == da_inner_product)) {
+            D_exp_row = {-9., -5., 12., 8., 16., 10.};
         } else {
             throw std::runtime_error("Error in metric_public.cpp");
         }
@@ -418,6 +422,9 @@ TYPED_TEST(PairwiseDistanceTest, FixedData_XX) {
                          5.811210513661822,
                          6.356105477264618,
                          0.};
+        } else if ((std::get<1>(metric) == da_inner_product)) {
+            D_exp_row = {26.,  -11., -22., -8., -11., 14., 19., 2.,
+                         -22., 19.,  30.,  10., -8.,  2.,  10., 19.};
         } else {
             throw std::runtime_error("Error in metric_public.cpp");
         }
@@ -429,9 +436,9 @@ TYPED_TEST(PairwiseDistanceTest, FixedData_XX) {
         }
 
         transposeMatrix(m, m, ldd_r, ldd_c, D_exp_row, D_exp_col);
-        auto status =
-            da_pairwise_distances(row_major, m, 1, k, X_row.data(), ldx_r, nullptr, 0,
-                                  D_row.data(), ldd_r, p, std::get<1>(metric));
+        auto status = da_pairwise_distances<TypeParam>(row_major, m, 1, k, X_row.data(),
+                                                       ldx_r, nullptr, 0, D_row.data(),
+                                                       ldd_r, p, std::get<1>(metric));
 
         EXPECT_EQ(status, da_status_success);
         EXPECT_ARR_NEAR(da_int(D_row.size()), D_row.data(), D_exp_row.data(),
@@ -441,9 +448,9 @@ TYPED_TEST(PairwiseDistanceTest, FixedData_XX) {
         name = "m=" + std::to_string(m) + ", k=" + std::to_string(k) +
                ", ldx=" + std::to_string(ldx_c) + ", ldd=" + std::to_string(ldd_c) +
                ", metric=" + std::get<0>(metric) + ", order=column_major";
-        status =
-            da_pairwise_distances(column_major, m, 1, k, X_col.data(), ldx_c, nullptr, 0,
-                                  D_col.data(), ldd_c, p, std::get<1>(metric));
+        status = da_pairwise_distances<TypeParam>(column_major, m, 1, k, X_col.data(),
+                                                  ldx_c, nullptr, 0, D_col.data(), ldd_c,
+                                                  p, std::get<1>(metric));
         EXPECT_EQ(status, da_status_success);
         EXPECT_ARR_NEAR(da_int(D_col.size()), D_col.data(), D_exp_col.data(),
                         100 * std::numeric_limits<TypeParam>::epsilon());
@@ -502,6 +509,8 @@ TYPED_TEST(PairwiseDistanceTest, FixedData_XY_ld) {
                          0.,
                          0.,
                          0.};
+        } else if ((std::get<1>(metric) == da_inner_product)) {
+            D_exp_row = {-9., -5., 0., 0., 0., 12., 8., 0., 0., 0., 16., 10., 0., 0., 0.};
         } else {
             throw std::runtime_error("Error in metric_public.cpp");
         }
@@ -626,6 +635,10 @@ TYPED_TEST(PairwiseDistanceTest, FixedData_XX_ld) {
                          0.,
                          0.,
                          0.};
+        } else if ((std::get<1>(metric) == da_inner_product)) {
+            D_exp_row = {26., -11., -22., -8., 0.,   0.,  0.,  -11., 14., 19.,
+                         2.,  0.,   0.,   0.,  -22., 19., 30., 10.,  0.,  0.,
+                         0.,  -8.,  2.,   10., 19.,  0.,  0.,  0.};
         } else {
             throw std::runtime_error("Error in metric_public.cpp");
         }
@@ -637,9 +650,9 @@ TYPED_TEST(PairwiseDistanceTest, FixedData_XX_ld) {
         }
 
         transposeMatrix(m, m, ldd_r, ldd_c, D_exp_row, D_exp_col);
-        auto status =
-            da_pairwise_distances(row_major, m, 1, k, X_row.data(), ldx_r, nullptr, 0,
-                                  D_row.data(), ldd_r, p, std::get<1>(metric));
+        auto status = da_pairwise_distances<TypeParam>(row_major, m, 1, k, X_row.data(),
+                                                       ldx_r, nullptr, 0, D_row.data(),
+                                                       ldd_r, p, std::get<1>(metric));
 
         EXPECT_EQ(status, da_status_success);
         EXPECT_ARR_NEAR(da_int(D_row.size()), D_row.data(), D_exp_row.data(),
@@ -649,9 +662,9 @@ TYPED_TEST(PairwiseDistanceTest, FixedData_XX_ld) {
         name = "m=" + std::to_string(m) + ", k=" + std::to_string(k) +
                ", ldx=" + std::to_string(ldx_c) + ", ldd=" + std::to_string(ldd_c) +
                ", metric=" + std::get<0>(metric) + ", order=column_major";
-        status =
-            da_pairwise_distances(column_major, m, 1, k, X_col.data(), ldx_c, nullptr, 0,
-                                  D_col.data(), ldd_c, p, std::get<1>(metric));
+        status = da_pairwise_distances<TypeParam>(column_major, m, 1, k, X_col.data(),
+                                                  ldx_c, nullptr, 0, D_col.data(), ldd_c,
+                                                  p, std::get<1>(metric));
         EXPECT_EQ(status, da_status_success);
         EXPECT_ARR_NEAR(da_int(D_col.size()), D_col.data(), D_exp_col.data(),
                         100 * std::numeric_limits<TypeParam>::epsilon());
@@ -737,15 +750,15 @@ TYPED_TEST(PairwiseDistanceTest, ErrorExits) {
               da_status_invalid_input)
         << ErrorExits_print("Minkowski parameter");
     // Test for invalid pointer X.
-    EXPECT_EQ(da_pairwise_distances(column_major, param.m, param.n, param.k, nullptr,
-                                    param.ldx, Y_tmp.data(), param.ldy, D.data(),
-                                    param.ldd, p, param.metric),
+    EXPECT_EQ(da_pairwise_distances<TypeParam>(
+                  column_major, param.m, param.n, param.k, nullptr, param.ldx,
+                  Y_tmp.data(), param.ldy, D.data(), param.ldd, p, param.metric),
               da_status_invalid_pointer)
         << ErrorExits_print("X");
     // Test for invalid pointer D.
-    EXPECT_EQ(da_pairwise_distances(column_major, param.m, param.n, param.k, X.data(),
-                                    param.ldx, Y_tmp.data(), param.ldy, nullptr,
-                                    param.ldd, p, param.metric),
+    EXPECT_EQ(da_pairwise_distances<TypeParam>(
+                  column_major, param.m, param.n, param.k, X.data(), param.ldx,
+                  Y_tmp.data(), param.ldy, nullptr, param.ldd, p, param.metric),
               da_status_invalid_pointer)
         << ErrorExits_print("D");
     // Test for invalid value of m.
@@ -785,9 +798,9 @@ TYPED_TEST(PairwiseDistanceTest, ErrorExits) {
               da_status_invalid_leading_dimension)
         << ErrorExits_print("ldd");
     // Test for invalid value of ldd when Y is nullptr.
-    EXPECT_EQ(da_pairwise_distances(column_major, param.m, param.n, param.k, X.data(),
-                                    param.ldx, nullptr, param.ldy, D.data(), -1, p,
-                                    param.metric),
+    EXPECT_EQ(da_pairwise_distances<TypeParam>(column_major, param.m, param.n, param.k,
+                                               X.data(), param.ldx, nullptr, param.ldy,
+                                               D.data(), -1, p, param.metric),
               da_status_invalid_leading_dimension)
         << ErrorExits_print("ldd");
     // Test for invalid value of metric.

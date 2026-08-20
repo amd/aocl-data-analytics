@@ -1,4 +1,4 @@
-# Copyright (C) 2024-2025 Advanced Micro Devices, Inc. All rights reserved.
+# Copyright (C) 2024-2026 Advanced Micro Devices, Inc. All rights reserved.
 #
 # Redistribution and use in source and binary forms, with or without modification,
 # are permitted provided that the following conditions are met:
@@ -216,6 +216,7 @@ class nlls():
             xtol=2.22e-16,
             reg_term=0,
             maxit=100,
+            maxtime=1.0e6,
             fd_step=1.0e-7,
             fd_ttol=1.0e-4):
         """
@@ -347,6 +348,9 @@ class nlls():
             maxit (int, optional): Defines the iteration limit.
                 Default = 100.
 
+            maxtime (float, optional): Defines the time limit. Solver will
+                stop when this limit is surpassed. Default = 1.0e6.
+
             fd_step (float, optional): Defines the overall step size to use in
             the finite-difference approximation. If the optimization process
             stagnates or fails, then trialing different values for this
@@ -424,7 +428,8 @@ class nlls():
             reg_term=reg_term,
             maxit=maxit,
             fd_step=fd_step,
-            fd_ttol=fd_ttol)
+            fd_ttol=fd_ttol,
+            maxtime=maxtime)
         return self
 
     @property

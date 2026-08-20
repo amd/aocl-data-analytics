@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2024-2025 Advanced Micro Devices, Inc. All rights reserved.
+ * Copyright (C) 2024-2026 Advanced Micro Devices, Inc. All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without modification,
  * are permitted provided that the following conditions are met:
@@ -52,6 +52,7 @@ enum da_metric_ {
     da_cosine,                   ///< Use Cosine distance.
     da_euclidean_gemm,           ///< Use gemm-based euclidean distance.
     da_sqeuclidean_gemm,         ///< Use gemm-based squared euclidean distance.
+    da_inner_product             ///< Inner product similarity. Not a true metric.
 };
 
 /** @brief Alias for the \ref da_metric_ enum. */
@@ -85,6 +86,8 @@ typedef enum da_data_types_ da_data_types;
  * \param[in] p the order of the Minkowski metric used to compute the distance matrix. For p = 1.0, this defaults to the Manhattan metric and for p = 2.0 this defaults to the Euclidean metric.
             \p p is only used for Minkowski distance and will be ignored otherwise.
  * \param[in] metric enum that specifies the metric to use to compute the distance matrix. The default value is \ref da_euclidean.
+ *   \note When \p metric = \ref da_inner_product, the output \p D contains inner product similarities
+ *   D[i,j] = dot(x_i, y_j), not distances. Values can be negative.
  * \return \ref da_status. The function returns:
  * - \ref da_status_success - the operation was successfully completed.
  * - \ref da_status_invalid_leading_dimension - one of the constraints on \p ldx, \p ldy or \p ldd was violated.

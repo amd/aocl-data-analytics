@@ -26,13 +26,7 @@
  */
 
 #include "aoclda_types.h"
-#include "da_kernel_utils.hpp"
-#include "kt.hpp"
 #include "metrics_kernels.hpp"
-#include <cmath>
-#include <immintrin.h>
-#include <iostream>
-#include <type_traits>
 
 #ifdef __AVX512F__
 
@@ -46,106 +40,277 @@ using namespace kernel_templates;
 //                            PACKED
 //***************************************************************
 
-template <typename T, da_int MR, da_int NR>
+template <typename T, da_int MR, da_int NR, bool is_first_slice>
 void sqeuclidean_kernel_packed(da_int k, const T *Atilde, const T *Btilde, T *C,
                                da_int ldc) {
-    sqeuclidean_kernel_packed_impl<bsz::b512, T, MR, NR>(k, Atilde, Btilde, C, ldc);
+    sqeuclidean_kernel_packed_impl<bsz::b512, T, MR, NR, is_first_slice>(k, Atilde,
+                                                                         Btilde, C, ldc);
 }
 
-template <typename T, da_int MR, da_int NR>
+template <typename T, da_int MR, da_int NR, bool is_first_slice>
 void manhattan_kernel_packed(da_int k, const T *Atilde, const T *Btilde, T *C,
                              da_int ldc) {
-    manhattan_kernel_packed_impl<bsz::b512, T, MR, NR>(k, Atilde, Btilde, C, ldc);
+    manhattan_kernel_packed_impl<bsz::b512, T, MR, NR, is_first_slice>(k, Atilde, Btilde,
+                                                                       C, ldc);
 }
 
-template <typename T, da_int MR, da_int NR>
+template <typename T, da_int MR, da_int NR, bool is_first_slice>
 void minkowski_kernel_packed(da_int k, const T *Atilde, const T *Btilde, T *C, da_int ldc,
                              T exponent) {
-    minkowski_kernel_packed_impl<bsz::b512, T, MR, NR>(k, Atilde, Btilde, C, ldc,
-                                                       exponent);
+    minkowski_kernel_packed_impl<bsz::b512, T, MR, NR, is_first_slice>(k, Atilde, Btilde,
+                                                                       C, ldc, exponent);
 }
 
-template <typename T, da_int MR, da_int NR>
+template <typename T, da_int MR, da_int NR, bool is_first_slice>
 void cosine_kernel_packed(da_int k, const T *Atilde, const T *Btilde, T *C, da_int ldc) {
-    cosine_kernel_packed_impl<bsz::b512, T, MR, NR>(k, Atilde, Btilde, C, ldc);
+    cosine_kernel_packed_impl<bsz::b512, T, MR, NR, is_first_slice>(k, Atilde, Btilde, C,
+                                                                    ldc);
 }
 
-template void sqeuclidean_kernel_packed<float, 16, 16>(da_int k, const float *Atilde,
+template <typename T, da_int MR, da_int NR, bool is_first_slice>
+void sqeuclidean_kernel_packed_masked(da_int m, da_int n, da_int k, const T *Atilde,
+                                      const T *Btilde, T *C, da_int ldc) {
+    sqeuclidean_kernel_packed_masked_impl<bsz::b512, T, MR, NR, is_first_slice>(
+        m, n, k, Atilde, Btilde, C, ldc);
+}
+
+template <typename T, da_int MR, da_int NR, bool is_first_slice>
+void manhattan_kernel_packed_masked(da_int m, da_int n, da_int k, const T *Atilde,
+                                    const T *Btilde, T *C, da_int ldc) {
+    manhattan_kernel_packed_masked_impl<bsz::b512, T, MR, NR, is_first_slice>(
+        m, n, k, Atilde, Btilde, C, ldc);
+}
+
+template <typename T, da_int MR, da_int NR, bool is_first_slice>
+void cosine_kernel_packed_masked(da_int m, da_int n, da_int k, const T *Atilde,
+                                 const T *Btilde, T *C, da_int ldc) {
+    cosine_kernel_packed_masked_impl<bsz::b512, T, MR, NR, is_first_slice>(
+        m, n, k, Atilde, Btilde, C, ldc);
+}
+
+template <typename T, da_int MR, da_int NR, bool is_first_slice>
+void minkowski_kernel_packed_masked(da_int m, da_int n, da_int k, const T *Atilde,
+                                    const T *Btilde, T *C, da_int ldc, T exponent) {
+    minkowski_kernel_packed_masked_impl<bsz::b512, T, MR, NR, is_first_slice>(
+        m, n, k, Atilde, Btilde, C, ldc, exponent);
+}
+
+template void sqeuclidean_kernel_packed<float, 16, 16, true>(da_int k,
+                                                             const float *Atilde,
+                                                             const float *Btilde,
+                                                             float *C, da_int ldc);
+template void sqeuclidean_kernel_packed<float, 16, 16, false>(da_int k,
+                                                              const float *Atilde,
+                                                              const float *Btilde,
+                                                              float *C, da_int ldc);
+
+template void sqeuclidean_kernel_packed<double, 8, 8, true>(da_int k,
+                                                            const double *Atilde,
+                                                            const double *Btilde,
+                                                            double *C, da_int ldc);
+template void sqeuclidean_kernel_packed<double, 8, 8, false>(da_int k,
+                                                             const double *Atilde,
+                                                             const double *Btilde,
+                                                             double *C, da_int ldc);
+
+template void sqeuclidean_kernel_packed<float, 16, 8, true>(da_int k, const float *Atilde,
+                                                            const float *Btilde, float *C,
+                                                            da_int ldc);
+template void sqeuclidean_kernel_packed<float, 16, 8, false>(da_int k,
+                                                             const float *Atilde,
+                                                             const float *Btilde,
+                                                             float *C, da_int ldc);
+
+template void sqeuclidean_kernel_packed<float, 16, 4, true>(da_int k, const float *Atilde,
+                                                            const float *Btilde, float *C,
+                                                            da_int ldc);
+template void sqeuclidean_kernel_packed<float, 16, 4, false>(da_int k,
+                                                             const float *Atilde,
+                                                             const float *Btilde,
+                                                             float *C, da_int ldc);
+
+template void sqeuclidean_kernel_packed<double, 8, 4, true>(da_int k,
+                                                            const double *Atilde,
+                                                            const double *Btilde,
+                                                            double *C, da_int ldc);
+template void sqeuclidean_kernel_packed<double, 8, 4, false>(da_int k,
+                                                             const double *Atilde,
+                                                             const double *Btilde,
+                                                             double *C, da_int ldc);
+
+template void manhattan_kernel_packed<float, 16, 16, true>(da_int k, const float *Atilde,
+                                                           const float *Btilde, float *C,
+                                                           da_int ldc);
+template void manhattan_kernel_packed<float, 16, 16, false>(da_int k, const float *Atilde,
+                                                            const float *Btilde, float *C,
+                                                            da_int ldc);
+
+template void manhattan_kernel_packed<double, 8, 8, true>(da_int k, const double *Atilde,
+                                                          const double *Btilde, double *C,
+                                                          da_int ldc);
+template void manhattan_kernel_packed<double, 8, 8, false>(da_int k, const double *Atilde,
+                                                           const double *Btilde,
+                                                           double *C, da_int ldc);
+
+template void manhattan_kernel_packed<float, 16, 8, true>(da_int k, const float *Atilde,
+                                                          const float *Btilde, float *C,
+                                                          da_int ldc);
+template void manhattan_kernel_packed<float, 16, 8, false>(da_int k, const float *Atilde,
+                                                           const float *Btilde, float *C,
+                                                           da_int ldc);
+
+template void manhattan_kernel_packed<float, 16, 4, true>(da_int k, const float *Atilde,
+                                                          const float *Btilde, float *C,
+                                                          da_int ldc);
+template void manhattan_kernel_packed<float, 16, 4, false>(da_int k, const float *Atilde,
+                                                           const float *Btilde, float *C,
+                                                           da_int ldc);
+
+template void manhattan_kernel_packed<double, 8, 4, true>(da_int k, const double *Atilde,
+                                                          const double *Btilde, double *C,
+                                                          da_int ldc);
+template void manhattan_kernel_packed<double, 8, 4, false>(da_int k, const double *Atilde,
+                                                           const double *Btilde,
+                                                           double *C, da_int ldc);
+
+template void minkowski_kernel_packed<float, 16, 16, true>(da_int k, const float *Atilde,
+                                                           const float *Btilde, float *C,
+                                                           da_int ldc, float exponent);
+template void minkowski_kernel_packed<float, 16, 16, false>(da_int k, const float *Atilde,
+                                                            const float *Btilde, float *C,
+                                                            da_int ldc, float exponent);
+
+template void minkowski_kernel_packed<double, 8, 8, true>(da_int k, const double *Atilde,
+                                                          const double *Btilde, double *C,
+                                                          da_int ldc, double exponent);
+template void minkowski_kernel_packed<double, 8, 8, false>(da_int k, const double *Atilde,
+                                                           const double *Btilde,
+                                                           double *C, da_int ldc,
+                                                           double exponent);
+template void minkowski_kernel_packed<float, 16, 8, true>(da_int k, const float *Atilde,
+                                                          const float *Btilde, float *C,
+                                                          da_int ldc, float exponent);
+template void minkowski_kernel_packed<float, 16, 8, false>(da_int k, const float *Atilde,
+                                                           const float *Btilde, float *C,
+                                                           da_int ldc, float exponent);
+template void minkowski_kernel_packed<float, 16, 4, true>(da_int k, const float *Atilde,
+                                                          const float *Btilde, float *C,
+                                                          da_int ldc, float exponent);
+template void minkowski_kernel_packed<float, 16, 4, false>(da_int k, const float *Atilde,
+                                                           const float *Btilde, float *C,
+                                                           da_int ldc, float exponent);
+
+template void minkowski_kernel_packed<double, 8, 4, true>(da_int k, const double *Atilde,
+                                                          const double *Btilde, double *C,
+                                                          da_int ldc, double exponent);
+template void minkowski_kernel_packed<double, 8, 4, false>(da_int k, const double *Atilde,
+                                                           const double *Btilde,
+                                                           double *C, da_int ldc,
+                                                           double exponent);
+
+template void cosine_kernel_packed<float, 16, 16, true>(da_int k, const float *Atilde,
+                                                        const float *Btilde, float *C,
+                                                        da_int ldc);
+template void cosine_kernel_packed<float, 16, 16, false>(da_int k, const float *Atilde,
+                                                         const float *Btilde, float *C,
+                                                         da_int ldc);
+
+template void cosine_kernel_packed<double, 8, 8, true>(da_int k, const double *Atilde,
+                                                       const double *Btilde, double *C,
+                                                       da_int ldc);
+template void cosine_kernel_packed<double, 8, 8, false>(da_int k, const double *Atilde,
+                                                        const double *Btilde, double *C,
+                                                        da_int ldc);
+
+template void cosine_kernel_packed<float, 16, 8, true>(da_int k, const float *Atilde,
                                                        const float *Btilde, float *C,
                                                        da_int ldc);
+template void cosine_kernel_packed<float, 16, 8, false>(da_int k, const float *Atilde,
+                                                        const float *Btilde, float *C,
+                                                        da_int ldc);
+template void cosine_kernel_packed<float, 16, 4, true>(da_int k, const float *Atilde,
+                                                       const float *Btilde, float *C,
+                                                       da_int ldc);
+template void cosine_kernel_packed<float, 16, 4, false>(da_int k, const float *Atilde,
+                                                        const float *Btilde, float *C,
+                                                        da_int ldc);
 
-template void sqeuclidean_kernel_packed<double, 8, 8>(da_int k, const double *Atilde,
-                                                      const double *Btilde, double *C,
-                                                      da_int ldc);
-
-template void sqeuclidean_kernel_packed<float, 16, 8>(da_int k, const float *Atilde,
-                                                      const float *Btilde, float *C,
-                                                      da_int ldc);
-
-template void sqeuclidean_kernel_packed<float, 16, 4>(da_int k, const float *Atilde,
-                                                      const float *Btilde, float *C,
-                                                      da_int ldc);
-
-template void sqeuclidean_kernel_packed<double, 8, 4>(da_int k, const double *Atilde,
-                                                      const double *Btilde, double *C,
-                                                      da_int ldc);
-
-template void manhattan_kernel_packed<float, 16, 16>(da_int k, const float *Atilde,
-                                                     const float *Btilde, float *C,
-                                                     da_int ldc);
-
-template void manhattan_kernel_packed<double, 8, 8>(da_int k, const double *Atilde,
-                                                    const double *Btilde, double *C,
-                                                    da_int ldc);
-
-template void manhattan_kernel_packed<float, 16, 8>(da_int k, const float *Atilde,
-                                                    const float *Btilde, float *C,
-                                                    da_int ldc);
-
-template void manhattan_kernel_packed<float, 16, 4>(da_int k, const float *Atilde,
-                                                    const float *Btilde, float *C,
-                                                    da_int ldc);
-
-template void manhattan_kernel_packed<double, 8, 4>(da_int k, const double *Atilde,
-                                                    const double *Btilde, double *C,
-                                                    da_int ldc);
-
-template void minkowski_kernel_packed<float, 16, 16>(da_int k, const float *Atilde,
-                                                     const float *Btilde, float *C,
-                                                     da_int ldc, float exponent);
-
-template void minkowski_kernel_packed<double, 8, 8>(da_int k, const double *Atilde,
-                                                    const double *Btilde, double *C,
-                                                    da_int ldc, double exponent);
-template void minkowski_kernel_packed<float, 16, 8>(da_int k, const float *Atilde,
-                                                    const float *Btilde, float *C,
-                                                    da_int ldc, float exponent);
-template void minkowski_kernel_packed<float, 16, 4>(da_int k, const float *Atilde,
-                                                    const float *Btilde, float *C,
-                                                    da_int ldc, float exponent);
-
-template void minkowski_kernel_packed<double, 8, 4>(da_int k, const double *Atilde,
-                                                    const double *Btilde, double *C,
-                                                    da_int ldc, double exponent);
-
-template void cosine_kernel_packed<float, 16, 16>(da_int k, const float *Atilde,
-                                                  const float *Btilde, float *C,
-                                                  da_int ldc);
-
-template void cosine_kernel_packed<double, 8, 8>(da_int k, const double *Atilde,
-                                                 const double *Btilde, double *C,
-                                                 da_int ldc);
-
-template void cosine_kernel_packed<float, 16, 8>(da_int k, const float *Atilde,
-                                                 const float *Btilde, float *C,
-                                                 da_int ldc);
-template void cosine_kernel_packed<float, 16, 4>(da_int k, const float *Atilde,
-                                                 const float *Btilde, float *C,
-                                                 da_int ldc);
-
-template void cosine_kernel_packed<double, 8, 4>(da_int k, const double *Atilde,
-                                                 const double *Btilde, double *C,
-                                                 da_int ldc);
+template void cosine_kernel_packed<double, 8, 4, true>(da_int k, const double *Atilde,
+                                                       const double *Btilde, double *C,
+                                                       da_int ldc);
+template void cosine_kernel_packed<double, 8, 4, false>(da_int k, const double *Atilde,
+                                                        const double *Btilde, double *C,
+                                                        da_int ldc);
+template void sqeuclidean_kernel_packed_masked<float, 16, 8, true>(da_int m, da_int n,
+                                                                   da_int k,
+                                                                   const float *Atilde,
+                                                                   const float *Btilde,
+                                                                   float *C, da_int ldc);
+template void sqeuclidean_kernel_packed_masked<float, 16, 8, false>(da_int m, da_int n,
+                                                                    da_int k,
+                                                                    const float *Atilde,
+                                                                    const float *Btilde,
+                                                                    float *C, da_int ldc);
+template void sqeuclidean_kernel_packed_masked<double, 8, 8, true>(da_int m, da_int n,
+                                                                   da_int k,
+                                                                   const double *Atilde,
+                                                                   const double *Btilde,
+                                                                   double *C, da_int ldc);
+template void sqeuclidean_kernel_packed_masked<double, 8, 8, false>(
+    da_int m, da_int n, da_int k, const double *Atilde, const double *Btilde, double *C,
+    da_int ldc);
+template void manhattan_kernel_packed_masked<float, 16, 8, true>(da_int m, da_int n,
+                                                                 da_int k,
+                                                                 const float *Atilde,
+                                                                 const float *Btilde,
+                                                                 float *C, da_int ldc);
+template void manhattan_kernel_packed_masked<float, 16, 8, false>(da_int m, da_int n,
+                                                                  da_int k,
+                                                                  const float *Atilde,
+                                                                  const float *Btilde,
+                                                                  float *C, da_int ldc);
+template void manhattan_kernel_packed_masked<double, 8, 8, true>(da_int m, da_int n,
+                                                                 da_int k,
+                                                                 const double *Atilde,
+                                                                 const double *Btilde,
+                                                                 double *C, da_int ldc);
+template void manhattan_kernel_packed_masked<double, 8, 8, false>(da_int m, da_int n,
+                                                                  da_int k,
+                                                                  const double *Atilde,
+                                                                  const double *Btilde,
+                                                                  double *C, da_int ldc);
+template void cosine_kernel_packed_masked<float, 16, 8, true>(da_int m, da_int n,
+                                                              da_int k,
+                                                              const float *Atilde,
+                                                              const float *Btilde,
+                                                              float *C, da_int ldc);
+template void cosine_kernel_packed_masked<float, 16, 8, false>(da_int m, da_int n,
+                                                               da_int k,
+                                                               const float *Atilde,
+                                                               const float *Btilde,
+                                                               float *C, da_int ldc);
+template void cosine_kernel_packed_masked<double, 8, 8, true>(da_int m, da_int n,
+                                                              da_int k,
+                                                              const double *Atilde,
+                                                              const double *Btilde,
+                                                              double *C, da_int ldc);
+template void cosine_kernel_packed_masked<double, 8, 8, false>(da_int m, da_int n,
+                                                               da_int k,
+                                                               const double *Atilde,
+                                                               const double *Btilde,
+                                                               double *C, da_int ldc);
+template void minkowski_kernel_packed_masked<float, 16, 8, true>(
+    da_int m, da_int n, da_int k, const float *Atilde, const float *Btilde, float *C,
+    da_int ldc, float exponent);
+template void minkowski_kernel_packed_masked<float, 16, 8, false>(
+    da_int m, da_int n, da_int k, const float *Atilde, const float *Btilde, float *C,
+    da_int ldc, float exponent);
+template void minkowski_kernel_packed_masked<double, 8, 8, true>(
+    da_int m, da_int n, da_int k, const double *Atilde, const double *Btilde, double *C,
+    da_int ldc, double exponent);
+template void minkowski_kernel_packed_masked<double, 8, 8, false>(
+    da_int m, da_int n, da_int k, const double *Atilde, const double *Btilde, double *C,
+    da_int ldc, double exponent);
 } // namespace avx512
 } // namespace ARCH
 

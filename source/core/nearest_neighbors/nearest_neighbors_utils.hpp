@@ -30,7 +30,9 @@
 
 #include "aoclda.h"
 #include "da_std.hpp"
+#include "kt.hpp"
 #include <algorithm>
+#include <immintrin.h>
 
 namespace ARCH {
 namespace da_neighbors {
@@ -70,12 +72,19 @@ smaller_values_and_indices(da_int n, T *D, da_int k, da_int *k_ind, T *k_dist,
 template <typename T>
 inline void sorted_n_dist_n_ind(da_int n, T *k_dist, da_int *k_ind, T *n_dist,
                                 da_int *n_ind, da_int *perm_vector, bool return_distance,
-                                bool get_squares) {
+                                bool get_squares, bool ascending = true) {
     // We sort with respect to partial distances and then we use the sorted array to reorder the array of indices.
     da_std::iota(perm_vector, perm_vector + n, 0);
 
-    std::stable_sort(perm_vector, perm_vector + n,
-                     [&](da_int i, da_int j) { return k_dist[i] < k_dist[j]; });
+    if (ascending) {
+        // sort smallest-first
+        std::stable_sort(perm_vector, perm_vector + n,
+                         [&](da_int i, da_int j) { return k_dist[i] < k_dist[j]; });
+    } else {
+        // sort largest-first
+        std::stable_sort(perm_vector, perm_vector + n,
+                         [&](da_int i, da_int j) { return k_dist[i] > k_dist[j]; });
+    }
 
     for (da_int i = 0; i < n; i++)
         n_ind[i] = k_ind[perm_vector[i]];
@@ -89,6 +98,200 @@ inline void sorted_n_dist_n_ind(da_int n, T *k_dist, da_int *k_ind, T *n_dist,
                 n_dist[i] = k_dist[perm_vector[i]];
         }
     }
+}
+
+// Vectorized selection utilities (k-smallest / k-largest)
+
+// Returns the index of the maximum value in x[0..n-1].
+template <typename T> inline da_int inline_iamax(da_int n, const T *x) {
+    da_int idx = 0;
+    T maxval = x[0];
+    for (da_int i = 1; i < n; i++) {
+        if (x[i] > maxval) {
+            maxval = x[i];
+            idx = i;
+        }
+    }
+    return idx;
+}
+
+// Returns the index of the minimum value in x[0..n-1].
+template <typename T> inline da_int inline_iamin(da_int n, const T *x) {
+    da_int idx = 0;
+    T minval = x[0];
+    for (da_int i = 1; i < n; i++) {
+        if (x[i] < minval) {
+            minval = x[i];
+            idx = i;
+        }
+    }
+    return idx;
+}
+
+// Returns mask where lane i is set if a[i] <= b[i].
+template <kernel_templates::bsz BSZ, typename T>
+inline auto compare_less_equal_mask(kernel_templates::avxvector_t<BSZ, T> a,
+                                    kernel_templates::avxvector_t<BSZ, T> b) {
+#ifdef __AVX512F__
+    if constexpr (BSZ == kernel_templates::bsz::b512) {
+        if constexpr (std::is_same_v<T, float>) {
+            return _mm512_cmp_ps_mask(a, b, _CMP_LE_OS);
+        } else if constexpr (std::is_same_v<T, double>) {
+            return _mm512_cmp_pd_mask(a, b, _CMP_LE_OS);
+        }
+    } else
+#endif
+        if constexpr (BSZ == kernel_templates::bsz::b256) {
+        if constexpr (std::is_same_v<T, float>) {
+            auto cmp = _mm256_cmp_ps(a, b, _CMP_LE_OS);
+            return _mm256_movemask_ps(cmp);
+        } else if constexpr (std::is_same_v<T, double>) {
+            auto cmp = _mm256_cmp_pd(a, b, _CMP_LE_OS);
+            return _mm256_movemask_pd(cmp);
+        }
+    } else {
+        static_assert(BSZ == kernel_templates::bsz::b256 ||
+                          BSZ == kernel_templates::bsz::b512,
+                      "Unsupported bit size");
+    }
+}
+
+// Returns mask where lane i is set if a[i] >= b[i].
+template <kernel_templates::bsz BSZ, typename T>
+inline auto compare_greater_equal_mask(kernel_templates::avxvector_t<BSZ, T> a,
+                                       kernel_templates::avxvector_t<BSZ, T> b) {
+#ifdef __AVX512F__
+    if constexpr (BSZ == kernel_templates::bsz::b512) {
+        if constexpr (std::is_same_v<T, float>) {
+            return _mm512_cmp_ps_mask(a, b, _CMP_GE_OS);
+        } else if constexpr (std::is_same_v<T, double>) {
+            return _mm512_cmp_pd_mask(a, b, _CMP_GE_OS);
+        }
+    } else
+#endif
+        if constexpr (BSZ == kernel_templates::bsz::b256) {
+        if constexpr (std::is_same_v<T, float>) {
+            auto cmp = _mm256_cmp_ps(a, b, _CMP_GE_OS);
+            return _mm256_movemask_ps(cmp);
+        } else if constexpr (std::is_same_v<T, double>) {
+            auto cmp = _mm256_cmp_pd(a, b, _CMP_GE_OS);
+            return _mm256_movemask_pd(cmp);
+        }
+    } else {
+        static_assert(BSZ == kernel_templates::bsz::b256 ||
+                          BSZ == kernel_templates::bsz::b512,
+                      "Unsupported bit size");
+    }
+}
+
+// Scans D[0..n-1] against existing top-k in k_ind/k_dist, keeping the k
+// smallest values. Uses global_offset for stored indices.
+// k_ind and k_dist must already be fully populated with k candidates.
+template <kernel_templates::bsz BSZ, typename T>
+inline __attribute__((always_inline)) void smaller_values_and_indices_vectorized_kernel(
+    da_int n, const T *D, da_int k, da_int *k_ind, T *k_dist, da_int global_offset) {
+    constexpr da_int VSIZE = da_int(kernel_templates::tsz_v<BSZ, T>);
+    da_int max_index = inline_iamax(k, k_dist);
+    T max_val = k_dist[max_index];
+    da_int i = 0;
+    auto k_dist_max = kernel_templates::kt_set1_p<BSZ, T>(max_val);
+    for (; i + VSIZE <= n; i += VSIZE) {
+        auto k_dist_vec = kernel_templates::kt_loadu_p<BSZ, T>(D + i);
+        auto mask = compare_less_equal_mask<BSZ, T>(k_dist_vec, k_dist_max);
+        if (mask == 0)
+            continue;
+        while (mask) {
+            da_int lane = __builtin_ctz(mask);
+            T dist_candidate = D[i + lane];
+            if (dist_candidate <= max_val) {
+                k_dist[max_index] = dist_candidate;
+                k_ind[max_index] = i + lane + global_offset;
+                max_index = inline_iamax(k, k_dist);
+                max_val = k_dist[max_index];
+            }
+            mask = mask & (mask - 1);
+        }
+        k_dist_max = kernel_templates::kt_set1_p<BSZ, T>(max_val);
+    }
+    for (; i < n; i++) {
+        if (D[i] <= max_val) {
+            k_ind[max_index] = i + global_offset;
+            k_dist[max_index] = D[i];
+            max_index = inline_iamax(k, k_dist);
+            max_val = k_dist[max_index];
+        }
+    }
+}
+
+// Dispatcher: selects AVX512 or AVX2 kernel for k-smallest selection.
+template <typename T>
+void smaller_values_and_indices_vectorized(da_int n, const T *D, da_int k, da_int *k_ind,
+                                           T *k_dist, da_int global_offset) {
+#ifdef __AVX512F__
+    smaller_values_and_indices_vectorized_kernel<kernel_templates::bsz::b512, T>(
+        n, D, k, k_ind, k_dist, global_offset);
+#elif defined(__AVX2__)
+    smaller_values_and_indices_vectorized_kernel<kernel_templates::bsz::b256, T>(
+        n, D, k, k_ind, k_dist, global_offset);
+#else
+    static_assert(false,
+                  "smaller_values_and_indices_vectorized requires AVX2 or AVX512F");
+#endif
+}
+
+// Mirror of smaller_values_and_indices_vectorized_kernel for inner product MIPS:
+// keeps the k largest values seen so far using a min-tracked buffer.
+// Replaces the current minimum when a larger value is found.
+template <kernel_templates::bsz BSZ, typename T>
+inline __attribute__((always_inline)) void
+larger_values_and_indices_vectorized_kernel(da_int n, const T *D, da_int k, da_int *k_ind,
+                                            T *k_dist, da_int global_offset) {
+    constexpr da_int VSIZE = da_int(kernel_templates::tsz_v<BSZ, T>);
+    da_int min_index = inline_iamin(k, k_dist);
+    T min_val = k_dist[min_index];
+    da_int i = 0;
+    auto k_dist_min = kernel_templates::kt_set1_p<BSZ, T>(min_val);
+    for (; i + VSIZE <= n; i += VSIZE) {
+        auto k_dist_vec = kernel_templates::kt_loadu_p<BSZ, T>(D + i);
+        auto mask = compare_greater_equal_mask<BSZ, T>(k_dist_vec, k_dist_min);
+        if (mask == 0)
+            continue;
+        while (mask) {
+            da_int lane = __builtin_ctz(mask);
+            T dist_candidate = D[i + lane];
+            if (dist_candidate >= min_val) {
+                k_dist[min_index] = dist_candidate;
+                k_ind[min_index] = i + lane + global_offset;
+                min_index = inline_iamin(k, k_dist);
+                min_val = k_dist[min_index];
+            }
+            mask = mask & (mask - 1);
+        }
+        k_dist_min = kernel_templates::kt_set1_p<BSZ, T>(min_val);
+    }
+    for (; i < n; i++) {
+        if (D[i] >= min_val) {
+            k_ind[min_index] = i + global_offset;
+            k_dist[min_index] = D[i];
+            min_index = inline_iamin(k, k_dist);
+            min_val = k_dist[min_index];
+        }
+    }
+}
+
+// Dispatcher: selects AVX512 or AVX2 kernel for k-largest selection (MIPS).
+template <typename T>
+void larger_values_and_indices_vectorized(da_int n, const T *D, da_int k, da_int *k_ind,
+                                          T *k_dist, da_int global_offset) {
+#ifdef __AVX512F__
+    larger_values_and_indices_vectorized_kernel<kernel_templates::bsz::b512, T>(
+        n, D, k, k_ind, k_dist, global_offset);
+#elif defined(__AVX2__)
+    larger_values_and_indices_vectorized_kernel<kernel_templates::bsz::b256, T>(
+        n, D, k, k_ind, k_dist, global_offset);
+#else
+    static_assert(false, "larger_values_and_indices_vectorized requires AVX2 or AVX512F");
+#endif
 }
 
 } // namespace da_neighbors

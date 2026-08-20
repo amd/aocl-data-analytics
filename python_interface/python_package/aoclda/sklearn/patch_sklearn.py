@@ -34,6 +34,7 @@ import sklearn.covariance as cov_sklearn
 import sklearn.decomposition as decomp_sklearn
 import sklearn.linear_model as linmod_sklearn
 import sklearn.cluster as clustering_sklearn
+import sklearn.manifold as manifold_sklearn
 import sklearn.tree as decision_tree_sklearn
 import sklearn.ensemble as decision_forest_sklearn
 import sklearn.metrics.pairwise as pairwise_sklearn
@@ -42,6 +43,7 @@ import sklearn.neighbors as nearest_neighbors_sklearn
 import sklearn.svm as svm_sklearn
 from ._empirical_covariance import EmpiricalCovariance as cov_da
 from ._pca import PCA as PCA_da
+from ._kernel_pca import KernelPCA as KernelPCA_da
 from ._kmeans import kmeans as kmeans_da
 from ._dbscan import DBSCAN as DBSCAN_da
 from ._linear_model import LinearRegression as LinearRegression_da
@@ -59,6 +61,7 @@ from ._neighbors import NearestNeighbors as NearestNeighbors_da
 from ._neighbors import RadiusNeighborsClassifier as RadiusNeighborsClassifier_da
 from ._neighbors import RadiusNeighborsRegressor as RadiusNeighborsRegressor_da
 from ._svm import SVC as SVC_da, SVR as SVR_da, NuSVC as NuSVC_da, NuSVR as NuSVR_da
+from ._tsne import TSNE as TSNE_da
 
 # Now on a case-by-case basis, overwrite with AMD symbols where we have
 # performant implementations
@@ -75,6 +78,9 @@ AMD_SYMBOLS = {'EmpiricalCovariance': {'pack': cov_sklearn,
                'PCA': {'pack': decomp_sklearn,
                        'sk_sym': getattr(decomp_sklearn, "PCA"),
                        'da_sym': PCA_da},
+               'KernelPCA': {'pack': decomp_sklearn,
+                             'sk_sym': getattr(decomp_sklearn, 'KernelPCA'),
+                             'da_sym': KernelPCA_da},
                'LinearRegression': {'pack': linmod_sklearn,
                                     'sk_sym': getattr(linmod_sklearn, 'LinearRegression'),
                                     'da_sym': LinearRegression_da},
@@ -96,6 +102,9 @@ AMD_SYMBOLS = {'EmpiricalCovariance': {'pack': cov_sklearn,
                'DBSCAN': {'pack': clustering_sklearn,
                           'sk_sym': getattr(clustering_sklearn, "DBSCAN"),
                           'da_sym': DBSCAN_da},
+               'TSNE': {'pack': manifold_sklearn,
+                        'sk_sym': getattr(manifold_sklearn, "TSNE"),
+                        'da_sym': TSNE_da},
                'DecisionTreeClassifier': {'pack': decision_tree_sklearn,
                                           'sk_sym': getattr(decision_tree_sklearn, 'DecisionTreeClassifier'),
                                           'da_sym': DecisionTreeClassifier_da},

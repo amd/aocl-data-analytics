@@ -28,9 +28,11 @@
 #ifndef TEST_UTILS_HPP
 #define TEST_UTILS_HPP
 
-#include <cerrno>
-#include <cstring>
+#include "aoclda.hpp"
+
+#include <iostream>
 #include <mutex>
+#include <sstream>
 #include <string>
 
 #ifdef _WIN32
@@ -44,23 +46,6 @@
 
 namespace model_persistence_test_utils {
 
-// Recursively create directories (equivalent to mkdir -p)
-inline bool create_directories(const std::string &path) {
-    std::string current;
-    for (size_t i = 0; i < path.size(); ++i) {
-        current += path[i];
-        if (path[i] == '/' || path[i] == '\\' || i == path.size() - 1) {
-            struct stat st;
-            if (stat(current.c_str(), &st) != 0) {
-                if (DA_MKDIR(current.c_str()) != 0 && errno != EEXIST) {
-                    return false;
-                }
-            }
-        }
-    }
-    return true;
-}
-
 // Thread-safe function to get and create test file directory
 inline std::string get_test_file_dir() {
     static std::once_flag flag;
@@ -68,22 +53,29 @@ inline std::string get_test_file_dir() {
 
     std::call_once(flag, []() {
 #ifdef TEST_OUTPUT_DIR
-        test_dir = TEST_OUTPUT_DIR;
-#else
-        // Fallback to current directory if TEST_OUTPUT_DIR not defined
-        test_dir = ".";
-#endif
-        // Create directory if it doesn't exist
         struct stat st;
-        if (stat(test_dir.c_str(), &st) != 0) {
-            if (!create_directories(test_dir)) {
-                // If directory creation fails, fall back to current directory
-                test_dir = ".";
-            }
+        if (stat(TEST_OUTPUT_DIR, &st) == 0) {
+            test_dir = TEST_OUTPUT_DIR;
+            return;
         }
+#endif
+        // Fallback to relative directory
+        const char *fallback = "tmp_test_files";
+        struct stat st2;
+        if (stat(fallback, &st2) != 0)
+            DA_MKDIR(fallback);
+        test_dir = fallback;
     });
 
     return test_dir;
+}
+
+inline void test_print_model_versions(da_handle handle) {
+    testing::internal::CaptureStdout();
+    EXPECT_EQ(da_handle_print_model_versions(handle), da_status_success);
+    std::string output = testing::internal::GetCapturedStdout();
+    EXPECT_NE(output.find("Serialization version:"), std::string::npos);
+    EXPECT_NE(output.find("Saved AOCL-DA build version:"), std::string::npos);
 }
 
 } // namespace model_persistence_test_utils

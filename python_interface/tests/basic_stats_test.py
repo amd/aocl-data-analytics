@@ -1,4 +1,4 @@
-# Copyright (C) 2024-2025 Advanced Micro Devices, Inc. All rights reserved.
+# Copyright (C) 2024-2026 Advanced Micro Devices, Inc. All rights reserved.
 #
 # Redistribution and use in source and binary forms, with or without modification,
 # are permitted provided that the following conditions are met:
@@ -283,8 +283,10 @@ def test_basic_stats_multiple_orders(numpy_precision, numpy_orders, da_axis):
     mean2 = da_stats.mean(X2, axis=da_axis)
 
     # standardize
-    standardized1 = da_stats.standardize(X1, axis=da_axis, inplace=False, dof=-1)
-    standardized2 = da_stats.standardize(X2, axis=da_axis, inplace=False, dof=-1)
+    standardized1 = da_stats.standardize(
+        X1, axis=da_axis, inplace=False, dof=-1)
+    standardized2 = da_stats.standardize(
+        X2, axis=da_axis, inplace=False, dof=-1)
     reversed_standardized = da_stats.standardize(standardized1,
                                                  axis=da_axis,
                                                  reverse=True,
@@ -359,8 +361,10 @@ def test_basic_stats_multiple_dtypes(numpy_precisions, numpy_order, da_axis):
     mean2 = da_stats.mean(X2, axis=da_axis)
 
     # standardize
-    standardized1 = da_stats.standardize(X1, axis=da_axis, inplace=False, dof=-1)
-    standardized2 = da_stats.standardize(X2, axis=da_axis, inplace=False, dof=-1)
+    standardized1 = da_stats.standardize(
+        X1, axis=da_axis, inplace=False, dof=-1)
+    standardized2 = da_stats.standardize(
+        X2, axis=da_axis, inplace=False, dof=-1)
     reversed_standardized = da_stats.standardize(standardized1,
                                                  axis=da_axis,
                                                  reverse=True,
@@ -463,13 +467,17 @@ def test_moment_functionality_1D(get_data1D, da_axis, np_axis):
     ex_moment = moment(X, 8, axis=np_axis)
 
     error = np.max(np.abs(da_moment - ex_moment))
+    error = error / np.abs(ex_moment)
     assert error < tol
     error = np.max(np.abs(da_moment_with_precomputed_mean - ex_moment))
+    error = error / np.abs(ex_moment)
     assert error < tol
     # Assert that 1D array passed as 2D array is also correct
     error = np.max(np.abs(da_moment2 - ex_moment))
+    error = error / np.abs(ex_moment)
     assert error < tol
     error = np.max(np.abs(da_moment_with_precomputed_mean2 - ex_moment))
+    error = error / np.abs(ex_moment)
     assert error < tol
 
 
@@ -480,7 +488,7 @@ def closest_observation_func(data, q, axis):
         h = n * q - 1.5
         h = 0 if h < 0 else h
         return data[:, round(h)]
-    if axis == 'col':
+    elif axis == 'col':
         n = len(data)
         data = np.sort(data, axis=0)
         h = n * q - 1.5
@@ -499,31 +507,172 @@ def closest_observation_func(data, q, axis):
     "interpolated_inverted_cdf", "hazen", "weibull", "linear",
     "median_unbiased", "normal_unbiased"
 ])
-@pytest.mark.parametrize("da_axis, np_axis", [("row", 1), ("col", 0),
-                                              ("all", None)])
-def test_quantile_functionality(get_data2D, calc_method, da_axis, np_axis):
+@pytest.mark.parametrize(
+    "da_axis, np_axis", [
+        ("row", 1), ("col", 0), ("all", None)
+    ]
+)
+def test_quantile_functionality_vector_q(get_data2D, calc_method, da_axis, np_axis):
     """
-    Testing functionality of quantile function
+    Testing functionality of quantile function for vector q
     """
     X = get_data2D["data"]
     tol = get_data2D["tol"]
 
     # Compute quantile
-    da_quantile1 = da_stats.quantile(X, 0.21, axis=da_axis, method=calc_method)
-    da_quantile2 = da_stats.quantile(X, 0.88, axis=da_axis, method=calc_method)
+    da_quantile1 = da_stats.quantile(X, np.array(
+        [0.21, 0.88]), axis=da_axis, method=calc_method)
+    da_quantile2 = da_stats.quantile(X, np.array(
+        [0.66]), axis=da_axis, method=calc_method)
+
+    if X.flags.c_contiguous:
+        assert da_quantile1.flags.c_contiguous
+        assert da_quantile2.flags.c_contiguous
+    else:
+        assert da_quantile1.flags.f_contiguous
+        assert da_quantile2.flags.f_contiguous
 
     # check expected quantile
-    ex_quantile1 = np.quantile(X, 0.21, axis=np_axis, method=calc_method)
-    ex_quantile2 = np.quantile(X, 0.88, axis=np_axis, method=calc_method)
+    ex_quantile = np.quantile(
+        X, [0.21, 0.66, 0.88], axis=np_axis, method=calc_method)
 
     # Take into account different definition of closest observation
     if calc_method == "closest_observation":
         ex_quantile1 = closest_observation_func(X, 0.21, axis=da_axis)
-        ex_quantile2 = closest_observation_func(X, 0.88, axis=da_axis)
+        ex_quantile2 = closest_observation_func(X, 0.66, axis=da_axis)
+        ex_quantile3 = closest_observation_func(X, 0.88, axis=da_axis)
+    else:
+        ex_quantile1 = ex_quantile[0]
+        ex_quantile2 = ex_quantile[1]
+        ex_quantile3 = ex_quantile[2]
 
-    error = np.max(np.abs(da_quantile1 - ex_quantile1))
-    assert error < tol
-    error = np.max(np.abs(da_quantile2 - ex_quantile2))
+    error1 = np.max(np.abs(da_quantile1[0] - ex_quantile1))
+    assert error1 < tol
+    error2 = np.max(np.abs(da_quantile1[1] - ex_quantile3))
+    assert error2 < tol
+    error3 = np.max(np.abs(da_quantile2 - ex_quantile2))
+    assert error3 < tol
+
+
+@pytest.mark.parametrize("calc_method", [
+    "inverted_cdf", "averaged_inverted_cdf", "closest_observation",
+    "interpolated_inverted_cdf", "hazen", "weibull", "linear",
+    "median_unbiased", "normal_unbiased"
+])
+@pytest.mark.parametrize(
+    "da_axis, np_axis", [
+        ("row", 1), ("col", 0), ("all", None)
+    ]
+)
+def test_quantile_functionality_scalar_q(get_data2D, calc_method, da_axis, np_axis):
+    """
+    Testing functionality of quantile function for scalar q
+    """
+    X = get_data2D["data"]
+    tol = get_data2D["tol"]
+
+    # Compute quantile
+    da_quantile1 = da_stats.quantile(X, 0.1, axis=da_axis, method=calc_method)
+    da_quantile2 = da_stats.quantile(X, 0.9, axis=da_axis, method=calc_method)
+
+    if da_axis == "row":
+        shape = X.shape[0]
+    elif da_axis == "col":
+        shape = X.shape[1]
+    else:
+        shape = 1
+
+    assert da_quantile1.shape == (shape,)
+    assert da_quantile2.shape == (shape,)
+
+    # check expected quantile
+    ex_quantile1 = np.quantile(X, 0.1, axis=np_axis, method=calc_method)
+    ex_quantile2 = np.quantile(X, 0.9, axis=np_axis, method=calc_method)
+
+    # Take into account different definition of closest observation
+    if calc_method == "closest_observation":
+        ex_quantile1 = closest_observation_func(X, 0.1, axis=da_axis)
+        ex_quantile2 = closest_observation_func(X, 0.9, axis=da_axis)
+
+    error1 = np.max(np.abs(da_quantile1 - ex_quantile1))
+    assert error1 < tol
+    error2 = np.max(np.abs(da_quantile2 - ex_quantile2))
+    assert error2 < tol
+
+
+@pytest.mark.parametrize("calc_method", [
+    "inverted_cdf", "averaged_inverted_cdf", "closest_observation",
+    "interpolated_inverted_cdf", "hazen", "weibull", "linear",
+    "median_unbiased", "normal_unbiased"
+])
+@pytest.mark.parametrize(
+    "da_axis", [
+        "row", "col", "all"
+    ]
+)
+def test_quantile_functionality_X1(get_data2D, calc_method, da_axis):
+    """
+    Testing functionality of quantile function for data size 1
+    """
+    X = np.array([10.0])
+    tol = get_data2D["tol"]
+
+    # For 1D input with axis != "all", the wrapper defaults to "all" with a warning
+    if da_axis != "all":
+        with pytest.warns(RuntimeWarning):
+            da_quantile1 = da_stats.quantile(X, np.array(
+                [0.1, 0.9]), axis=da_axis, method=calc_method)
+        with pytest.warns(RuntimeWarning):
+            da_quantile2 = da_stats.quantile(
+                X, 0.5, axis=da_axis, method=calc_method)
+    else:
+        da_quantile1 = da_stats.quantile(X, np.array(
+            [0.1, 0.9]), axis=da_axis, method=calc_method)
+        da_quantile2 = da_stats.quantile(
+            X, 0.5, axis=da_axis, method=calc_method)
+
+    shape = 1
+    assert da_quantile2.shape == (shape,)
+
+    ex_quantile = np.quantile(X, [0.1, 0.5, 0.9], method=calc_method)
+
+    error1 = np.max(np.abs(da_quantile1[0] - ex_quantile[0]))
+    assert error1 < tol
+    error2 = np.max(np.abs(da_quantile1[1] - ex_quantile[2]))
+    assert error2 < tol
+    error3 = np.max(np.abs(da_quantile2 - ex_quantile[1]))
+    assert error3 < tol
+
+
+@pytest.mark.parametrize("calc_method", [
+    "inverted_cdf", "averaged_inverted_cdf", "closest_observation",
+    "interpolated_inverted_cdf", "hazen", "weibull", "linear",
+    "median_unbiased", "normal_unbiased"
+])
+@pytest.mark.parametrize(
+    "da_axis, np_axis, order", [
+        ("row", 1, 'F'), ("col", 0, "F"),
+        ("row", 1, 'C'), ("col", 0, "C"),
+    ]
+)
+def test_quantile_length_one_fast_path(calc_method, da_axis, np_axis, order):
+    """
+    Test the fast path (length==1) in quantile: single-row with axis_col,
+    single-column with axis_row. All quantiles should equal the single element.
+    """
+    q = np.array([0.1, 0.5, 0.9])
+    tol = np.sqrt(np.finfo(np.float64).eps)
+
+    if da_axis == "col":
+        # Single-row (1x5): axis_col → each column has 1 element
+        X = np.array([[3.0, 7.0, 1.0, 9.0, 5.0]], order=order)
+    else:
+        # Single-column (4x1): axis_row → each row has 1 element
+        X = np.array([[2.0], [8.0], [4.0], [6.0]], order=order)
+
+    da_q = da_stats.quantile(X, q, axis=da_axis, method=calc_method)
+    ex_q = np.quantile(X, q, axis=np_axis, method=calc_method)
+    error = np.max(np.abs(da_q - ex_q))
     assert error < tol
 
 
@@ -770,7 +919,8 @@ def test_covariance_functionality(get_data2D, da_biased, numpy_biased):
     assert covariance.flags.f_contiguous == X.flags.f_contiguous
 
     # Check covariance with assume_centered=True
-    covariance = da_stats.covariance_matrix(X, dof=da_biased, assume_centered=True)
+    covariance = da_stats.covariance_matrix(
+        X, dof=da_biased, assume_centered=True)
 
     # expected result
     if numpy_biased:
@@ -831,7 +981,8 @@ def test_error_exits_general(func, da_axis):
 
 
 @pytest.mark.parametrize("da_axis, wrong_shape_input", [("row", np.array([1, 2, 3])),
-                                                        ("col", np.array([1, 2, 3, 4])),
+                                                        ("col", np.array(
+                                                            [1, 2, 3, 4])),
                                                         ("all", np.array([1, 2]))])
 def test_error_exits_moment(get_data2D, da_axis, wrong_shape_input):
     """
@@ -864,12 +1015,13 @@ def test_error_exits_moment(get_data2D, da_axis, wrong_shape_input):
         da_stats.moment(np.array([[[]]]), k=2, axis=da_axis)
 
 
-@pytest.mark.parametrize("da_axis", ["row", "col", "all"])
-def test_error_exits_quantile(da_axis):
+@pytest.mark.parametrize("da_axis, order", [("row", 'F'), ("col", 'F'),
+                         ("all", "F"), ("row", 'C'), ("col", 'C'), ("all", "C")])
+def test_error_exits_quantile(da_axis, order):
     """
     Testing error exits in quantile function
     """
-    X = np.array([[1, 2, 3], [4, -5, 6]])
+    X = np.array([[1, 2, 3], [4, -5, 6]], order=order)
     # Check invalid value for quantile
     with pytest.raises(ValueError):
         da_stats.quantile(X, 1.01, axis=da_axis)
@@ -885,15 +1037,18 @@ def test_error_exits_quantile(da_axis):
             da_stats.quantile(np.array([]), 0.2, axis=da_axis)
     # Check wrong input type
     with pytest.raises(ValueError):
-        da_stats.quantile(np.array([[1, 2, 3], [4, 'a', 6]]), 0.2, axis=da_axis)
+        da_stats.quantile(
+            np.array([[1, 2, 3], [4, 'a', 6]]), 0.2, axis=da_axis)
     with pytest.raises(ValueError):
         da_stats.quantile(X, q=-1.2, axis=da_axis)
-    with pytest.raises(TypeError):
-        da_stats.quantile(X, q='a', axis=da_axis)
+    with pytest.raises(ValueError):
+        with pytest.warns(UserWarning):
+            da_stats.quantile(X, q='a', axis=da_axis)
 
 
 @pytest.mark.parametrize("da_axis, wrong_shape_input", [("row", np.array([1, 2, 3])),
-                                                        ("col", np.array([1, 2])),
+                                                        ("col", np.array(
+                                                            [1, 2])),
                                                         ("all", np.array([1, 2]))])
 def test_error_exits_standardize(da_axis, wrong_shape_input):
     """

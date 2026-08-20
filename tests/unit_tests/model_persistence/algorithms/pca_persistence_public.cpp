@@ -265,6 +265,8 @@ void pca_serialization_test(const pca_serial_params &pr, da_int n_samples,
                   da_status_success);
         EXPECT_EQ(whiten_loaded, pr.whiten);
 
+        model_persistence_test_utils::test_print_model_versions(handle_loaded);
+
         da_handle_destroy(&handle_loaded);
     }
 }
@@ -321,4 +323,23 @@ TEST_F(PCASerializationErrorTest, FitAfterLoadWithoutSetDataFails) {
     EXPECT_EQ(da_handle_load_model(&handle_load, model_file.c_str()), da_status_success);
     EXPECT_EQ(da_pca_compute_d(handle_load), da_status_no_data);
     da_handle_destroy(&handle_load);
+}
+
+TEST_F(PCASerializationErrorTest, PrintModelMetadataFromFile) {
+    // Fit and save a PCA model to file
+    da_handle handle = nullptr;
+    ASSERT_EQ(da_handle_init_d(&handle, da_handle_pca), da_status_success);
+    std::vector<double> X = {1.0, 2.0, 3.0, 4.0, 5.0, 6.0};
+    ASSERT_EQ(da_pca_set_data_d(handle, 3, 2, X.data(), 3), da_status_success);
+    ASSERT_EQ(da_options_set_int(handle, "n_components", 2), da_status_success);
+    ASSERT_EQ(da_pca_compute_d(handle), da_status_success);
+    ASSERT_EQ(da_handle_save_model(handle, model_file.c_str()), da_status_success);
+    da_handle_destroy(&handle);
+
+    testing::internal::CaptureStdout();
+    EXPECT_EQ(da_print_model_metadata(model_file.c_str()), da_status_success);
+    std::string output = testing::internal::GetCapturedStdout();
+    EXPECT_NE(output.find("Header keyword:"), std::string::npos);
+    EXPECT_NE(output.find("Serialization version:"), std::string::npos);
+    EXPECT_NE(output.find("Saved AOCL-DA build version:"), std::string::npos);
 }

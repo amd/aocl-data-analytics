@@ -24,6 +24,9 @@
 
 # Build Python bindings using pybind11
 
+# Python examples to exclude when Fortran is unavailable
+set(EXCLUDED_EXAMPLES "nlls_*.py" "logit_cls.py")
+
 if(NOT BUILD_SHARED_LIBS)
   message(
     FATAL_ERROR "Shared libraries are required to build python interfaces.")
@@ -39,10 +42,14 @@ if(BUILD_FORTRAN)
   install(DIRECTORY python_package/aoclda DESTINATION python_package)
 else()
   # Exclude those Python examples that rely on Fortran code
+  set(EXCLUDED_EXAMPLES_INSTALL_ARGS "")
+  foreach(example_pattern IN LISTS EXCLUDED_EXAMPLES)
+    list(APPEND EXCLUDED_EXAMPLES_INSTALL_ARGS PATTERN "${example_pattern}" EXCLUDE)
+  endforeach()
   install(
     DIRECTORY python_package/aoclda
     DESTINATION python_package
-    PATTERN "nlls_*.py" EXCLUDE)
+    ${EXCLUDED_EXAMPLES_INSTALL_ARGS})
 endif()
 install(FILES python_package/setup.py python_package/pyproject.toml python_package/README.rst
         ${CMAKE_SOURCE_DIR}/License DESTINATION python_package)
@@ -87,5 +94,8 @@ install(CODE "set(BLAS \"${BLAS}\")")
 install(CODE "set(LAPACK \"${LAPACK}\")")
 install(CODE "set(SPARSE \"${SPARSE}\")")
 install(CODE "set(UTILS \"${UTILS}\")")
+if(NOT WIN32)
+  install(CODE "set(DLP \"${DLP}\")")
+endif()
 
 install(CODE "include(\"${CMAKE_CURRENT_SOURCE_DIR}/repairwheel.cmake\")")

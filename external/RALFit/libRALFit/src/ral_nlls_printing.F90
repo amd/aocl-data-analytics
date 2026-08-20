@@ -95,6 +95,9 @@
       Write (adj,Fmt=99999) 'maxit'
       nrec = nrec + 1
       Write (rec(nrec),Fmt=99997) adjustl(adj), options%maxit
+      Write (adj,Fmt=99999) 'maxtime'
+      nrec = nrec + 1
+      Write (rec(nrec),Fmt=99998) adjustl(adj), options%maxtime
       Write (adj,Fmt=99999) 'model'
       nrec = nrec + 1
       Write (rec(nrec),Fmt=99997) adjustl(adj), options%model

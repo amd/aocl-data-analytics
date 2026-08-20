@@ -33,307 +33,181 @@
 
 using namespace interpolation_public;
 
-da_status da_interpolation_select_model_d(da_handle handle,
-                                          da_interpolation_model model) {
+template <typename T>
+da_status da_interpolation_select_model(da_handle handle, da_interpolation_model model) {
     if (!handle)
         return da_status_handle_not_initialized;
     handle->clear(); // Clean up handle logs
-    if (handle->precision != da_double)
-        return da_error(
-            handle->err, da_status_wrong_type,
-            "The handle was initialized with a different precision type than double.");
+
+    da_status status = handle->check_precision<T>();
+    if (status != da_status_success)
+        return da_error_trace(handle->err, status, "Wrong precision type.");
 
     da_interpolation_model model_cpp = static_cast<da_interpolation_model>(model);
 
     DISPATCHER(
         handle->err,
-        return (
-            interpolation_select_model<da_interpolation::interpolation_p<double>, double>(
-                handle, model_cpp)))
+        return (interpolation_select_model<da_interpolation::interpolation_p<T>, T>(
+            handle, model_cpp)))
 
     return da_status_success;
 }
 
-da_status da_interpolation_select_model_s(da_handle handle,
-                                          da_interpolation_model model) {
+template <typename T>
+da_status da_interpolation_set_sites(da_handle handle, da_int n_sites, const T *x) {
     if (!handle)
         return da_status_handle_not_initialized;
     handle->clear(); // Clean up handle logs
-    if (handle->precision != da_single)
-        return da_error(
-            handle->err, da_status_wrong_type,
-            "The handle was initialized with a different precision type than single.");
 
-    da_interpolation_model model_cpp = static_cast<da_interpolation_model>(model);
+    da_status status = handle->check_precision<T>();
+    if (status != da_status_success)
+        return da_error_trace(handle->err, status, "Wrong precision type.");
+
+    DISPATCHER(handle->err,
+               return (interpolation_set_sites<da_interpolation::interpolation_p<T>, T>(
+                   handle, n_sites, x)))
+
+    return da_status_success;
+}
+
+template <typename T>
+da_status da_interpolation_set_sites_uniform(da_handle handle, da_int n_sites, T x_start,
+                                             T x_end) {
+    if (!handle)
+        return da_status_handle_not_initialized;
+    handle->clear(); // Clean up handle logs
+
+    da_status status = handle->check_precision<T>();
+    if (status != da_status_success)
+        return da_error_trace(handle->err, status, "Wrong precision type.");
 
     DISPATCHER(
         handle->err,
-        return (
-            interpolation_select_model<da_interpolation::interpolation_p<float>, float>(
-                handle, model_cpp)))
+        return (interpolation_set_sites_uniform<da_interpolation::interpolation_p<T>, T>(
+            handle, n_sites, x_start, x_end)))
 
     return da_status_success;
 }
 
-da_status da_interpolation_set_sites_d(da_handle handle, da_int n_sites,
-                                       const double *x) {
+template <typename T>
+da_status da_interpolation_set_values(da_handle handle, da_int n, da_int dim,
+                                      const T *y_data, da_int ldy, da_int order) {
     if (!handle)
         return da_status_handle_not_initialized;
     handle->clear(); // Clean up handle logs
-    if (handle->precision != da_double)
-        return da_error(
-            handle->err, da_status_wrong_type,
-            "The handle was initialized with a different precision type than double.");
+
+    da_status status = handle->check_precision<T>();
+    if (status != da_status_success)
+        return da_error_trace(handle->err, status, "Wrong precision type.");
+
+    DISPATCHER(handle->err,
+               return (interpolation_set_values<da_interpolation::interpolation_p<T>, T>(
+                   handle, n, dim, y_data, ldy, order)))
+
+    return da_status_success;
+}
+
+template <typename T>
+da_status da_interpolation_search_cells(da_handle handle, da_int n_eval, const T *x_eval,
+                                        da_int *cells) {
+    if (!handle)
+        return da_status_handle_not_initialized;
+    handle->clear(); // Clean up handle logs
+
+    da_status status = handle->check_precision<T>();
+    if (status != da_status_success)
+        return da_error_trace(handle->err, status, "Wrong precision type.");
 
     DISPATCHER(
         handle->err,
-        return (
-            interpolation_set_sites<da_interpolation::interpolation_p<double>, double>(
-                handle, n_sites, x)))
+        return (interpolation_search_cells<da_interpolation::interpolation_p<T>, T>(
+            handle, n_eval, x_eval, cells)))
 
     return da_status_success;
 }
 
-da_status da_interpolation_set_sites_s(da_handle handle, da_int n_sites, const float *x) {
+template <typename T> da_status da_interpolation_interpolate(da_handle handle) {
     if (!handle)
         return da_status_handle_not_initialized;
     handle->clear(); // Clean up handle logs
-    if (handle->precision != da_single)
-        return da_error(
-            handle->err, da_status_wrong_type,
-            "The handle was initialized with a different precision type than single.");
 
-    DISPATCHER(
-        handle->err,
-        return (interpolation_set_sites<da_interpolation::interpolation_p<float>, float>(
-            handle, n_sites, x)))
+    da_status status = handle->check_precision<T>();
+    if (status != da_status_success)
+        return da_error_trace(handle->err, status, "Wrong precision type.");
+
+    DISPATCHER(handle->err,
+               return (interpolation_interpolate<da_interpolation::interpolation_p<T>, T>(
+                   handle)))
 
     return da_status_success;
 }
 
-da_status da_interpolation_set_sites_uniform_d(da_handle handle, da_int n_sites,
-                                               double x_start, double x_end) {
+template <typename T>
+da_status
+da_interpolation_set_boundary_conditions(da_handle handle, da_int dim, da_int left_order,
+                                         const T *left_values, da_int right_order,
+                                         const T *right_values) {
     if (!handle)
         return da_status_handle_not_initialized;
     handle->clear(); // Clean up handle logs
-    if (handle->precision != da_double)
-        return da_error(
-            handle->err, da_status_wrong_type,
-            "The handle was initialized with a different precision type than double.");
 
-    DISPATCHER(
-        handle->err,
-        return (interpolation_set_sites_uniform<da_interpolation::interpolation_p<double>,
-                                                double>(handle, n_sites, x_start, x_end)))
-
-    return da_status_success;
-}
-
-da_status da_interpolation_set_sites_uniform_s(da_handle handle, da_int n_sites,
-                                               float x_start, float x_end) {
-    if (!handle)
-        return da_status_handle_not_initialized;
-    handle->clear(); // Clean up handle logs
-    if (handle->precision != da_single)
-        return da_error(
-            handle->err, da_status_wrong_type,
-            "The handle was initialized with a different precision type than single.");
-
-    DISPATCHER(
-        handle->err,
-        return (interpolation_set_sites_uniform<da_interpolation::interpolation_p<float>,
-                                                float>(handle, n_sites, x_start, x_end)))
-
-    return da_status_success;
-}
-
-da_status da_interpolation_set_values_d(da_handle handle, da_int n, da_int dim,
-                                        const double *y_data, da_int ldy, da_int order) {
-    if (!handle)
-        return da_status_handle_not_initialized;
-    handle->clear(); // Clean up handle logs
-    if (handle->precision != da_double)
-        return da_error(
-            handle->err, da_status_wrong_type,
-            "The handle was initialized with a different precision type than double.");
-
-    DISPATCHER(
-        handle->err,
-        return (
-            interpolation_set_values<da_interpolation::interpolation_p<double>, double>(
-                handle, n, dim, y_data, ldy, order)))
-
-    return da_status_success;
-}
-
-da_status da_interpolation_set_values_s(da_handle handle, da_int n, da_int dim,
-                                        const float *y_data, da_int ldy, da_int order) {
-    if (!handle)
-        return da_status_handle_not_initialized;
-    handle->clear(); // Clean up handle logs
-    if (handle->precision != da_single)
-        return da_error(
-            handle->err, da_status_wrong_type,
-            "The handle was initialized with a different precision type than single.");
-
-    DISPATCHER(
-        handle->err,
-        return (interpolation_set_values<da_interpolation::interpolation_p<float>, float>(
-            handle, n, dim, y_data, ldy, order)))
-
-    return da_status_success;
-}
-
-da_status da_interpolation_search_cells_d(da_handle handle, da_int n_eval,
-                                          const double *x_eval, da_int *cells) {
-    if (!handle)
-        return da_status_handle_not_initialized;
-    handle->clear(); // Clean up handle logs
-    if (handle->precision != da_double)
-        return da_error(
-            handle->err, da_status_wrong_type,
-            "The handle was initialized with a different precision type than double.");
-
-    DISPATCHER(
-        handle->err,
-        return (
-            interpolation_search_cells<da_interpolation::interpolation_p<double>, double>(
-                handle, n_eval, x_eval, cells)))
-
-    return da_status_success;
-}
-
-da_status da_interpolation_search_cells_s(da_handle handle, da_int n_eval,
-                                          const float *x_eval, da_int *cells) {
-    if (!handle)
-        return da_status_handle_not_initialized;
-    handle->clear(); // Clean up handle logs
-    if (handle->precision != da_single)
-        return da_error(
-            handle->err, da_status_wrong_type,
-            "The handle was initialized with a different precision type than single.");
-
-    DISPATCHER(
-        handle->err,
-        return (
-            interpolation_search_cells<da_interpolation::interpolation_p<float>, float>(
-                handle, n_eval, x_eval, cells)))
-
-    return da_status_success;
-}
-
-da_status da_interpolation_interpolate_d(da_handle handle) {
-    if (!handle)
-        return da_status_handle_not_initialized;
-    handle->clear(); // Clean up handle logs
-    if (handle->precision != da_double)
-        return da_error(
-            handle->err, da_status_wrong_type,
-            "The handle was initialized with a different precision type than double.");
-
-    DISPATCHER(
-        handle->err,
-        return (
-            interpolation_interpolate<da_interpolation::interpolation_p<double>, double>(
-                handle)))
-
-    return da_status_success;
-}
-
-da_status da_interpolation_interpolate_s(da_handle handle) {
-    if (!handle)
-        return da_status_handle_not_initialized;
-    handle->clear(); // Clean up handle logs
-    if (handle->precision != da_single)
-        return da_error(
-            handle->err, da_status_wrong_type,
-            "The handle was initialized with a different precision type than single.");
-
-    DISPATCHER(
-        handle->err,
-        return (
-            interpolation_interpolate<da_interpolation::interpolation_p<float>, float>(
-                handle)))
-
-    return da_status_success;
-}
-
-da_status da_interpolation_set_boundary_conditions_d(da_handle handle, da_int dim,
-                                                     da_int left_order,
-                                                     const double *left_values,
-                                                     da_int right_order,
-                                                     const double *right_values) {
-    if (!handle)
-        return da_status_handle_not_initialized;
-    handle->clear(); // Clean up handle logs
-    if (handle->precision != da_double)
-        return da_error(
-            handle->err, da_status_wrong_type,
-            "The handle was initialized with a different precision type than double.");
+    da_status status = handle->check_precision<T>();
+    if (status != da_status_success)
+        return da_error_trace(handle->err, status, "Wrong precision type.");
 
     DISPATCHER(handle->err,
                return (interpolation_set_boundary_conditions<
-                       da_interpolation::interpolation_p<double>, double>(
+                       da_interpolation::interpolation_p<T>, T>(
                    handle, dim, left_order, left_values, right_order, right_values)))
 
     return da_status_success;
 }
 
-da_status da_interpolation_set_boundary_conditions_s(da_handle handle, da_int dim,
-                                                     da_int left_order,
-                                                     const float *left_values,
-                                                     da_int right_order,
-                                                     const float *right_values) {
+template <typename T>
+da_status da_interpolation_evaluate(da_handle handle, da_int n_eval, const T *x_eval,
+                                    T *y_eval, da_int n_orders, da_int *orders) {
     if (!handle)
         return da_status_handle_not_initialized;
     handle->clear(); // Clean up handle logs
-    if (handle->precision != da_single)
-        return da_error(
-            handle->err, da_status_wrong_type,
-            "The handle was initialized with a different precision type than single.");
+
+    da_status status = handle->check_precision<T>();
+    if (status != da_status_success)
+        return da_error_trace(handle->err, status, "Wrong precision type.");
 
     DISPATCHER(handle->err,
-               return (interpolation_set_boundary_conditions<
-                       da_interpolation::interpolation_p<float>, float>(
-                   handle, dim, left_order, left_values, right_order, right_values)))
+               return (interpolation_evaluate<da_interpolation::interpolation_p<T>, T>(
+                   handle, n_eval, x_eval, y_eval, n_orders, orders)))
 
     return da_status_success;
 }
 
-da_status da_interpolation_evaluate_d(da_handle handle, da_int n_eval,
-                                      const double *x_eval, double *y_eval,
-                                      da_int n_orders, da_int *orders) {
-    if (!handle)
-        return da_status_handle_not_initialized;
-    handle->clear(); // Clean up handle logs
-    if (handle->precision != da_double)
-        return da_error(
-            handle->err, da_status_wrong_type,
-            "The handle was initialized with a different precision type than double.");
-
-    DISPATCHER(
-        handle->err,
-        return (interpolation_evaluate<da_interpolation::interpolation_p<double>, double>(
-            handle, n_eval, x_eval, y_eval, n_orders, orders)))
-
-    return da_status_success;
-}
-
-da_status da_interpolation_evaluate_s(da_handle handle, da_int n_eval,
-                                      const float *x_eval, float *y_eval, da_int n_orders,
-                                      da_int *orders) {
-    if (!handle)
-        return da_status_handle_not_initialized;
-    handle->clear(); // Clean up handle logs
-    if (handle->precision != da_single)
-        return da_error(
-            handle->err, da_status_wrong_type,
-            "The handle was initialized with a different precision type than single.");
-
-    DISPATCHER(
-        handle->err,
-        return (interpolation_evaluate<da_interpolation::interpolation_p<float>, float>(
-            handle, n_eval, x_eval, y_eval, n_orders, orders)))
-
-    return da_status_success;
-}
+template da_status da_interpolation_select_model<float>(da_handle,
+                                                        da_interpolation_model);
+template da_status da_interpolation_select_model<double>(da_handle,
+                                                         da_interpolation_model);
+template da_status da_interpolation_set_sites<float>(da_handle, da_int, const float *);
+template da_status da_interpolation_set_sites<double>(da_handle, da_int, const double *);
+template da_status da_interpolation_set_sites_uniform<float>(da_handle, da_int, float,
+                                                             float);
+template da_status da_interpolation_set_sites_uniform<double>(da_handle, da_int, double,
+                                                              double);
+template da_status da_interpolation_set_values<float>(da_handle, da_int, da_int,
+                                                      const float *, da_int, da_int);
+template da_status da_interpolation_set_values<double>(da_handle, da_int, da_int,
+                                                       const double *, da_int, da_int);
+template da_status da_interpolation_search_cells<float>(da_handle, da_int, const float *,
+                                                        da_int *);
+template da_status da_interpolation_search_cells<double>(da_handle, da_int,
+                                                         const double *, da_int *);
+template da_status da_interpolation_interpolate<float>(da_handle);
+template da_status da_interpolation_interpolate<double>(da_handle);
+template da_status da_interpolation_set_boundary_conditions<float>(da_handle, da_int,
+                                                                   da_int, const float *,
+                                                                   da_int, const float *);
+template da_status
+da_interpolation_set_boundary_conditions<double>(da_handle, da_int, da_int,
+                                                 const double *, da_int, const double *);
+template da_status da_interpolation_evaluate<float>(da_handle, da_int, const float *,
+                                                    float *, da_int, da_int *);
+template da_status da_interpolation_evaluate<double>(da_handle, da_int, const double *,
+                                                     double *, da_int, da_int *);

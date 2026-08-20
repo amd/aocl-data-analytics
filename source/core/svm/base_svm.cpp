@@ -31,8 +31,11 @@
 #include "da_error.hpp"
 #include "da_omp.hpp"
 #include "da_std.hpp"
+#include "da_utils.hpp"
 #include "da_vector.hpp"
+#include "fp16_helpers.hpp"
 #include "kernel_functions.hpp"
+#include "kf_tuning_tables.hpp"
 #include "macros.h"
 #include "miscellaneous.hpp"
 #include "options.hpp"
@@ -122,8 +125,16 @@ base_svm<T>::base_svm(const T *XUSR, const T *yusr, da_int n, da_int p, da_int l
     : XUSR(XUSR), yusr(yusr), n(n), p(p), ldx(ldx_train){};
 template <typename T> base_svm<T>::~base_svm(){};
 
+template <typename T> da_status base_svm<T>::compute() { return compute_impl(nullptr); }
+
+template <typename T>
+da_status base_svm<T>::compute_warm_start(std::vector<T> &initial_alpha) {
+    return compute_impl(&initial_alpha);
+}
+
 /* Main function which contains Thunder loop */
-template <typename T> da_status base_svm<T>::compute() {
+template <typename T>
+da_status base_svm<T>::compute_impl(const std::vector<T> *initial_alpha) {
     da_status status = da_status_success;
     // Define them in this scope since they are large matrices and do not need to be in the class scope
     da_cache::LRUCache<T> cache(*err);
@@ -153,13 +164,16 @@ template <typename T> da_status base_svm<T>::compute() {
         X = new T[n * p];
         y = new T[n];
 
-        for (da_int i = 0; i < n; i++) {
-            da_int current_idx = idx_class[i];
-            for (da_int j = 0; j < p; j++) {
-                X[i + j * n] = XUSR[current_idx + j * ldx];
+        // 0 is transformed to -1 in initialisation
+        for (da_int i = 0; i < n; i++)
+            y[i] = idx_is_positive[i] ? (T)1.0 : (T)0.0;
+
+#pragma omp parallel for collapse(2) schedule(static) default(none)                      \
+    shared(X, XUSR, idx_class, n, p, ldx)
+        for (da_int j = 0; j < p; j++) {
+            for (da_int i = 0; i < n; i++) {
+                X[i + j * n] = XUSR[idx_class[i] + j * ldx];
             }
-            // 0 is transformed to -1 in initialisation
-            y[i] = idx_is_positive[i] ? 1.0 : 0.0;
         }
         ldx_2 = n; // At this point X array has to be in the dense layout
     } else {
@@ -168,12 +182,20 @@ template <typename T> da_status base_svm<T>::compute() {
         ldx_2 = ldx;
     }
     if (max_ws_size == T(-1.0)) {
+        // optimal_ws_size::threshold is type da_int, so use oracle_default<da_int>
         // Heuristically chosen boundaries, they depend on
-        select_ws_size(n, (svm_kernel)kernel_function, max_ws_size);
+        da_dispatch::tuning::Oracle<da_int(1024)>(optimal_ws_size,
+                                                  svm_kernel(kernel_function), n,
+                                                  max_ws_size, oracle_default<da_int>);
     }
     compute_ws_size(ws_size, max_ws_size);
-    vectorization_type simd_type_wssi, simd_type_wssj;
-    select_simd_size_wss<T>(ws_size, padding, simd_type_wssi, simd_type_wssj);
+    vectorization_type simd_type_wssi, simd_type_wssj, isa;
+    simd_type_wssi = Oracle<KernelSelection>(wssi_tuning, tid<T>(), ws_size,
+                                             oracle_lt<da_int>, "svm.isa");
+    simd_type_wssj = Oracle<KernelSelection>(wssj_tuning, tid<T>(), ws_size,
+                                             oracle_lt<da_int>, "svm.isa");
+    isa = (simd_type_wssi > simd_type_wssj) ? simd_type_wssi : simd_type_wssj;
+    padding = get_padding<T>(isa);
     wssi_vec_type = simd_type_wssi;
     wssj_vec_type = simd_type_wssj;
     // Add telemetry
@@ -200,7 +222,7 @@ template <typename T> da_status base_svm<T>::compute() {
         cache_smaller_than_ws = false;
     // Initialise which kernel function will be used
     switch (kernel_function) {
-    case rbf:
+    case svm_kernel::rbf:
         kernel_f = &rbf_wrapper<T>;
         try {
             x_norm_aux.resize(n + padding);
@@ -215,14 +237,16 @@ template <typename T> da_status base_svm<T>::compute() {
             }
         }
         break;
-    case linear:
+    case svm_kernel::linear:
         kernel_f = &linear_wrapper<T>;
         break;
-    case polynomial:
+    case svm_kernel::polynomial:
         kernel_f = &polynomial_wrapper<T>;
         break;
-    case sigmoid:
+    case svm_kernel::sigmoid:
         kernel_f = &sigmoid_wrapper<T>;
+        break;
+    default:
         break;
     }
     status = cache.set_size(cache_col_capacity, n);
@@ -266,9 +290,24 @@ template <typename T> da_status base_svm<T>::compute() {
         return da_error(err, da_status_memory_error, // LCOV_EXCL_LINE
                         "Memory allocation error");
     }
+
+    has_warm_start = initial_alpha && !initial_alpha->empty();
+
+    if (has_warm_start && (da_int)initial_alpha->size() != actual_size) // LCOV_EXCL_LINE
+        return da_error(err, da_status_invalid_input,                   // LCOV_EXCL_LINE
+                        "initial_alpha size mismatch in warm start.");
+
     status = initialisation(n, gradient, response, alpha, cache);
     if (status != da_status_success)
         return status;
+
+    if (has_warm_start) {
+        std::copy(initial_alpha->begin(), initial_alpha->end(), alpha.begin());
+        status = recompute_gradient(alpha, response, gradient, cache);
+        if (status != da_status_success)
+            return status;
+    }
+
     for (; iter < max_iter; iter++) {
         ////////// Outer WSS
         da_std::fill(ws_indicator.begin(), ws_indicator.end(), false);
@@ -299,13 +338,16 @@ template <typename T> da_status base_svm<T>::compute() {
         // Check global convergence
         // Stop when first_diff does not change for 5 iteration OR first_diff is less than tolerance
         // Additionally make sure that we perform at least 5 iterations
-        no_diff_counter = std::abs(first_diff - previous_first_diff) < tol * 1e-3
+        no_diff_counter = da_std::abs(first_diff - previous_first_diff) < tol * 1e-3
                               ? no_diff_counter + 1
                               : 0;
         previous_first_diff = first_diff;
         if ((no_diff_counter > 4 || first_diff < tol) && iter > 4)
             break;
     }
+    // Save raw alpha before set_bias/set_sv modify it (used for iterative refinement)
+    if (save_raw_alpha)
+        raw_alpha = alpha;
     // Interpret results and save them into appropriate arrays
     status = set_bias(alpha, gradient, response, actual_size, bias);
     if (status != da_status_success)
@@ -368,13 +410,15 @@ void base_svm<T>::decision_function_loop(
                outer_block_size, inner_block_count, outer_block_count,                   \
                inner_block_remainder, outer_block_remainder, n_support, kernel_matrices, \
                local_decisions, sv_norms, test_norms, sv_matrix, support_coefficients,   \
-               gamma, degree, coef0, kernel_f, vectorisation_full)
+               gamma, degree, coef0, kernel_f, vectorisation_full,                       \
+               ::da_kernel_functions::kf_tuning)
     for (da_int block_idx = 0; block_idx < total_blocks; block_idx++) {
         da_int outer_sample_block_idx = block_idx / inner_block_count;
         da_int inner_block_idx = block_idx % inner_block_count;
-        da_int tid = omp_get_thread_num();
-        T *my_kernel = kernel_matrices.data() + tid * inner_block_size * outer_block_size;
-        T *my_decision = local_decisions.data() + tid * outer_block_size;
+        da_int thid = omp_get_thread_num();
+        T *my_kernel =
+            kernel_matrices.data() + thid * inner_block_size * outer_block_size;
+        T *my_decision = local_decisions.data() + thid * outer_block_size;
 
         bool last_inner =
             inner_block_remainder > 0 && inner_block_idx == inner_block_count - 1;
@@ -383,9 +427,11 @@ void base_svm<T>::decision_function_loop(
         da_int cur_inner = last_inner ? inner_block_remainder : inner_block_size;
         da_int cur_outer = last_outer ? outer_block_remainder : outer_block_size;
         vectorization_type vectorisation = vectorisation_full;
-        if (last_inner || last_outer)
-            da_kernel_functions::select_simd_size<T>(std::max(cur_inner, cur_outer),
-                                                     vectorisation);
+        if (last_inner || last_outer) {
+            vectorisation = Oracle<KernelSelection>(
+                ::da_kernel_functions::kf_tuning, tid<T>(),
+                std::max(cur_inner, cur_outer), oracle_lt<da_int>, "kf.isa");
+        }
 
         da_int sample_start = outer_sample_block_idx * outer_block_size;
         const T *X_test_block = X_test + sample_start;
@@ -420,7 +466,7 @@ da_status base_svm<T>::decision_function(da_int nsamples, da_int nfeat, const T 
         decision_values[i] = bias;
     if (n_support == 0 || nsamples == 0)
         return da_status_success;
-    bool use_precomputed_norms = (kernel_function == rbf);
+    bool use_precomputed_norms = (kernel_function == svm_kernel::rbf);
 
     // Threading and blocking parameters.
     da_int thread_count = omp_get_max_threads();
@@ -428,8 +474,10 @@ da_status base_svm<T>::decision_function(da_int nsamples, da_int nfeat, const T 
     constexpr da_int max_inner_block_size = 256;
 
     // Outer (sample) blocking
+    // Integer ceiling of nsamples / thread_count (avoids floating point, which
+    // can overflow for large nsamples).
     da_int outer_block_size =
-        std::min((da_int)std::ceil((T)nsamples / thread_count), max_outer_block_size);
+        std::min((nsamples + thread_count - 1) / thread_count, max_outer_block_size);
     da_int outer_block_count, outer_block_remainder;
     da_utils::blocking_scheme(nsamples, outer_block_size, outer_block_count,
                               outer_block_remainder);
@@ -477,9 +525,9 @@ da_status base_svm<T>::decision_function(da_int nsamples, da_int nfeat, const T 
         }
     }
     // Precompute SIMD type for the common (full-size) blocks
-    vectorization_type vectorisation_full;
-    da_kernel_functions::select_simd_size<T>(std::max(inner_block_size, outer_block_size),
-                                             vectorisation_full);
+    vectorization_type vectorisation_full = Oracle<KernelSelection>(
+        ::da_kernel_functions::kf_tuning, tid<T>(),
+        std::max(inner_block_size, outer_block_size), oracle_lt<da_int>, "kf.isa");
 
     if (use_precomputed_norms)
         decision_function_loop<true>(
@@ -557,7 +605,7 @@ void base_svm<T>::kernel_compute(std::vector<da_int> &idx, da_int &idx_size,
 #pragma omp parallel for if (idx_to_compute_count > 64)                                  \
     num_threads(n_threads_get_slices) default(none)                                      \
     shared(idx, idx_to_compute, idx_to_compute_count, X_temp, kernel_temp, X, n, p,      \
-               ldx_2)
+               ldx_2, ::da_kernel_functions::kf_tuning)
         // Get the relevant slices of original matrix (working set)
         // Note: it would be more efficient to operate on row-major order
         for (da_int i = 0; i < idx_to_compute_count; i++) {
@@ -568,8 +616,9 @@ void base_svm<T>::kernel_compute(std::vector<da_int> &idx, da_int &idx_size,
         }
 
         // Call to appropriate kernel function. Note that only idx_to_compute_count columns of kernel_temp will be filled.
-        vectorization_type vectorisation;
-        da_kernel_functions::select_simd_size<T>(n, vectorisation);
+        vectorization_type vectorisation = Oracle<KernelSelection>(
+            ::da_kernel_functions::kf_tuning, tid<T>(), n, oracle_lt<da_int>, "kf.isa");
+
         // Variables used in euclidean_distance interface, 1 means to use precomputed norms, 2 means to compute norms
         da_int compute_X_norms = 1;
         da_int compute_y_norms = 2;
@@ -665,6 +714,116 @@ void base_svm<T>::update_gradient(T *gradient, std::vector<T> &gradient_threads,
         [kernel_data, stride](da_int i) { return kernel_data + i * stride; });
 }
 
+template <typename T>
+da_status base_svm<T>::recompute_gradient(std::vector<T> &alpha, std::vector<T> &response,
+                                          std::vector<T> &gradient,
+                                          da_cache::LRUCache<T> &cache) {
+    da_int gradient_size = (da_int)gradient.size();
+    da_int n = this->n;
+    da_int p = this->p;
+    std::vector<da_int> idx_all;
+    std::vector<T> coeff_all;
+    bool is_regression = (mod == da_svm_model::svr || mod == da_svm_model::nusvr);
+    da_int loop_size = is_regression ? n : gradient_size;
+    try {
+        idx_all.reserve(loop_size);
+        coeff_all.reserve(loop_size);
+    } catch (std::bad_alloc &) {
+        return da_error(err, da_status_memory_error, "Memory allocation error");
+    }
+    for (da_int i = 0; i < loop_size; i++) {
+        T coeff = is_regression ? alpha[i] - alpha[i + n] : alpha[i] * response[i];
+        if (coeff != (T)0) {
+            idx_all.push_back(i);
+            coeff_all.push_back(coeff);
+        }
+    }
+
+    if (idx_all.empty()) {
+        da_std::fill(gradient.begin(), gradient.end(), T(0));
+        if (is_regression) {
+            for (da_int i = 0; i < n; i++) {
+                gradient[i] = -y[i];
+                gradient[i + n] = -y[i];
+            }
+        } else {
+            for (da_int i = 0; i < gradient_size; i++) {
+                gradient[i] = -response[i];
+            }
+        }
+        return da_status_success;
+    }
+
+    da_int block_size = std::min((da_int)256, (da_int)idx_all.size());
+    // kernel_compute writes into member y_norm_aux which was sized for ws_size.
+    // Ensure it is large enough for block_size used here.
+    if ((da_int)y_norm_aux.size() < block_size + padding) {
+        try {
+            y_norm_aux.resize(block_size + padding);
+        } catch (std::bad_alloc &) {
+            return da_error(err, da_status_memory_error, "Memory allocation error");
+        }
+    }
+    std::vector<T> X_temp, coeff_block, gradient_acc, kernel_packed;
+    da_vector::da_vector<T> kernel_temp;
+    std::vector<T *> ptr_kernel_col;
+    std::vector<da_int> idx_block;
+    try {
+        X_temp.resize(block_size * p);
+        coeff_block.resize(block_size);
+        gradient_acc.resize(n, T(0));
+        kernel_temp.resize(n * block_size);
+        kernel_packed.resize(n * block_size);
+        ptr_kernel_col.resize(block_size);
+        idx_block.resize(block_size);
+    } catch (std::bad_alloc &) {
+        return da_error(err, da_status_memory_error, "Memory allocation error");
+    }
+
+    for (std::size_t offset = 0; offset < idx_all.size(); offset += block_size) {
+        da_int current_block_size =
+            std::min(block_size, (da_int)(idx_all.size() - offset));
+        for (da_int j = 0; j < current_block_size; j++) {
+            idx_block[j] = idx_all[offset + j];
+            coeff_block[j] = coeff_all[offset + j];
+        }
+        kernel_compute(idx_block, current_block_size, X_temp, kernel_temp, ptr_kernel_col,
+                       cache);
+        for (da_int j = 0; j < current_block_size; j++) {
+            T *dst = kernel_packed.data() + (std::size_t)j * n;
+            T *src = ptr_kernel_col[j];
+            for (da_int i = 0; i < n; i++)
+                dst[i] = src[i];
+        }
+        da_blas::cblas_gemv(CblasColMajor, CblasNoTrans, n, current_block_size, (T)1.0,
+                            kernel_packed.data(), n, coeff_block.data(), 1, (T)1.0,
+                            gradient_acc.data(), 1);
+    }
+
+    if (mod == da_svm_model::svr) {
+        for (da_int i = 0; i < n; i++) {
+            gradient[i] = gradient_acc[i] + eps - y[i];
+            gradient[i + n] = gradient_acc[i] - eps - y[i];
+        }
+    } else if (mod == da_svm_model::nusvr) {
+        for (da_int i = 0; i < n; i++) {
+            gradient[i] = gradient_acc[i] - y[i];
+            gradient[i + n] = gradient_acc[i] - y[i];
+        }
+    } else if (mod == da_svm_model::nusvc) {
+        // NuSVC: gradient starts at 0 (not -response), so no response subtraction
+        for (da_int i = 0; i < gradient_size; i++) {
+            gradient[i] = gradient_acc[i];
+        }
+    } else {
+        // SVC: gradient = kernel_accumulator - response
+        for (da_int i = 0; i < gradient_size; i++) {
+            gradient[i] = gradient_acc[i] - response[i];
+        }
+    }
+    return da_status_success;
+}
+
 // This function calculates highest power of 2, that is smaller or equal to n (number of rows in data)
 template <typename T> da_int base_svm<T>::maxpowtwo(da_int &n) {
     da_int power = 1;
@@ -679,25 +838,52 @@ template <typename T> da_int base_svm<T>::maxpowtwo(da_int &n) {
 template <typename T>
 void base_svm<T>::wssi(std::vector<da_int> &I_up, std::vector<T> &gradient, da_int &i,
                        T &min_grad) {
+    // SIMD wssi/wssj kernels exist for float/double unconditionally, but for
+    // _Float16 they are only compiled when AVX-512-FP16 is available. On builds
+    // without it (e.g. AVX-512 but no FP16) only the scalar _Float16 kernel is
+    // defined, so guard the vectorized branches to avoid referencing the
+    // (undefined) FP16 SIMD kernels. The tuning tables already select scalar for
+    // _Float16 at runtime on such hardware, so this is purely a build-time guard.
+#ifdef __AVX512FP16__
+    constexpr bool simd_available = true;
+#else
+    constexpr bool simd_available = !std::is_same_v<T, _Float16>;
+#endif
     // Start with very large value to find minimum and its index
     T min_grad_value = std::numeric_limits<T>::max();
     da_int min_grad_idx = -1;
     switch (wssi_vec_type) {
     case vectorization_type::avx:
-        wssi_kernel<T, avx>(I_up.data(), gradient.data(), min_grad_idx, min_grad_value,
-                            ws_size);
+        if constexpr (simd_available)
+            wssi_kernel<T, avx>(I_up.data(), gradient.data(), min_grad_idx,
+                                min_grad_value, ws_size);
+        else
+            wssi_kernel<T, scalar>(I_up.data(), gradient.data(), min_grad_idx,
+                                   min_grad_value, ws_size);
         break;
     case vectorization_type::avx2:
-        wssi_kernel<T, avx2>(I_up.data(), gradient.data(), min_grad_idx, min_grad_value,
-                             ws_size);
+        if constexpr (simd_available)
+            wssi_kernel<T, avx2>(I_up.data(), gradient.data(), min_grad_idx,
+                                 min_grad_value, ws_size);
+        else
+            wssi_kernel<T, scalar>(I_up.data(), gradient.data(), min_grad_idx,
+                                   min_grad_value, ws_size);
         break;
     case vectorization_type::avx512:
 #ifdef __AVX512F__
-        wssi_kernel<T, avx512>(I_up.data(), gradient.data(), min_grad_idx, min_grad_value,
-                               ws_size);
+        if constexpr (simd_available)
+            wssi_kernel<T, avx512>(I_up.data(), gradient.data(), min_grad_idx,
+                                   min_grad_value, ws_size);
+        else
+            wssi_kernel<T, scalar>(I_up.data(), gradient.data(), min_grad_idx,
+                                   min_grad_value, ws_size);
 #else
-        wssi_kernel<T, avx2>(I_up.data(), gradient.data(), min_grad_idx, min_grad_value,
-                             ws_size);
+        if constexpr (simd_available)
+            wssi_kernel<T, avx2>(I_up.data(), gradient.data(), min_grad_idx,
+                                 min_grad_value, ws_size);
+        else
+            wssi_kernel<T, scalar>(I_up.data(), gradient.data(), min_grad_idx,
+                                   min_grad_value, ws_size);
 #endif
         break;
     default:
@@ -730,26 +916,54 @@ void base_svm<T>::wssj(std::vector<da_int> &I_low, std::vector<T> &gradient, da_
     T *K_ith_row = &kernel_matrix_row_major[i * ws_size];
     T K_ii = K_ith_row[i];
 
+    // See wssi() above: the vectorized _Float16 kernels only exist with
+    // AVX-512-FP16, so guard the SIMD branches and fall back to scalar otherwise.
+#ifdef __AVX512FP16__
+    constexpr bool simd_available = true;
+#else
+    constexpr bool simd_available = !std::is_same_v<T, _Float16>;
+#endif
+
     switch (wssj_vec_type) {
     case vectorization_type::avx:
-        wssj_kernel<T, avx>(I_low.data(), gradient.data(), K_ith_row,
-                            kernel_matrix_diagonal.data(), K_ii, j, max_grad, min_grad,
-                            max_fun, delta, tau, ws_size);
+        if constexpr (simd_available)
+            wssj_kernel<T, avx>(I_low.data(), gradient.data(), K_ith_row,
+                                kernel_matrix_diagonal.data(), K_ii, j, max_grad,
+                                min_grad, max_fun, delta, tau, ws_size);
+        else
+            wssj_kernel<T, scalar>(I_low.data(), gradient.data(), K_ith_row,
+                                   kernel_matrix_diagonal.data(), K_ii, j, max_grad,
+                                   min_grad, max_fun, delta, tau, ws_size);
         break;
     case vectorization_type::avx2:
-        wssj_kernel<T, avx2>(I_low.data(), gradient.data(), K_ith_row,
-                             kernel_matrix_diagonal.data(), K_ii, j, max_grad, min_grad,
-                             max_fun, delta, tau, ws_size);
+        if constexpr (simd_available)
+            wssj_kernel<T, avx2>(I_low.data(), gradient.data(), K_ith_row,
+                                 kernel_matrix_diagonal.data(), K_ii, j, max_grad,
+                                 min_grad, max_fun, delta, tau, ws_size);
+        else
+            wssj_kernel<T, scalar>(I_low.data(), gradient.data(), K_ith_row,
+                                   kernel_matrix_diagonal.data(), K_ii, j, max_grad,
+                                   min_grad, max_fun, delta, tau, ws_size);
         break;
     case vectorization_type::avx512:
 #ifdef __AVX512F__
-        wssj_kernel<T, avx512>(I_low.data(), gradient.data(), K_ith_row,
-                               kernel_matrix_diagonal.data(), K_ii, j, max_grad, min_grad,
-                               max_fun, delta, tau, ws_size);
+        if constexpr (simd_available)
+            wssj_kernel<T, avx512>(I_low.data(), gradient.data(), K_ith_row,
+                                   kernel_matrix_diagonal.data(), K_ii, j, max_grad,
+                                   min_grad, max_fun, delta, tau, ws_size);
+        else
+            wssj_kernel<T, scalar>(I_low.data(), gradient.data(), K_ith_row,
+                                   kernel_matrix_diagonal.data(), K_ii, j, max_grad,
+                                   min_grad, max_fun, delta, tau, ws_size);
 #else
-        wssj_kernel<T, avx2>(I_low.data(), gradient.data(), K_ith_row,
-                             kernel_matrix_diagonal.data(), K_ii, j, max_grad, min_grad,
-                             max_fun, delta, tau, ws_size);
+        if constexpr (simd_available)
+            wssj_kernel<T, avx2>(I_low.data(), gradient.data(), K_ith_row,
+                                 kernel_matrix_diagonal.data(), K_ii, j, max_grad,
+                                 min_grad, max_fun, delta, tau, ws_size);
+        else
+            wssj_kernel<T, scalar>(I_low.data(), gradient.data(), K_ith_row,
+                                   kernel_matrix_diagonal.data(), K_ii, j, max_grad,
+                                   min_grad, max_fun, delta, tau, ws_size);
 #endif
         break;
     default:
@@ -785,16 +999,16 @@ void base_svm<T>::prepare_kernel_matrix(std::vector<T *> &ptr_kernel_col, da_int
 
 template <typename T> da_status base_svm<T>::deserialize_kernel_f() {
     switch (kernel_function) {
-    case rbf:
+    case svm_kernel::rbf:
         kernel_f = &rbf_wrapper<T>;
         break;
-    case linear:
+    case svm_kernel::linear:
         kernel_f = &linear_wrapper<T>;
         break;
-    case polynomial:
+    case svm_kernel::polynomial:
         kernel_f = &polynomial_wrapper<T>;
         break;
-    case sigmoid:
+    case svm_kernel::sigmoid:
         kernel_f = &sigmoid_wrapper<T>;
         break;
     default:
@@ -839,8 +1053,18 @@ template <typename T> da_status base_svm<T>::serialize(serialization_buffer &buf
     return status;
 };
 
+// The _Float16 classifier is only used internally as a mixed-precision warm-start
+// scratch object; it is never serialized. Specialize serialize() to a no-op so the
+// generic body (which would odr-use dispatch_buffer_io<_Float16>) is not instantiated.
+template <> da_status base_svm<_Float16>::serialize(serialization_buffer &) {
+    return da_status_not_implemented;
+}
+
 template class base_svm<float>;
 template class base_svm<double>;
+#ifdef __AVX512FP16__
+template class base_svm<_Float16>;
+#endif
 
 } // namespace da_svm
 

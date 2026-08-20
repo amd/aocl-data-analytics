@@ -264,6 +264,7 @@ Nonlinear least-squares options
          "regularization power", "string", ":math:`s=` `quadratic`", "Value of the regularization power term.", ":math:`s=` `cubic`, or `quadratic`."
          "regularization term", "real", ":math:`r=0`", "Value of the regularization term. A value of 0 disables regularization.", ":math:`0 \le r`"
          "ralfit iteration limit", "integer", ":math:`i=100`", "Maximum number of iterations to perform.", ":math:`1 \le i`"
+         "time limit", "real", ":math:`r=10^6`", "Maximum time allowed to run (in seconds).", ":math:`0 < r`"
          "ralfit convergence rel tol fun", "real", ":math:`r=10/21\sqrt{2\,\varepsilon}`", "Relative tolerance to declare convergence for the iterative optimization step. See details in optimization solver documentation.", ":math:`0 < r < 1`"
          "ralfit convergence abs tol fun", "real", ":math:`r=10/21\sqrt{2\,\varepsilon}`", "Absolute tolerance to declare convergence for the iterative optimization step. See details in optimization solver documentation.", ":math:`0 < r < 1`"
          "ralfit convergence rel tol grd", "real", ":math:`r=10/21\sqrt{2\,\varepsilon}`", "Relative tolerance on the gradient norm to declare convergence for the iterative optimization step. See details in optimization solver documentation.", ":math:`0 < r < 1`"

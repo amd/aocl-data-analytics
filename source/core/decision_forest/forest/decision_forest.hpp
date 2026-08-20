@@ -54,7 +54,6 @@ using namespace da_errors;
 
 template <typename T> class decision_forest : public basic_handle<T> {
 
-    bool model_trained = false;
     bool init_done = false;
 
     // User data. Never modified by the classifier
@@ -85,9 +84,16 @@ template <typename T> class decision_forest : public basic_handle<T> {
     da_int use_hist = 0;
     da_int usr_max_bins;
 
+    // Thread distribution for nested parallelism
+    da_int max_tree_threads = 0;
+    da_int n_tree_threads = 0;
+
     // Model data
     std::vector<std::unique_ptr<decision_tree<T>>> forest;
 
+  private:
+    void compute_thread_distribution(da_int n_tree, da_int &n_forest_threads,
+                                     std::vector<da_int> &n_tree_threads);
     da_status forest_serialization(da_model_persistence::serialization_buffer &buffer);
 
   public:
@@ -112,8 +118,7 @@ template <typename T> class decision_forest : public basic_handle<T> {
                     const da_int *y_test, T *score);
 
     da_status get_result(da_result query, da_int *dim, T *result) override;
-    da_status get_result([[maybe_unused]] da_result query, [[maybe_unused]] da_int *dim,
-                         [[maybe_unused]] da_int *result) override;
+    da_status get_result(da_result query, da_int *dim, da_int *result) override;
 
     da_status serialize(da_model_persistence::serialization_buffer &buffer) override;
     da_status save_model(da_model_persistence::serialization_buffer &buffer) override;

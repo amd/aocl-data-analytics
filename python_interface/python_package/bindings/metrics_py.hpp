@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2024-2025 Advanced Micro Devices, Inc. All rights reserved.
+ * Copyright (C) 2024-2026 Advanced Micro Devices, Inc. All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without modification,
  * are permitted provided that the following conditions are met:
@@ -93,11 +93,14 @@ py::array_t<T> py_da_pairwise_distances(py::array_t<T> X, std::optional<py::arra
         metric_enum = da_euclidean_gemm;
     } else if (metric == "sqeuclidean_gemm") {
         metric_enum = da_sqeuclidean_gemm;
+    } else if (metric == "inner product" || metric == "inner_product") {
+        metric_enum = da_inner_product;
     } else {
         throw std::invalid_argument("Given metric does not exist. Available choices are: "
                                     "'euclidean', 'l2', 'sqeuclidean', 'manhattan', "
                                     "'l1', 'cityblock', 'cosine', 'minkowski', "
-                                    "'euclidean_gemm', 'sqeuclidean_gemm.");
+                                    "'euclidean_gemm', 'sqeuclidean_gemm', "
+                                    "'inner_product'.");
     }
 
     // Create the output distance matrix as a numpy array

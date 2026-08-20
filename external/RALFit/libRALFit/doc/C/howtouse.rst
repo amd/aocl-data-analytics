@@ -357,6 +357,11 @@ The derived data type for holding options
 		 |maxit|
 		 Default is 100
 
+   .. c:member:: double maxtime
+		 
+		 |maxtime|
+		 Default is 1e6.
+
    .. c:member:: double stop_g_absolute
 		 
 		 |stop_g_absolute|
