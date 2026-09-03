@@ -322,6 +322,9 @@ class kmeans():
             )
         return
 
+    def print_model_versions(self):
+        return self.kmeans.pybind_print_model_versions()
+
 
 class DBSCAN():
     """

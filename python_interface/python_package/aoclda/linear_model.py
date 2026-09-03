@@ -317,6 +317,9 @@ class linmod():
                 "model. Expected 'float32' or 'float64'."
             )
 
+    def print_model_versions(self):
+        return self.linmod.pybind_print_model_versions()
+
     @property
     def trained(self):
         """

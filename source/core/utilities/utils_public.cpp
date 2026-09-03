@@ -219,6 +219,18 @@ da_status da_debug_get(const char *key, da_int lvalue, char *value) {
     return da_status_success;
 }
 
+da_status da_print_model_metadata(const char *filename) {
+    if (filename == nullptr)
+        return da_status_invalid_pointer;
+
+    std::string filename_str{filename};
+    return da_model_persistence::print_model_metadata(filename_str);
+};
+
+da_status da_print_model_metadata(const std::vector<char> &file_data) {
+    return da_model_persistence::print_model_metadata(file_data);
+};
+
 template da_status da_check_data<float>(da_order, da_int, da_int, const float *, da_int);
 template da_status da_check_data<double>(da_order, da_int, da_int, const double *,
                                          da_int);

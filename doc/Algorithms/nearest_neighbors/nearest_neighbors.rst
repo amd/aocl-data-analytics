@@ -85,6 +85,28 @@ The standard way of computing the *k*-nearest neighbors is as follows.
       2. Pass data to the handle using :ref:`da_nn_set_data_? <da_nn_set_data>`.
       3. Compute the indices of the nearest neighbors and optionally the corresponding distances using :ref:`da_nn_kneighbors_? <da_nn_kneighbors>`.
 
+Maximum Inner Product Search (MIPS)
+====================================
+
+When the ``inner product`` metric is selected, the *k*-nearest neighbors algorithm performs Maximum Inner Product Search (MIPS).
+For each query vector :math:`x_i^{\text{test}}`, the algorithm returns the :math:`k` training vectors with the largest inner product.
+
+.. math::
+
+   d = \langle x_i^{\text{test}},\, x_j^{\text{train}} \rangle = \sum_{p=1}^{n\_features} x_{i,p}^{\text{test}}\, x_{j,p}^{\text{train}},
+
+ordered from most similar (highest inner product) to least similar.
+The returned values are the raw inner products and can be negative.
+
+.. note::
+
+   The inner product is a similarity measure, not a true distance.
+   Consequently, the following restrictions apply:
+
+   * Only the brute-force algorithm is supported; tree-based algorithms (``kd tree``, ``ball tree``) are incompatible and will raise an error.
+   * There is no meaningful radius threshold for a similarity measure in radius neighbors, so :ref:`da_nn_radius_neighbors_? <da_nn_radius_neighbors>` is incompatible and will raise an error.
+   * ``weights="distance"`` computes :math:`1/d`, which is undefined when distances can be negative or zero. Use ``weights="uniform"`` instead.
+
 Radius Neighbors
 ================
 
@@ -326,7 +348,7 @@ Nearest Neighbors APIs
 
       .. autoclass:: aoclda.neighbors.nearest_neighbors(n_neighbors=5, radius=1.0, weights='uniform', algorithm='auto', metric='minkowski', p=2.0, leaf_size=30, check_data=false)
          :members:
-         :no-index:
+         :noindex:
 
    .. tab-item:: C
 

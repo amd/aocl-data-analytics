@@ -338,6 +338,8 @@ void knn_reg_serialization_test(const knn_reg_serial_params &pr, da_int n_sample
         EXPECT_NEAR(minkowski_p_loaded, (T)pr.minkowski_p,
                     10 * std::numeric_limits<T>::epsilon());
 
+        model_persistence_test_utils::test_print_model_versions(handle_loaded);
+
         da_handle_destroy(&handle_loaded);
     }
 }

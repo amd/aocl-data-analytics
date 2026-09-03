@@ -326,6 +326,9 @@ class decision_tree():
             )
         return
 
+    def print_model_versions(self):
+        return self.decision_tree.pybind_print_model_versions()
+
     @property
     def n_samples(self):
         """int: The number of samples used in the trained tree"""

@@ -141,6 +141,17 @@ int main() {
             return 1;
         }
 
+        std::cout << "\n";
+        pass =
+            pass && (da_handle_print_model_versions(handle_loaded) == da_status_success);
+        std::cout << "\n";
+
+        if (!pass) {
+            std::cerr << "\nError: ";
+            std::cerr << "Failed to print serialization versions.";
+            return 1;
+        }
+
         std::cout << "\nModel persistence verified - predictions match!" << std::endl;
 
         da_handle_destroy(&handle_loaded);

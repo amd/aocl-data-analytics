@@ -279,7 +279,7 @@ for macro in f:
     latex_elements['preamble'] += macro + '\n'
     # used when building html version
     imgmath_latex_preamble += macro + '\n'
-# (from http://stackoverflow.com/questions/9728292/creating-latex-math-macros-within-sphinx)
+
 
 #####################################################
 

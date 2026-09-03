@@ -52,6 +52,7 @@ The following AOCL-DA models support serialization (saving and loading):
 - **Linear Models**
 - **Nearest Neighbors**
 - **Principal Component Analysis**
+- **Kernel Principal Component Analysis**
 - **Support Vector Machines**
 
 Compatibility and Limitations
@@ -75,6 +76,15 @@ When saving and loading models, the following compatibility requirements and lim
    Attempting to load a model saved with an older or newer version of AOCL-DA may fail if the serialization format has changed. 
    The library performs version checks during loading and will return an error if the saved model format is incompatible with the current version.
 
+Inspecting Saved Models
+------------------------
+
+AOCL-DA provides utility functions to inspect metadata from saved models.
+:cpp:func:`da_print_model_metadata` reads and prints the metadata header (version, precision, handle type)
+from a saved file without fully loading the model, which is useful for diagnosing version mismatches or
+verifying file contents. :cpp:func:`da_handle_print_model_versions` prints the AOCL-DA build version and
+serialization format version recorded in an already-loaded model.
+
 Example: PCA Model Persistence
 -------------------------------
 
@@ -91,4 +101,10 @@ API Reference
    :project: da
 
 .. doxygenfunction:: da_handle_load_model(da_handle *, const char *)
+   :project: da
+
+.. doxygenfunction:: da_print_model_metadata(const char *filename)
+   :project: da
+
+.. doxygenfunction:: da_handle_print_model_versions(da_handle)
    :project: da

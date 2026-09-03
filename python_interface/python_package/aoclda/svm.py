@@ -202,6 +202,9 @@ class BaseSVM:
             )
         return
 
+    def print_model_versions(self):
+        return self._model.pybind_print_model_versions()
+
     @property
     def n_samples(self):
         """

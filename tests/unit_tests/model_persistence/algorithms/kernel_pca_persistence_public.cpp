@@ -228,6 +228,8 @@ void kernel_pca_persistence_test(const KernelPCAParamType<double> &param,
                   da_status_success);
         EXPECT_EQ(alpha_loaded, alpha);
 
+        model_persistence_test_utils::test_print_model_versions(handle_loaded);
+
         da_handle_destroy(&handle_loaded);
     }
 }

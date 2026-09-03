@@ -147,6 +147,7 @@ set(DA_METRICS_INTERNAL
   core/metrics/pairwise_distances.cpp
   core/metrics/euclidean_distance.cpp
   core/metrics/cosine_distance.cpp
+  core/metrics/inner_product_distance.cpp
   core/metrics/manhattan_distance.cpp
   core/metrics/sqeuclidean_distance.cpp
   core/metrics/minkowski_distance.cpp

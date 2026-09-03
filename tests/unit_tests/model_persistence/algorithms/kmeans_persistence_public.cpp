@@ -268,6 +268,8 @@ void kmeans_serialization_test(const kmeans_serial_params &pr, da_int n_samples,
                   da_status_success);
         EXPECT_EQ(n_init_loaded, 1);
 
+        model_persistence_test_utils::test_print_model_versions(handle_loaded);
+
         da_handle_destroy(&handle_loaded);
     }
 }
@@ -325,4 +327,26 @@ TEST_F(KMeansSerializationErrorTest, FitAfterLoadWithoutSetDataFails) {
     EXPECT_EQ(da_handle_load_model(&handle_load, model_file.c_str()), da_status_success);
     EXPECT_EQ(da_kmeans_compute_d(handle_load), da_status_no_data);
     da_handle_destroy(&handle_load);
+}
+
+TEST_F(KMeansSerializationErrorTest, PrintModelMetadataFromBuffer) {
+    // Fit and save a kmeans model to buffer
+    da_handle handle = nullptr;
+    ASSERT_EQ(da_handle_init_s(&handle, da_handle_kmeans), da_status_success);
+    std::vector<float> X = {2.5f, 1.4f, -1.0f, -2.3f, 3.8f, 2.6f, -3.0f, -2.4f};
+    ASSERT_EQ(da_kmeans_set_data_s(handle, 4, 2, X.data(), 4), da_status_success);
+    ASSERT_EQ(da_options_set_int(handle, "n_clusters", 2), da_status_success);
+    ASSERT_EQ(da_options_set_int(handle, "seed", 42), da_status_success);
+    ASSERT_EQ(da_kmeans_compute_s(handle), da_status_success);
+
+    std::vector<char> buffer;
+    ASSERT_EQ(da_handle_save_model(handle, buffer), da_status_success);
+    da_handle_destroy(&handle);
+
+    testing::internal::CaptureStdout();
+    EXPECT_EQ(da_print_model_metadata(buffer), da_status_success);
+    std::string output = testing::internal::GetCapturedStdout();
+    EXPECT_NE(output.find("Header keyword:"), std::string::npos);
+    EXPECT_NE(output.find("Serialization version:"), std::string::npos);
+    EXPECT_NE(output.find("Saved AOCL-DA build version:"), std::string::npos);
 }

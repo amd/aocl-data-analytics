@@ -42,6 +42,31 @@ from aoclda.decision_tree import decision_tree
 from aoclda.decision_forest import decision_forest
 from aoclda.neighbors import nearest_neighbors, approximate_neighbors
 from aoclda.svm import SVC, SVR, NuSVR
+from aoclda.utils import print_model_metadata
+
+
+# ============================================================================
+# Helper Functions
+# ============================================================================
+
+def check_print_model_versions(model, capfd):
+    """Verify print_model_versions() outputs expected metadata fields."""
+    model.print_model_versions()
+    captured = capfd.readouterr()
+    assert "Serialization version:" in captured.out
+    assert "Saved AOCL-DA build version:" in captured.out
+
+
+def check_print_model_metadata(filepath, capfd):
+    """Verify print_model_metadata() outputs expected metadata fields."""
+    print_model_metadata(filepath)
+    captured = capfd.readouterr()
+    assert "Header keyword:" in captured.out
+    assert "Integer size:" in captured.out
+    assert "Serialization version:" in captured.out
+    assert "Handle type:" in captured.out
+    assert "Precision:" in captured.out
+    assert "Saved AOCL-DA build version:" in captured.out
 
 
 # ============================================================================
@@ -51,7 +76,7 @@ from aoclda.svm import SVC, SVR, NuSVR
 @pytest.mark.parametrize("method", ["covariance", "correlation", "svd"])
 @pytest.mark.parametrize("numpy_precision", [np.float32, np.float64])
 @pytest.mark.parametrize("numpy_order", ["C", "F"])
-def test_pca_pickle(method, numpy_precision, numpy_order, tmp_path):
+def test_pca_pickle(method, numpy_precision, numpy_order, tmp_path, capfd):
     """Test PCA pickle serialization preserves model state."""
     X_train = np.array([
         [1.3, 2.53, 3.86],
@@ -82,6 +107,8 @@ def test_pca_pickle(method, numpy_precision, numpy_order, tmp_path):
         pickle.dump(pca, f)
     del pca
 
+    check_print_model_metadata(filepath, capfd)
+
     # Load from file
     with open(filepath, 'rb') as f:
         pca_loaded = pickle.load(f)
@@ -96,6 +123,8 @@ def test_pca_pickle(method, numpy_precision, numpy_order, tmp_path):
     assert np.array_equal(components_before, components_after)
     assert np.array_equal(variance_before, pca_loaded.variance)
 
+    check_print_model_versions(pca_loaded, capfd)
+
     # Try saving again
     filepath = tmp_path / "model_pca2.pkl"
     with open(filepath, 'wb') as f:
@@ -109,7 +138,7 @@ def test_pca_pickle(method, numpy_precision, numpy_order, tmp_path):
 @pytest.mark.parametrize("kernel", ["linear", "rbf", "poly", "sigmoid"])
 @pytest.mark.parametrize("numpy_precision", [np.float32, np.float64])
 @pytest.mark.parametrize("numpy_order", ["C", "F"])
-def test_kernel_pca_pickle(kernel, numpy_precision, numpy_order, tmp_path):
+def test_kernel_pca_pickle(kernel, numpy_precision, numpy_order, tmp_path, capfd):
     """Test Kernel PCA pickle serialization preserves model state."""
     X_train = np.array([
         [1.0, 3.0, 0.5],
@@ -143,6 +172,8 @@ def test_kernel_pca_pickle(kernel, numpy_precision, numpy_order, tmp_path):
         pickle.dump(kpca, f)
     del kpca
 
+    check_print_model_metadata(filepath, capfd)
+
     # Load from file
     with open(filepath, 'rb') as f:
         kpca_loaded = pickle.load(f)
@@ -160,6 +191,8 @@ def test_kernel_pca_pickle(kernel, numpy_precision, numpy_order, tmp_path):
     assert np.array_equal(transform_before, transform_after)
     assert np.array_equal(inverse_before, inverse_after)
 
+    check_print_model_versions(kpca_loaded, capfd)
+
     # Try saving again (stability check)
     filepath2 = tmp_path / "model_kernel_pca2.pkl"
     with open(filepath2, 'wb') as f:
@@ -173,7 +206,7 @@ def test_kernel_pca_pickle(kernel, numpy_precision, numpy_order, tmp_path):
 @pytest.mark.parametrize("algorithm", ["lloyd", "elkan", "macqueen", "hartigan-wong"])
 @pytest.mark.parametrize("numpy_precision", [np.float32, np.float64])
 @pytest.mark.parametrize("numpy_order", ["C", "F"])
-def test_kmeans_pickle(algorithm, numpy_precision, numpy_order, tmp_path):
+def test_kmeans_pickle(algorithm, numpy_precision, numpy_order, tmp_path, capfd):
     """Test kmeans pickle serialization preserves model state."""
     X_train = np.array([
         [2.5, 1.4],
@@ -206,6 +239,8 @@ def test_kmeans_pickle(algorithm, numpy_precision, numpy_order, tmp_path):
         pickle.dump(km, f)
     del km
 
+    check_print_model_metadata(filepath, capfd)
+
     # Load from file
     with open(filepath, 'rb') as f:
         km_loaded = pickle.load(f)
@@ -217,6 +252,8 @@ def test_kmeans_pickle(algorithm, numpy_precision, numpy_order, tmp_path):
     assert np.array_equal(labels_before, labels_after)
     assert np.array_equal(transform_before, transform_after)
     assert np.array_equal(centers_before, km_loaded.cluster_centres)
+
+    check_print_model_versions(km_loaded, capfd)
 
     # Try saving again
     filepath = tmp_path / "model_kmeans2.pkl"
@@ -243,7 +280,7 @@ def test_linmod_pickle(
         intercept,
         numpy_precision,
         numpy_order,
-        tmp_path):
+        tmp_path, capfd):
     """Test linmod pickle serialization preserves model state."""
     # Use different data based on model type
     if mod == "mse":
@@ -287,6 +324,8 @@ def test_linmod_pickle(
         pickle.dump(lmod, f)
     del lmod
 
+    check_print_model_metadata(filepath, capfd)
+
     # Load from file
     with open(filepath, 'rb') as f:
         lmod_loaded = pickle.load(f)
@@ -296,6 +335,8 @@ def test_linmod_pickle(
 
     assert np.array_equal(predict_before, predict_after)
     assert np.array_equal(coef_before, lmod_loaded.coef)
+
+    check_print_model_versions(lmod_loaded, capfd)
 
     # Try saving again
     filepath = tmp_path / "model_linmod2.pkl"
@@ -311,7 +352,12 @@ def test_linmod_pickle(
                          ["gini", "cross-entropy", "misclassification"])
 @pytest.mark.parametrize("numpy_precision", [np.float32, np.float64])
 @pytest.mark.parametrize("numpy_order", ["C", "F"])
-def test_decision_tree_pickle(scoring_function, numpy_precision, numpy_order, tmp_path):
+def test_decision_tree_pickle(
+        scoring_function,
+        numpy_precision,
+        numpy_order,
+        tmp_path,
+        capfd):
     """Test decision_tree pickle serialization preserves model state."""
     X_train = np.array([
         [1., 0.],
@@ -342,6 +388,8 @@ def test_decision_tree_pickle(scoring_function, numpy_precision, numpy_order, tm
         pickle.dump(clf, f)
     del clf
 
+    check_print_model_metadata(filepath, capfd)
+
     # Load from file
     with open(filepath, 'rb') as f:
         clf_loaded = pickle.load(f)
@@ -352,6 +400,8 @@ def test_decision_tree_pickle(scoring_function, numpy_precision, numpy_order, tm
 
     assert np.array_equal(predict_before, predict_after)
     assert np.array_equal(proba_before, proba_after)
+
+    check_print_model_versions(clf_loaded, capfd)
 
     # Try saving again
     filepath = tmp_path / "model_clf2.pkl"
@@ -373,7 +423,7 @@ def test_decision_forest_pickle(
         bootstrap,
         numpy_precision,
         numpy_order,
-        tmp_path):
+        tmp_path, capfd):
     """Test decision_forest pickle serialization preserves model state."""
     X_train = np.array([
         [1., 0.],
@@ -410,6 +460,8 @@ def test_decision_forest_pickle(
         pickle.dump(clf, f)
     del clf
 
+    check_print_model_metadata(filepath, capfd)
+
     # Load from file
     with open(filepath, 'rb') as f:
         clf_loaded = pickle.load(f)
@@ -421,6 +473,8 @@ def test_decision_forest_pickle(
     assert np.array_equal(predict_before, predict_after)
     # Edge case failing with small diffs possibly due to order of calculations randomness
     np.testing.assert_array_almost_equal(proba_before, proba_after, decimal=7)
+
+    check_print_model_versions(clf_loaded, capfd)
 
     # Try saving again
     filepath = tmp_path / "model_forest2.pkl"
@@ -436,7 +490,7 @@ def test_decision_forest_pickle(
 @pytest.mark.parametrize("numpy_precision", [np.float32, np.float64])
 @pytest.mark.parametrize("numpy_order", ["C", "F"])
 def test_nearest_neighbors_kneighbors_pickle(
-        algorithm, numpy_precision, numpy_order, tmp_path):
+        algorithm, numpy_precision, numpy_order, tmp_path, capfd):
     """Test nearest_neighbors pickle serialization for kneighbors queries."""
     X_train = np.array([
         [-1.5, -1.2, 2.6],
@@ -468,6 +522,8 @@ def test_nearest_neighbors_kneighbors_pickle(
         pickle.dump(nn, f)
     del nn
 
+    check_print_model_metadata(filepath, capfd)
+
     # Load from file
     with open(filepath, 'rb') as f:
         nn_loaded = pickle.load(f)
@@ -477,6 +533,8 @@ def test_nearest_neighbors_kneighbors_pickle(
 
     assert np.array_equal(ind_before, ind_after)
     assert np.array_equal(dist_before, dist_after)
+
+    check_print_model_versions(nn_loaded, capfd)
 
     # Try saving again
     filepath = tmp_path / "model_knn2.pkl"
@@ -488,7 +546,7 @@ def test_nearest_neighbors_kneighbors_pickle(
 @pytest.mark.parametrize("numpy_precision", [np.float32, np.float64])
 @pytest.mark.parametrize("numpy_order", ["C", "F"])
 def test_nearest_neighbors_classifier_pickle(
-        algorithm, numpy_precision, numpy_order, tmp_path):
+        algorithm, numpy_precision, numpy_order, tmp_path, capfd):
     """Test nearest_neighbors pickle serialization for classification."""
     X_train = np.array([
         [-1.5, -1.2, 2.6],
@@ -520,6 +578,8 @@ def test_nearest_neighbors_classifier_pickle(
         pickle.dump(nn, f)
     del nn
 
+    check_print_model_metadata(filepath, capfd)
+
     # Load from file
     with open(filepath, 'rb') as f:
         nn_loaded = pickle.load(f)
@@ -531,6 +591,8 @@ def test_nearest_neighbors_classifier_pickle(
     assert np.array_equal(predict_before, predict_after)
     assert np.array_equal(proba_before, proba_after)
 
+    check_print_model_versions(nn_loaded, capfd)
+
     # Try saving again
     filepath = tmp_path / "model_nn_class2.pkl"
     with open(filepath, 'wb') as f:
@@ -541,7 +603,7 @@ def test_nearest_neighbors_classifier_pickle(
 @pytest.mark.parametrize("numpy_precision", [np.float32, np.float64])
 @pytest.mark.parametrize("numpy_order", ["C", "F"])
 def test_nearest_neighbors_regressor_pickle(
-        algorithm, numpy_precision, numpy_order, tmp_path):
+        algorithm, numpy_precision, numpy_order, tmp_path, capfd):
     """Test nearest_neighbors pickle serialization for regression."""
     X_train = np.array([
         [-1.5, -1.2, 2.6],
@@ -572,6 +634,8 @@ def test_nearest_neighbors_regressor_pickle(
         pickle.dump(nn, f)
     del nn
 
+    check_print_model_metadata(filepath, capfd)
+
     # Load from file
     with open(filepath, 'rb') as f:
         nn_loaded = pickle.load(f)
@@ -580,6 +644,8 @@ def test_nearest_neighbors_regressor_pickle(
     predict_after = nn_loaded.regressor_predict(X_test)
 
     assert np.array_equal(predict_before, predict_after)
+
+    check_print_model_versions(nn_loaded, capfd)
 
     # Try saving again
     filepath = tmp_path / "model_nn_reg2.pkl"
@@ -594,7 +660,7 @@ def test_nearest_neighbors_radius_pickle(
         algorithm,
         numpy_precision,
         numpy_order,
-        tmp_path):
+        tmp_path, capfd):
     """Test nearest_neighbors pickle serialization for radius queries."""
     X_train = np.array([
         [-1.5, -1.2, 2.6],
@@ -626,6 +692,8 @@ def test_nearest_neighbors_radius_pickle(
         pickle.dump(nn, f)
     del nn
 
+    check_print_model_metadata(filepath, capfd)
+
     # Load from file
     with open(filepath, 'rb') as f:
         nn_loaded = pickle.load(f)
@@ -638,6 +706,8 @@ def test_nearest_neighbors_radius_pickle(
     for i in range(len(dist_before)):
         assert np.array_equal(ind_before[i], ind_after[i])
         assert np.array_equal(dist_before[i], dist_after[i])
+
+    check_print_model_versions(nn_loaded, capfd)
 
     # Try saving again
     filepath = tmp_path / "model_nn_rad2.pkl"
@@ -652,7 +722,12 @@ def test_nearest_neighbors_radius_pickle(
 @pytest.mark.parametrize("metric", ["sqeuclidean", 'euclidean', 'cosine'])
 @pytest.mark.parametrize("numpy_precision", [np.float32, np.float64])
 @pytest.mark.parametrize("numpy_order", ["C", "F"])
-def test_approximate_neighbors_pickle(metric, numpy_precision, numpy_order, tmp_path):
+def test_approximate_neighbors_pickle(
+        metric,
+        numpy_precision,
+        numpy_order,
+        tmp_path,
+        capfd):
     """Test approximate_neighbors pickle serialization preserves model state."""
     X_train = np.array([
         [-1.5, -1.2, 2.6],
@@ -690,6 +765,8 @@ def test_approximate_neighbors_pickle(metric, numpy_precision, numpy_order, tmp_
         pickle.dump(ann, f)
     del ann
 
+    check_print_model_metadata(filepath, capfd)
+
     # Load from file
     with open(filepath, 'rb') as f:
         ann_loaded = pickle.load(f)
@@ -699,6 +776,8 @@ def test_approximate_neighbors_pickle(metric, numpy_precision, numpy_order, tmp_
 
     assert np.array_equal(ind_before, ind_after)
     assert np.array_equal(dist_before, dist_after)
+
+    check_print_model_versions(ann_loaded, capfd)
 
     # Try saving again
     filepath = tmp_path / "model_ann2.pkl"
@@ -713,7 +792,7 @@ def test_approximate_neighbors_pickle(metric, numpy_precision, numpy_order, tmp_
 @pytest.mark.parametrize("kernel", ["linear", "rbf", "poly", "sigmoid"])
 @pytest.mark.parametrize("numpy_precision", [np.float32, np.float64])
 @pytest.mark.parametrize("numpy_order", ["C", "F"])
-def test_svc_pickle(kernel, numpy_precision, numpy_order, tmp_path):
+def test_svc_pickle(kernel, numpy_precision, numpy_order, tmp_path, capfd):
     """Test SVC pickle serialization preserves model state."""
     X_train = np.array([
         [-1.0, -1.0],
@@ -746,6 +825,8 @@ def test_svc_pickle(kernel, numpy_precision, numpy_order, tmp_path):
         pickle.dump(svc, f)
     del svc
 
+    check_print_model_metadata(filepath, capfd)
+
     # Load from file
     with open(filepath, 'rb') as f:
         svc_loaded = pickle.load(f)
@@ -756,6 +837,8 @@ def test_svc_pickle(kernel, numpy_precision, numpy_order, tmp_path):
     assert np.array_equal(predict_before, predict_after)
     assert np.array_equal(orig_sv, svc_loaded.support_vectors)
 
+    check_print_model_versions(svc_loaded, capfd)
+
     # Try saving again
     filepath = tmp_path / "model_svc2.pkl"
     with open(filepath, 'wb') as f:
@@ -765,7 +848,7 @@ def test_svc_pickle(kernel, numpy_precision, numpy_order, tmp_path):
 @pytest.mark.parametrize("kernel", ["linear", "rbf", "poly"])
 @pytest.mark.parametrize("numpy_precision", [np.float32, np.float64])
 @pytest.mark.parametrize("numpy_order", ["C", "F"])
-def test_nusvr_pickle(kernel, numpy_precision, numpy_order, tmp_path):
+def test_nusvr_pickle(kernel, numpy_precision, numpy_order, tmp_path, capfd):
     """Test NuSVR pickle serialization preserves model state."""
     X_train = np.array([
         [1.0, 0.5],
@@ -796,6 +879,8 @@ def test_nusvr_pickle(kernel, numpy_precision, numpy_order, tmp_path):
         pickle.dump(nusvr, f)
     del nusvr
 
+    check_print_model_metadata(filepath, capfd)
+
     # Load from file
     with open(filepath, 'rb') as f:
         nusvr_loaded = pickle.load(f)
@@ -805,6 +890,8 @@ def test_nusvr_pickle(kernel, numpy_precision, numpy_order, tmp_path):
 
     assert np.array_equal(predict_before, predict_after)
     assert np.array_equal(orig_sv, nusvr_loaded.support_vectors)
+
+    check_print_model_versions(nusvr_loaded, capfd)
 
     # Try saving again
     filepath = tmp_path / "model_nusvr2.pkl"
@@ -1031,3 +1118,35 @@ def test_svr_fit_after_load_succeeds(tmp_path):
     # Verify we can predict with the refitted model
     predictions = svr_loaded.predict(X_new)
     assert predictions.shape == (2,)
+
+
+def test_print_model_versions_errors():
+    """Test that calling .print_model_versions() on invalid model fails."""
+
+    X_train = np.array([
+        [-1.0, -1.0],
+        [-0.5, -0.5],
+        [1.0, 1.0],
+        [1.5, 1.5]
+    ], dtype=np.float64)
+    y_train = np.array([1.5, 2.0, 5.5, 6.0], dtype=np.float64)
+
+    svr = SVR(kernel="rbf", C=1.0)
+    svr.fit(X_train, y_train)
+
+    with pytest.raises(RuntimeError):
+        svr.print_model_versions()
+
+    return
+
+
+def test_print_model_metadata_errors():
+    """Test that calling print_model_metadata() on invalid file fails."""
+
+    with pytest.raises(FileNotFoundError):
+        print_model_metadata("invalid_file.pkl")
+
+    with pytest.raises(FileNotFoundError):
+        print_model_metadata("")
+
+    return

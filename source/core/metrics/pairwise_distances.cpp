@@ -66,6 +66,9 @@ da_status pairwise_distance_kernel(da_order order, da_int m, da_int n, da_int k,
     case da_sqeuclidean_gemm:
         return da_metrics::pairwise_distances::euclidean_gemm(order, m, n, k, X, ldx, Y,
                                                               ldy, D, ldd, true);
+    case da_inner_product:
+        return da_metrics::pairwise_distances::inner_product(order, m, n, k, X, ldx, Y,
+                                                             ldy, D, ldd);
     default:
         return da_status_not_implemented; // LCOV_EXCL_LINE
     }

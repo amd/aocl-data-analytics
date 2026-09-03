@@ -1339,6 +1339,122 @@ TYPED_TEST(NearestNeighborsTest, IncompatibleMetrics) {
                              param.ldx_train),
               da_status_incompatible_options);
 
+    EXPECT_EQ(da_options_set_string(nn_handle, "metric", "inner product"),
+              da_status_success);
+    // inner product is also incompatible with tree algorithms
+    EXPECT_EQ(da_nn_set_data(nn_handle, param.n_samples, param.n_features, X.data(),
+                             param.ldx_train),
+              da_status_incompatible_options);
+
+    EXPECT_EQ(da_options_set_string(nn_handle, "algorithm", "kd tree"),
+              da_status_success);
+    EXPECT_EQ(da_options_set_string(nn_handle, "metric", "inner product"),
+              da_status_success);
+    EXPECT_EQ(da_nn_set_data(nn_handle, param.n_samples, param.n_features, X.data(),
+                             param.ldx_train),
+              da_status_incompatible_options);
+
+    da_handle_destroy(&nn_handle);
+}
+
+// Verify that inner product is incompatible with radius neighbors and
+// weights="distance".
+TYPED_TEST(NearestNeighborsTest, InnerProductIncompatibleCombinations) {
+    NearestNeighborsParamType<TypeParam> param;
+    da_handle nn_handle = nullptr;
+    std::vector<TypeParam> X_train(param.n_samples * param.n_features, TypeParam(1));
+    std::vector<TypeParam> X_test(param.n_queries * param.n_features, TypeParam(1));
+
+    // --- radius_neighbors must reject inner product ---
+    EXPECT_EQ(da_handle_init<TypeParam>(&nn_handle, da_handle_nn), da_status_success);
+    EXPECT_EQ(da_options_set_string(nn_handle, "metric", "inner product"),
+              da_status_success);
+    EXPECT_EQ(da_nn_set_data(nn_handle, param.n_samples, param.n_features, X_train.data(),
+                             param.ldx_train),
+              da_status_success);
+    EXPECT_EQ(da_nn_radius_neighbors(nn_handle, param.n_queries, param.n_features,
+                                     X_test.data(), param.ldx_test, TypeParam(1), 0, 0),
+              da_status_incompatible_options);
+    da_handle_destroy(&nn_handle);
+
+    // --- weights="distance" must reject inner product at prediction time ---
+    EXPECT_EQ(da_handle_init<TypeParam>(&nn_handle, da_handle_nn), da_status_success);
+    EXPECT_EQ(da_options_set_string(nn_handle, "metric", "inner product"),
+              da_status_success);
+    EXPECT_EQ(da_options_set_string(nn_handle, "weights", "distance"), da_status_success);
+    EXPECT_EQ(da_nn_set_data(nn_handle, param.n_samples, param.n_features, X_train.data(),
+                             param.ldx_train),
+              da_status_success);
+    std::vector<da_int> labels(param.n_samples, 0);
+    EXPECT_EQ(da_nn_set_labels<TypeParam>(nn_handle, param.n_samples, labels.data()),
+              da_status_success);
+    std::vector<da_int> y_test(param.n_queries);
+    EXPECT_EQ(da_nn_classifier_predict(nn_handle, param.n_queries, param.n_features,
+                                       X_test.data(), param.ldx_test, y_test.data(),
+                                       knn_search_mode),
+              da_status_incompatible_options);
+    std::vector<TypeParam> proba(param.n_queries);
+    EXPECT_EQ(da_nn_classifier_predict_proba(nn_handle, param.n_queries, param.n_features,
+                                             X_test.data(), param.ldx_test, proba.data(),
+                                             knn_search_mode),
+              da_status_incompatible_options);
+    EXPECT_EQ(da_nn_classifier_predict(nn_handle, param.n_queries, param.n_features,
+                                       X_test.data(), param.ldx_test, y_test.data(),
+                                       radius_search_mode),
+              da_status_incompatible_options);
+    EXPECT_EQ(da_nn_classifier_predict_proba(nn_handle, param.n_queries, param.n_features,
+                                             X_test.data(), param.ldx_test, proba.data(),
+                                             radius_search_mode),
+              da_status_incompatible_options);
+    da_handle_destroy(&nn_handle);
+}
+
+// Verify that inner product KNN returns the k training points with the highest
+// dot product for each query, sorted from largest to smallest inner product.
+// The returned distances are the actual dot product values (can be negative).
+TYPED_TEST(NearestNeighborsTest, InnerProductKNN) {
+    da_handle nn_handle = nullptr;
+    EXPECT_EQ(da_handle_init<TypeParam>(&nn_handle, da_handle_nn), da_status_success);
+    EXPECT_EQ(da_options_set_string(nn_handle, "storage order", "row-major"),
+              da_status_success);
+    EXPECT_EQ(da_options_set_string(nn_handle, "metric", "inner product"),
+              da_status_success);
+    EXPECT_EQ(da_options_set_string(nn_handle, "algorithm", "brute"), da_status_success);
+
+    // 7 training points in R^2 (row-major): mix of positive and negative
+    da_int n_samples = 7, n_features = 2;
+    std::vector<TypeParam> X_train = {
+        TypeParam(3),  TypeParam(1),  TypeParam(1),  TypeParam(2), TypeParam(-1),
+        TypeParam(0),  TypeParam(0),  TypeParam(-2), TypeParam(2), TypeParam(3),
+        TypeParam(-2), TypeParam(-3), TypeParam(-1), TypeParam(-4)};
+    EXPECT_EQ(
+        da_nn_set_data(nn_handle, n_samples, n_features, X_train.data(), n_features),
+        da_status_success);
+
+    // 3 query points: (1,1), (0,-1), (-1,-2)
+    da_int n_queries = 3, k = 3;
+    std::vector<TypeParam> X_test = {TypeParam(1),  TypeParam(1),  TypeParam(0),
+                                     TypeParam(-1), TypeParam(-1), TypeParam(-2)};
+    std::vector<da_int> n_ind(n_queries * k);
+    std::vector<TypeParam> n_dist(n_queries * k);
+
+    EXPECT_EQ(da_nn_kneighbors(nn_handle, n_queries, n_features, X_test.data(),
+                               n_features, n_ind.data(), n_dist.data(), k, 1),
+              da_status_success);
+
+    // Expected: k training points with largest dot product, sorted descending.
+    // q[0]=(1,1):   t[4]=(2,3)->5,  t[0]=(3,1)->4,  t[1]=(1,2)->3
+    // q[1]=(0,-1):  t[6]=(-1,-4)->4, t[5]=(-2,-3)->3, t[3]=(0,-2)->2
+    // q[2]=(-1,-2): t[6]=(-1,-4)->9, t[5]=(-2,-3)->8, t[3]=(0,-2)->4
+    std::vector<da_int> expected_ind = {4, 0, 1, 6, 5, 3, 6, 5, 3};
+    std::vector<double> expected_dist_d = {5., 4., 3., 4., 3., 2., 9., 8., 4.};
+    std::vector<TypeParam> expected_dist =
+        convert_vector<double, TypeParam>(expected_dist_d);
+
+    EXPECT_ARR_EQ(da_int(n_ind.size()), n_ind.data(), expected_ind.data(), 1, 1, 0, 0);
+    EXPECT_ARR_NEAR(da_int(n_dist.size()), n_dist.data(), expected_dist.data(),
+                    10 * std::numeric_limits<TypeParam>::epsilon());
+
     da_handle_destroy(&nn_handle);
 }
 

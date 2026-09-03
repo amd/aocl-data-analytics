@@ -200,4 +200,20 @@ da_status da_handle_save_model(da_handle handle, const char *file_name);
  */
 da_status da_handle_load_model(da_handle *handle, const char *file_name);
 
+/**
+ * @brief Print the serialization version information of a loaded model.
+ *
+ * Prints the AOCL-DA build version and serialization version that 
+ * were stored when the model was saved. The handle must
+ * contain a previously loaded model.
+ *
+ * @param[in] handle the @ref da_handle structure containing the loaded model.
+ * @return @ref da_status. The function returns:
+ * - @ref da_status_success - the operation was successfully completed.
+ * - @ref da_status_invalid_pointer - the handle pointer is invalid.
+ * - @ref da_status_invalid_input - the handle does not contain a valid loaded model.
+ * - @ref da_status_internal_error - an unexpected internal error occurred.
+ */
+da_status da_handle_print_model_versions(da_handle handle);
+
 #endif

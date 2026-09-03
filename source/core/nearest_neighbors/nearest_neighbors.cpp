@@ -31,7 +31,6 @@
 #include "da_error.hpp"
 #include "da_omp.hpp"
 #include "da_simd_math.hpp"
-#include "kt.hpp"
 #include "macros.h"
 #include "model_persistence.hpp"
 #include "nearest_neighbors_options.hpp"
@@ -322,10 +321,10 @@ template <typename T> da_status neighbors<T>::set_params() {
     else if (this->working_algo == da_neighbors_types::nn_algorithm::kd_tree ||
              this->working_algo == da_neighbors_types::nn_algorithm::ball_tree) {
         if (metric == da_cosine || metric == da_sqeuclidean ||
-            metric == da_sqeuclidean_gemm) {
+            metric == da_sqeuclidean_gemm || metric == da_inner_product) {
             return da_error(this->err, da_status_incompatible_options,
-                            "The tree algorithms are not compatible with the cosine or "
-                            "squared Euclidean distances.");
+                            "The tree algorithms are not compatible with the cosine, "
+                            "squared Euclidean, or inner product distances.");
         } else if (metric == da_minkowski && p < (T)1.0) {
             // Minkowski distance with p<1 does not satisfy the triangle inequality,
             // so it is not a metric.
@@ -356,7 +355,8 @@ template <typename T> da_status neighbors<T>::set_params() {
 template <typename T> void neighbors<T>::set_neighbors_algorithm() {
     if ((this->metric == da_cosine) || (this->metric == da_sqeuclidean) ||
         (this->metric == da_minkowski && this->p < (T)1.0) ||
-        (this->metric == da_sqeuclidean_gemm)) { // LCOV_EXCL_LINE
+        (this->metric == da_sqeuclidean_gemm) ||
+        (this->metric == da_inner_product)) { // LCOV_EXCL_LINE
         this->working_algo = da_neighbors_types::nn_algorithm::brute;
     } else {
         // If the number of features is small and the number of samples is large, use k-d tree
@@ -563,125 +563,6 @@ da_status neighbors<T>::set_targets(da_int n_samples, const T *y_train_reg) {
     return da_status_success;
 }
 
-using namespace kernel_templates;
-
-// Inline max-finding. Distances are non-negative so absolute value is not needed.
-template <typename T> inline da_int inline_iamax(da_int n, const T *x) {
-    // set index and value to first element
-    da_int idx = 0;
-    T maxval = x[0];
-    for (da_int i = 1; i < n; i++) {
-        if (x[i] > maxval) {
-            maxval = x[i];
-            idx = i;
-        }
-    }
-    return idx;
-}
-
-template <bsz BSZ, typename T>
-inline auto compare_less_equal_mask(avxvector_t<BSZ, T> a, avxvector_t<BSZ, T> b) {
-#ifdef __AVX512F__
-    if constexpr (BSZ == kernel_templates::bsz::b512) {
-        if constexpr (std::is_same_v<T, float>) {
-            return _mm512_cmp_ps_mask(a, b, _CMP_LE_OS);
-        } else if constexpr (std::is_same_v<T, double>) {
-            return _mm512_cmp_pd_mask(a, b, _CMP_LE_OS);
-        }
-    } else
-#endif
-        if constexpr (BSZ == kernel_templates::bsz::b256) {
-        if constexpr (std::is_same_v<T, float>) {
-            auto cmp = _mm256_cmp_ps(a, b, _CMP_LE_OS);
-            return _mm256_movemask_ps(cmp);
-        } else if constexpr (std::is_same_v<T, double>) {
-            auto cmp = _mm256_cmp_pd(a, b, _CMP_LE_OS);
-            return _mm256_movemask_pd(cmp);
-        }
-    } else {
-        static_assert(BSZ == kernel_templates::bsz::b256 ||
-                          BSZ == kernel_templates::bsz::b512,
-                      "Unsupported bit size");
-    }
-}
-
-// Overload for incremental updates: scans D[0..n-1] against existing top-k in
-// k_ind/k_dist, using global_offset for stored indices. k_ind and k_dist must
-// already be fully populated with n_neigh candidates.
-template <bsz BSZ, typename T>
-inline __attribute__((always_inline)) void smaller_values_and_indices_vectorized_kernel(
-    da_int n, const T *D, da_int k, da_int *k_ind, T *k_dist, da_int global_offset) {
-    constexpr da_int VSIZE = da_int(tsz_v<BSZ, T>);
-    // Find the max val of the first k values and its index.
-    da_int max_index = inline_iamax(k, k_dist);
-    T max_val = k_dist[max_index];
-    // Starting from k, since we currently assume the first k values of D are the smaller values,
-    // and the corresponding indices have been initialized in k_ind.
-    da_int i = 0;
-    auto k_dist_max = kt_set1_p<BSZ, T>(max_val);
-    // For the rest of the values in D, we need to compare repeatedly with k_dist_vec
-    // and replace the values that are smaller.
-    for (; i + VSIZE <= n; i += VSIZE) {
-        // Load the next VSIZE values of D
-        auto k_dist_vec = kt_loadu_p<BSZ, T>(D + i);
-        // Compare each lane and set the mask bit if D[i+lane] < max_val
-        auto mask = compare_less_equal_mask<BSZ, T>(k_dist_vec, k_dist_max);
-        // If no lane beats the max value, continue to the next iteration.
-        if (mask == 0)
-            continue;
-        // If there is at least one lane that beats the max value, we need to find it and replace it
-        // in k_ind and k_dist.
-        // We could have multiple lanes so we need to iterate through them
-        while (mask) {
-            // __builtin_ctz returns the index of the lowest set bit,
-            // i.e. the position of the next candidate within the chunk.
-            da_int lane = __builtin_ctz(mask);
-            // Now we go back to scalar code to do the replacements.
-            T dist_candidate = D[i + lane];
-            // Need to check again in case a previous iteration in this while-loop
-            // has already replaced the max value.
-            if (dist_candidate <= max_val) {
-                // Replace the max value with the new smaller value and update the index.
-                k_dist[max_index] = dist_candidate;
-                k_ind[max_index] = i + lane + global_offset;
-                // Find the new max value and index.
-                max_index = inline_iamax(k, k_dist);
-                max_val = k_dist[max_index];
-            }
-            // Unset the lowest set bit to find the next candidate in this chunk.
-            mask = mask & (mask - 1);
-        }
-        // Update the broadcast vector with the new max value for the next comparisons.
-        k_dist_max = kt_set1_p<BSZ, T>(max_val);
-    }
-    // In case we have a leftover chunk that is smaller than VSIZE, we need to do a scalar loop
-    for (; i < n; i++) {
-        if (D[i] <= max_val) {
-            k_ind[max_index] = i + global_offset;
-            k_dist[max_index] = D[i];
-            max_index = inline_iamax(k, k_dist);
-            max_val = k_dist[max_index];
-        }
-    }
-}
-
-// Overload for incremental updates with global index offset.
-// k_ind and k_dist must already be fully populated with k candidates.
-template <typename T>
-void smaller_values_and_indices_vectorized(da_int n, const T *D, da_int k, da_int *k_ind,
-                                           T *k_dist, da_int global_offset) {
-#ifdef __AVX512F__
-    smaller_values_and_indices_vectorized_kernel<bsz::b512, T>(n, D, k, k_ind, k_dist,
-                                                               global_offset);
-#elif defined(__AVX2__)
-    smaller_values_and_indices_vectorized_kernel<bsz::b256, T>(n, D, k, k_ind, k_dist,
-                                                               global_offset);
-#else
-    static_assert(false,
-                  "smaller_values_and_indices_vectorized requires AVX2 or AVX512F");
-#endif
-}
-
 // Compute kernel for brute force algorithm
 template <typename T>
 da_status neighbors<T>::kneighbors_compute_brute_force(da_int n_queries,
@@ -802,10 +683,17 @@ da_status neighbors<T>::kneighbors_compute_brute_force(da_int n_queries,
                         }
                         // Phase 2: update k-nearest with remaining distances
                         if (ii < local_xtrain_size) {
-                            smaller_values_and_indices_vectorized(
-                                local_xtrain_size - ii, this_D.data() + ii + jj * ldd,
-                                n_neigh, query_k_ind, query_k_dist,
-                                ii + i * xtrain_block_size);
+                            if (this->metric != da_inner_product) {
+                                smaller_values_and_indices_vectorized(
+                                    local_xtrain_size - ii, this_D.data() + ii + jj * ldd,
+                                    n_neigh, query_k_ind, query_k_dist,
+                                    ii + i * xtrain_block_size);
+                            } else {
+                                larger_values_and_indices_vectorized(
+                                    local_xtrain_size - ii, this_D.data() + ii + jj * ldd,
+                                    n_neigh, query_k_ind, query_k_dist,
+                                    ii + i * xtrain_block_size);
+                            }
                         }
                     } // End of per-query update
                 }     // End of error check
@@ -831,7 +719,8 @@ da_status neighbors<T>::kneighbors_compute_brute_force(da_int n_queries,
                                         thread_k_ind[0].data() + q * n_neigh,
                                         return_distance ? n_dist + q * n_neigh : nullptr,
                                         n_ind + q * n_neigh, perm_vector.data(),
-                                        return_distance, get_squares);
+                                        return_distance, get_squares,
+                                        this->metric != da_inner_product);
                 }
             }
         } else {
@@ -873,14 +762,27 @@ da_status neighbors<T>::kneighbors_compute_brute_force(da_int n_queries,
                         }
                         // Update phase: merge remaining candidates into top-k
                         if (oi < other_count && count >= n_neigh) {
-                            da_int max_idx = inline_iamax(n_neigh, q_k_dist);
-                            T max_val = q_k_dist[max_idx];
-                            for (; oi < other_count; oi++) {
-                                if (other_k_dist[oi] <= max_val) {
-                                    q_k_ind[max_idx] = other_k_ind[oi];
-                                    q_k_dist[max_idx] = other_k_dist[oi];
-                                    max_idx = inline_iamax(n_neigh, q_k_dist);
-                                    max_val = q_k_dist[max_idx];
+                            if (this->metric != da_inner_product) {
+                                da_int max_idx = inline_iamax(n_neigh, q_k_dist);
+                                T max_val = q_k_dist[max_idx];
+                                for (; oi < other_count; oi++) {
+                                    if (other_k_dist[oi] <= max_val) {
+                                        q_k_ind[max_idx] = other_k_ind[oi];
+                                        q_k_dist[max_idx] = other_k_dist[oi];
+                                        max_idx = inline_iamax(n_neigh, q_k_dist);
+                                        max_val = q_k_dist[max_idx];
+                                    }
+                                }
+                            } else {
+                                da_int min_idx = inline_iamin(n_neigh, q_k_dist);
+                                T min_val = q_k_dist[min_idx];
+                                for (; oi < other_count; oi++) {
+                                    if (other_k_dist[oi] >= min_val) {
+                                        q_k_ind[min_idx] = other_k_ind[oi];
+                                        q_k_dist[min_idx] = other_k_dist[oi];
+                                        min_idx = inline_iamin(n_neigh, q_k_dist);
+                                        min_val = q_k_dist[min_idx];
+                                    }
                                 }
                             }
                         }
@@ -890,7 +792,8 @@ da_status neighbors<T>::kneighbors_compute_brute_force(da_int n_queries,
                     sorted_n_dist_n_ind(n_neigh, q_k_dist, q_k_ind,
                                         return_distance ? n_dist + q * n_neigh : nullptr,
                                         n_ind + q * n_neigh, perm_vector.data(),
-                                        return_distance, get_squares);
+                                        return_distance, get_squares,
+                                        this->metric != da_inner_product);
                 }
             }
         }
@@ -1265,6 +1168,14 @@ da_status neighbors<T>::predict_proba_compute_knn(da_int n_queries, da_int n_fea
                                                   T *proba) {
     da_status status = da_status_success;
 
+    // Distance-weighted voting uses 1/d, which is undefined for inner product
+    // (larger = more similar, values can be negative).
+    if (this->metric == da_inner_product &&
+        this->weights == da_neighbors_types::nn_weights::distance)
+        return da_error(this->err, da_status_incompatible_options,
+                        "The inner product metric is not compatible with "
+                        "weights=\"distance\". Use weights=\"uniform\" instead.");
+
     if (!this->classes_computed) {
         // From the input data y_train, find the available classes.
         status = neighbors<T>::available_classes();
@@ -1370,6 +1281,14 @@ da_status neighbors<T>::predict_proba_compute_rnn(da_int n_queries, da_int n_fea
                                                   const T *X_test, da_int ldx_test,
                                                   T *proba) {
     da_status status = da_status_success;
+
+    // Distance-weighted voting uses 1/d, which is undefined for inner product
+    // (larger = more similar, values can be negative).
+    if (this->metric == da_inner_product &&
+        this->weights == da_neighbors_types::nn_weights::distance)
+        return da_error(this->err, da_status_incompatible_options,
+                        "The inner product metric is not compatible with "
+                        "weights=\"distance\". Use weights=\"uniform\" instead.");
 
     if (!this->classes_computed) {
         // From the input data y_train, find the available classes.
@@ -1759,6 +1678,14 @@ neighbors<T>::predict_targets_knn(da_int n_queries, da_int n_features, const T *
 
     da_status status = da_status_success;
 
+    // Distance-weighted voting uses 1/d, which is undefined for inner product
+    // (larger = more similar, values can be negative).
+    if (this->metric == da_inner_product &&
+        this->weights == da_neighbors_types::nn_weights::distance)
+        return da_error(this->err, da_status_incompatible_options,
+                        "The inner product metric is not compatible with "
+                        "weights=\"distance\". Use weights=\"uniform\" instead.");
+
     // Allocate memory to set neighbors' indices and corresponding distances.
     // If n_ind and n_dist were returned in row order, then we need to transpose them
     try {
@@ -1837,6 +1764,14 @@ neighbors<T>::predict_targets_rnn(da_int n_queries, da_int n_features, const T *
                                   da_int ldx_test, T *y_test) {
 
     da_status status = da_status_success;
+
+    // Distance-weighted voting uses 1/d, which is undefined for inner product
+    // (larger = more similar, values can be negative).
+    if (this->metric == da_inner_product &&
+        this->weights == da_neighbors_types::nn_weights::distance)
+        return da_error(this->err, da_status_incompatible_options,
+                        "The inner product metric is not compatible with "
+                        "weights=\"distance\". Use weights=\"uniform\" instead.");
 
     if (this->outlier_handling ==
             da_neighbors_types::nn_outlier_handling::most_frequent &&
@@ -2001,6 +1936,14 @@ da_status neighbors<T>::radius_neighbors(da_int n_queries, da_int n_features,
     status = this->check_options_update();
     if (status != da_status_success)
         return status;
+
+    // inner product is a similarity measure without a meaningful radius threshold;
+    // use kneighbors instead.
+    if (this->metric == da_inner_product)
+        return da_error(this->err, da_status_incompatible_options,
+                        "The inner product metric is not compatible with radius "
+                        "neighbors. Use da_nn_kneighbors to find the k most similar "
+                        "training vectors by inner product.");
 
     const T *X_test_temp = nullptr;
     T *utility_ptr1 = nullptr;

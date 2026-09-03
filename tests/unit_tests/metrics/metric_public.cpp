@@ -52,7 +52,8 @@ static std::list<std::tuple<std::string, da_metric>> MetricExactResultsType = {
     {"da_cosine", da_cosine},
     {"da_minkowski", da_minkowski},
     {"da_euclidean_gemm", da_euclidean_gemm},
-    {"da_sqeuclidean_gemm", da_sqeuclidean_gemm}};
+    {"da_sqeuclidean_gemm", da_sqeuclidean_gemm},
+    {"da_inner_product", da_inner_product}};
 
 template <typename T> class PairwiseDistanceTest : public testing::Test {
   public:
@@ -326,6 +327,8 @@ TYPED_TEST(PairwiseDistanceTest, FixedData_XY) {
         } else if ((std::get<1>(metric) == da_minkowski)) {
             D_exp_row = {6.254413691636758, 5.124034794569624, 3.009451461921273, 2,
                          4.001734793974489, 3.1055785043917186};
+        } else if ((std::get<1>(metric) == da_inner_product)) {
+            D_exp_row = {-9., -5., 12., 8., 16., 10.};
         } else {
             throw std::runtime_error("Error in metric_public.cpp");
         }
@@ -419,6 +422,9 @@ TYPED_TEST(PairwiseDistanceTest, FixedData_XX) {
                          5.811210513661822,
                          6.356105477264618,
                          0.};
+        } else if ((std::get<1>(metric) == da_inner_product)) {
+            D_exp_row = {26.,  -11., -22., -8., -11., 14., 19., 2.,
+                         -22., 19.,  30.,  10., -8.,  2.,  10., 19.};
         } else {
             throw std::runtime_error("Error in metric_public.cpp");
         }
@@ -503,6 +509,8 @@ TYPED_TEST(PairwiseDistanceTest, FixedData_XY_ld) {
                          0.,
                          0.,
                          0.};
+        } else if ((std::get<1>(metric) == da_inner_product)) {
+            D_exp_row = {-9., -5., 0., 0., 0., 12., 8., 0., 0., 0., 16., 10., 0., 0., 0.};
         } else {
             throw std::runtime_error("Error in metric_public.cpp");
         }
@@ -627,6 +635,10 @@ TYPED_TEST(PairwiseDistanceTest, FixedData_XX_ld) {
                          0.,
                          0.,
                          0.};
+        } else if ((std::get<1>(metric) == da_inner_product)) {
+            D_exp_row = {26., -11., -22., -8., 0.,   0.,  0.,  -11., 14., 19.,
+                         2.,  0.,   0.,   0.,  -22., 19., 30., 10.,  0.,  0.,
+                         0.,  -8.,  2.,   10., 19.,  0.,  0.,  0.};
         } else {
             throw std::runtime_error("Error in metric_public.cpp");
         }

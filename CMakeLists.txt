@@ -26,10 +26,10 @@ if(POLICY CMP0167)
   cmake_policy(SET CMP0167 OLD) # FindBoost
 endif()
 
-project(AOCL-DA VERSION 5.3.1)
+project(AOCL-DA VERSION 5.3.2)
 
 set(AOCLDA_VERSION
-    "${PROJECT_VERSION_MAJOR}.${PROJECT_VERSION_MINOR}.${PROJECT_VERSION_PATCH}"
+  "${PROJECT_VERSION_MAJOR}.${PROJECT_VERSION_MINOR}.${PROJECT_VERSION_PATCH}"
 )
 
 # Capture git commit date and tag if available, otherwise fallback to commit hash, if unavailable then "unknown"
@@ -83,12 +83,6 @@ set(VERS_DEF -DAOCLDA_VERSION_STRING="${AOCLDA_VERSION_STR}")
 # Add version string in the variable that holds all definitions required to
 # build da_core.
 list(APPEND AOCLDA_DEFS ${VERS_DEF})
-
-math(EXPR AOCLDA_VERSION_INT
-    "${PROJECT_VERSION_MAJOR} * 10000 + \
-     ${PROJECT_VERSION_MINOR} * 100 + \
-     ${PROJECT_VERSION_PATCH}")
-list(APPEND AOCLDA_DEFS -DAOCLDA_VERSION_INT=${AOCLDA_VERSION_INT})
 
 # Export Release Information automatically
 set(CMAKE_EXPORT_COMPILE_COMMANDS ON)
@@ -231,11 +225,6 @@ else()
     WARNING
     "Building without OpenMP may cause linking issues with threaded BLAS/LAPACK/Sparse libraries"
   )
-  # Suppress warnings about unrecognized #pragma omp directives in serial builds
-  if(CMAKE_CXX_COMPILER_ID MATCHES "GNU|Clang")
-    # clang-cl also accepts this flag
-    add_compile_options(-Wno-unknown-pragmas)
-  endif()
 endif()
 
 # Quick checks to disable requested features Disable *SAN & VALGRIND if running
@@ -325,6 +314,13 @@ if(WIN32)
       set(CMAKE_MSVC_RUNTIME_LIBRARY "MultiThreaded$<$<CONFIG:Debug>:Debug>DLL")
     else()
       set(CMAKE_MSVC_RUNTIME_LIBRARY "MultiThreaded$<$<CONFIG:Debug>:Debug>")
+    endif()
+    if(BUILD_FORTRAN AND CMAKE_Fortran_COMPILER_ID MATCHES "Flang")
+      # Blank out the Fortran expansions so they aren't passed to AOCC flang.
+      foreach(_rt MultiThreaded MultiThreadedDLL
+        MultiThreadedDebug MultiThreadedDebugDLL)
+        set(CMAKE_Fortran_COMPILE_OPTIONS_MSVC_RUNTIME_LIBRARY_${_rt} "")
+      endforeach()
     endif()
   endif()
 

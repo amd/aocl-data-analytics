@@ -112,6 +112,7 @@ PYBIND11_MODULE(_aoclda, m) {
                 "seed"_a, "train_size"_a, "test_size"_a, "fp_precision"_a, "classes"_a);
     m_utils.def("pybind_get_shuffled_indices", &py_get_shuffled_indices<double>, "size"_a,
                 "seed"_a, "train_size"_a, "test_size"_a, "fp_precision"_a, "classes"_a);
+    m_utils.def("pybind_print_model_metadata", &py_print_model_metadata, "data"_a);
 
     /********************************************/
     /*         Internal utility functions    */
@@ -176,7 +177,8 @@ PYBIND11_MODULE(_aoclda, m) {
     /**********************************/
     py::class_<pyda_handle>(m, "handle")
         .def(py::init<>())
-        .def("print_error_message", &pyda_handle::print_error_message);
+        .def("print_error_message", &pyda_handle::print_error_message)
+        .def("pybind_print_model_versions", &pyda_handle::print_model_versions);
 
     /**********************************/
     /*         Linear Models          */

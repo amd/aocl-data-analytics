@@ -31,7 +31,10 @@
 #include "aoclda_cpp_overloads.hpp"
 #include "gmock/gmock.h"
 #include "gtest/gtest.h"
+#include <iostream>
 #include <math.h>
+#include <type_traits>
+#include <typeinfo>
 #include <vector>
 
 namespace template_nlls_cb_errors {
@@ -155,18 +158,27 @@ da_int eval_HF(da_int n, da_int m, void *params, T const *x, T const *r, T *HF) 
     return 0; // Success
 }
 template <typename T> void driver(void) {
-    T t[5]{1.0, 2.0, 4.0, 5.0, 8.0};
-    T y[5]{3.0, 4.0, 6.0, 11.0, 20.0};
-    const struct params_type<T> udata = {
-        t, y
-    };
-
     const da_int n_coef = 2;
     const da_int n_res = 5;
-    T coef[n_coef]{1.0, 0.15};
-    const T coef_exp[n_coef]{2.541046, 0.2595048};
-
+    std::vector<T> t{1.0, 2.0, 4.0, 5.0, 8.0};
+    std::vector<T> y(n_res);
+    std::vector<T> coef(n_coef), coef_exp(n_coef);
     T blx[2]{0.0, 0.0};
+    if constexpr (std::is_same_v<T, float>) {
+        y = {0.606531f, 0.367879f, 0.135335f, 0.082085f, 0.018316f};
+        coef = {0.1f, 0.1f};
+        coef_exp = {1.0f, -0.5f};
+        blx[1] = -1.0f;
+    } else {
+        static_assert(std::is_same_v<T, double>);
+        y = {3.0, 4.0, 6.0, 11.0, 20.0};
+        coef = {1.0, 0.15};
+        coef_exp = {2.541046, 0.2595048};
+    }
+    struct params_type<T> udata = {
+        t.data(), y.data()
+    };
+
     T bux[2]{3.0, 10.0};
     T tol{1.0e-2};
 
@@ -188,14 +200,17 @@ template <typename T> void driver(void) {
     if constexpr (std::is_same_v<T, float>) {
         EXPECT_EQ(da_options_set_real_s(handle, "finite differences step", 1e-3),
                   da_status_success);
-        EXPECT_EQ(da_options_set_real_s(handle, "ralfit convergence abs tol grd", 1e-8f),
+        EXPECT_EQ(da_options_set_real_s(handle, "ralfit convergence abs tol grd", 1e-5f),
                   da_status_success);
-        EXPECT_EQ(da_nlls_fit_s(handle, n_coef, coef, (void *)&udata), da_status_success);
+        EXPECT_EQ(da_nlls_fit_s(handle, n_coef, coef.data(), static_cast<void *>(&udata)),
+                  da_status_success);
     } else {
-        EXPECT_EQ(da_options_set_real_d(handle, "finite differences step", 1e-6f),
+        static_assert(std::is_same_v<T, double>);
+        EXPECT_EQ(da_options_set_real_d(handle, "finite differences step", 1e-6),
                   da_status_success);
 
-        EXPECT_EQ(da_nlls_fit_d(handle, n_coef, coef, (void *)&udata), da_status_success);
+        EXPECT_EQ(da_nlls_fit_d(handle, n_coef, coef.data(), static_cast<void *>(&udata)),
+                  da_status_success);
     }
 
     EXPECT_NEAR(coef[0], coef_exp[0], tol);

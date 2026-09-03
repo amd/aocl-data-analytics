@@ -305,6 +305,8 @@ da_status da_train_test_split(da_order order, da_int m, da_int n, const T *X, da
                               const da_int *shuffle_array, T *X_train, da_int ldx_train,
                               T *X_test, da_int ldx_test);
 
+da_status da_print_model_metadata(const std::vector<char> &file_data);
+
 /* Kernel function declarations */
 template <typename T>
 da_status da_rbf_kernel(da_order order, da_int m, da_int n, da_int k, const T *X,

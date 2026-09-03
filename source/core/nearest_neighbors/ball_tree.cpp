@@ -295,7 +295,7 @@ bool ball_tree<T>::choose_centroid(T *c1, T c1_norm, da_int c1_index, T *c2, T c
 // Recursive function to build the ball tree
 // The ball tree is built in a top-down manner, starting from the root node and recursively splitting
 template <typename T>
-std::shared_ptr<ball_node<T>>
+std::unique_ptr<ball_node<T>>
 ball_tree<T>::build_tree(da_int depth, da_int *indices, da_int n_indices,
                          std::vector<T> *centroid, T radius) {
 
@@ -307,8 +307,8 @@ ball_tree<T>::build_tree(da_int depth, da_int *indices, da_int n_indices,
     // Create a new node for this part of the tree, with sensible defaults. Only the root node will have
     // centroid and radius supplied; for all other nodes these will be computed later
     auto this_node = (centroid == nullptr)
-                         ? std::make_shared<ball_node<T>>(depth, indices, n_indices)
-                         : std::make_shared<ball_node<T>>(depth, indices, n_indices,
+                         ? std::make_unique<ball_node<T>>(depth, indices, n_indices)
+                         : std::make_unique<ball_node<T>>(depth, indices, n_indices,
                                                           *centroid, radius);
 
     // If needed compute the centroid and radius for the node
@@ -375,13 +375,11 @@ ball_tree<T>::build_tree(da_int depth, da_int *indices, da_int n_indices,
     // Recursively build the left and right child nodes, but only spawn tasks if the workload is large enough
     if (mid > BALL_TREE_MIN_TASK_SIZE) {
         // Some older compilers don't like the use of "omp task if" so use an explicit if statement
-#pragma omp task firstprivate(depth, mid, indices, this_node)
-        { this_node->left_child = build_tree(depth + 1, indices, mid); }
-#pragma omp task firstprivate(depth, mid, indices, n_indices, this_node)
-        {
-            this_node->right_child =
-                build_tree(depth + 1, indices + mid, n_indices - mid);
-        }
+        auto *node_ptr = this_node.get();
+#pragma omp task firstprivate(depth, mid, indices, node_ptr)
+        { node_ptr->left_child = build_tree(depth + 1, indices, mid); }
+#pragma omp task firstprivate(depth, mid, indices, n_indices, node_ptr)
+        { node_ptr->right_child = build_tree(depth + 1, indices + mid, n_indices - mid); }
     } else {
         this_node->left_child = build_tree(depth + 1, indices, mid);
         this_node->right_child = build_tree(depth + 1, indices + mid, n_indices - mid);
@@ -439,7 +437,7 @@ ball_tree<T>::check_ball(T *X, T eps, std::vector<T> &centroid, T radius, T &dis
 // Recursive function to find the radius neighbors of a point (determined by index_X) in X
 template <typename T>
 da_status ball_tree<T>::radius_neighbors_recursive(
-    std::shared_ptr<ball_node<T>> current_node, T *X, T eps, T eps_internal,
+    ball_node<T> *current_node, T *X, T eps, T eps_internal,
     da_vector::da_vector<da_int> &neighbors, da_vector::da_vector<T> &distances,
     bool return_distances, bool X_is_A, da_int index_X, T X_norm) {
 
@@ -506,23 +504,27 @@ da_status ball_tree<T>::radius_neighbors_recursive(
         // This is not a leaf node, so check the sub-nodes
 
         // Check the left child
-        radius_neighbors_recursive(current_node->left_child, X, eps, eps_internal,
-                                   neighbors, distances, return_distances, X_is_A,
-                                   index_X, X_norm);
+        status = radius_neighbors_recursive(current_node->left_child.get(), X, eps,
+                                            eps_internal, neighbors, distances,
+                                            return_distances, X_is_A, index_X, X_norm);
+        if (status != da_status_success)
+            return status; // LCOV_EXCL_LINE
 
         // Check the right child
-        radius_neighbors_recursive(current_node->right_child, X, eps, eps_internal,
-                                   neighbors, distances, return_distances, X_is_A,
-                                   index_X, X_norm);
+        status = radius_neighbors_recursive(current_node->right_child.get(), X, eps,
+                                            eps_internal, neighbors, distances,
+                                            return_distances, X_is_A, index_X, X_norm);
+        if (status != da_status_success)
+            return status; // LCOV_EXCL_LINE
     }
     return da_status_success;
 }
 
 // Recursive function to find the k nearest neighbors of a point (determined by index_X) in X
 template <typename T>
-da_status ball_tree<T>::k_neighbors_recursive(std::shared_ptr<ball_node<T>> current_node,
-                                              T *X, da_int k, bool X_is_A, da_int index_X,
-                                              T X_norm, MaxHeap<T> &heap) {
+da_status ball_tree<T>::k_neighbors_recursive(ball_node<T> *current_node, T *X, da_int k,
+                                              bool X_is_A, da_int index_X, T X_norm,
+                                              MaxHeap<T> &heap) {
 
     da_status status = da_status_success;
     T dist;
@@ -584,8 +586,8 @@ da_status ball_tree<T>::k_neighbors_recursive(std::shared_ptr<ball_node<T>> curr
         if (dist_left < dist_right) {
             // Check the left child first
             if (ball_left != 0)
-                k_neighbors_recursive(current_node->left_child, X, k, X_is_A, index_X,
-                                      X_norm, heap);
+                k_neighbors_recursive(current_node->left_child.get(), X, k, X_is_A,
+                                      index_X, X_norm, heap);
 
             // Check the right child
             heap_max_dist =
@@ -594,14 +596,14 @@ da_status ball_tree<T>::k_neighbors_recursive(std::shared_ptr<ball_node<T>> curr
                     : heap.GetMaxDist();
             if (ball_right != 0 &&
                 dist_right - current_node->right_child->radius <= heap_max_dist)
-                k_neighbors_recursive(current_node->right_child, X, k, X_is_A, index_X,
-                                      X_norm, heap);
+                k_neighbors_recursive(current_node->right_child.get(), X, k, X_is_A,
+                                      index_X, X_norm, heap);
 
         } else {
             // Check the right child first
             if (ball_right != 0)
-                k_neighbors_recursive(current_node->right_child, X, k, X_is_A, index_X,
-                                      X_norm, heap);
+                k_neighbors_recursive(current_node->right_child.get(), X, k, X_is_A,
+                                      index_X, X_norm, heap);
 
             // Check the left child
             heap_max_dist =
@@ -610,8 +612,8 @@ da_status ball_tree<T>::k_neighbors_recursive(std::shared_ptr<ball_node<T>> curr
                     : heap.GetMaxDist();
             if (ball_left != 0 &&
                 dist_left - current_node->left_child->radius <= heap_max_dist)
-                k_neighbors_recursive(current_node->left_child, X, k, X_is_A, index_X,
-                                      X_norm, heap);
+                k_neighbors_recursive(current_node->left_child.get(), X, k, X_is_A,
+                                      index_X, X_norm, heap);
         }
     }
     return da_status_success;

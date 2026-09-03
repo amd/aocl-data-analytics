@@ -104,7 +104,8 @@ inline da_status register_neighbors_options(da_options::OptionRegistry &opts,
                           {"cosine", da_cosine},
                           {"minkowski", da_minkowski},
                           {"sqeuclidean_gemm", da_sqeuclidean_gemm},
-                          {"euclidean_gemm", da_euclidean_gemm}},
+                          {"euclidean_gemm", da_euclidean_gemm},
+                          {"inner product", da_inner_product}},
                          "euclidean"));
         opts.register_opt(os);
         os = std::make_shared<OptionString>(OptionString(

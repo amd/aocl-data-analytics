@@ -32,3 +32,5 @@
 
 void context_set_hidden_settings(const std::string &key,
                                  const std::string &value) noexcept;
+
+const char *da_get_version();

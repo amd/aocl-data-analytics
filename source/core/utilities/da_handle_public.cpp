@@ -343,6 +343,13 @@ da_status da_handle_load_model(da_handle *handle, const char *file_name) {
     return _da_handle::load_handle(*handle, std::string(file_name));
 }
 
+/* Print saved versions of AOCL-DA and model serialization. */
+da_status da_handle_print_model_versions(da_handle handle) {
+    if (handle == nullptr)
+        return da_status_invalid_pointer;
+    return handle->print_model_versions();
+}
+
 template da_status da_handle_init<float>(da_handle *, da_handle_type);
 template da_status da_handle_init<double>(da_handle *, da_handle_type);
 template da_status da_handle_get_result<float>(da_handle, da_result, da_int *, float *);

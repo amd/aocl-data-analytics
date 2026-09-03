@@ -351,6 +351,8 @@ void ann_serialization_test(const ann_serial_params &pr, da_int n_samples,
                   da_status_success);
         EXPECT_EQ(train_fraction_loaded, (T)ANN_TRAIN_FRACTION);
 
+        model_persistence_test_utils::test_print_model_versions(handle_loaded);
+
         da_handle_destroy(&handle_loaded);
     }
 }

@@ -241,6 +241,12 @@ class pyda_handle {
         obj->exception_check(status);
         return obj.release();
     }
+
+    void print_model_versions() {
+        da_status status = da_handle_print_model_versions(handle);
+        exception_check(status);
+        return;
+    }
 };
 
 /*

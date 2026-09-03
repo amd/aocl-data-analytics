@@ -71,7 +71,10 @@ class nearest_neighbors : public pyda_handle {
             algo = "ball tree";
         status = da_options_set(handle, "algorithm", algo.c_str());
         exception_check(status);
-        status = da_options_set(handle, "metric", metric.c_str());
+        std::string met = metric;
+        if (metric == "inner_product")
+            met = "inner product";
+        status = da_options_set(handle, "metric", met.c_str());
         exception_check(status);
         status = da_options_set(handle, "leaf size", leaf_size);
         exception_check(status);

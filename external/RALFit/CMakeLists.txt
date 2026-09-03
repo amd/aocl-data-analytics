@@ -1,4 +1,4 @@
-# Copyright (C) 2023-2025 Advanced Micro Devices, Inc. All rights reserved.
+# Copyright (C) 2023-2026 Advanced Micro Devices, Inc. All rights reserved.
 #
 # Redistribution and use in source and binary forms, with or without
 # modification, are permitted provided that the following conditions are met: 1.
@@ -29,7 +29,12 @@
 set(CMAKE_Fortran_PREPROCESS ON)
 
 if(NOT WIN32)
-  AppendFortranFlags(_Fortran_FLAGS REQUIRED -march=x86-64-v3)
+  # AOCC flang rejects -march= in Ninja's two-phase preprocessing step (-E);
+  # GCC, flang-new and Make+AOCC (one-shot) all accept it.
+  IsAOCCFlang(IS_AOCC_FLANG)
+  if(NOT (CMAKE_GENERATOR MATCHES "Ninja" AND IS_AOCC_FLANG))
+    AppendFortranFlags(_Fortran_FLAGS REQUIRED -march=x86-64-v3)
+  endif()
   AppendFortranFlags(_Fortran_FLAGS 
     -Qunused-arguments
     -Wno-character-truncation

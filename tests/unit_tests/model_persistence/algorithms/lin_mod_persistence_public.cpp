@@ -224,6 +224,8 @@ void linmod_serialization_test(const linmod_serial_params &pr, da_int m, da_int 
             da_status_success);
         EXPECT_STREQ(scaling_loaded, pr.scaling.c_str());
 
+        model_persistence_test_utils::test_print_model_versions(handle_loaded);
+
         da_handle_destroy(&handle_loaded);
     }
 }

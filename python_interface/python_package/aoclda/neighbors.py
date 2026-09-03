@@ -50,8 +50,9 @@ class nearest_neighbors():
         algorithm (str, optional): The underlying algorithm used to compute
             the k-nearest neighbors. Available options are 'auto', 'brute' and 'kd_tree'.
             k-d trees are likely to be fastest for lower dimensional datasets, but
-            cannot not be used with the cosine distance, the squared Euclidean distance
-            or with the Minkowski distance with power less than 1.0. Default = 'auto'.
+            cannot not be used with the cosine distance, the squared Euclidean distance,
+            the inner product distance, or with the Minkowski distance with power less than 1.0.
+            Default = 'auto'.
 
         leaf_size (int, optional): The leaf size passed to the k-d tree algorithm.
             This affects the construction of the tree and the speed of the nearest neighbor
@@ -59,7 +60,8 @@ class nearest_neighbors():
 
         metric (str, optional): The metric used for the distance computation.
             Available metrics are 'euclidean', 'l2', 'sqeuclidean' (squared Euclidean distances),
-            'manhattan', 'l1', 'cityblock', 'cosine', or 'minkowski'. Default = 'euclidean'.
+            'manhattan', 'l1', 'cityblock', 'cosine', 'minkowski', or 'inner_product'.
+            Default = 'euclidean'.
 
         p (float, optional): The power parameter used for the Minkowski metric. For p = 1.0,
             this defaults to 'manhattan' metric and for p = 2.0 this defaults to 'euclidean' metric.
@@ -569,6 +571,9 @@ class nearest_neighbors():
             )
         return
 
+    def print_model_versions(self):
+        return self.nearest_neighbors.pybind_print_model_versions()
+
 
 class approximate_neighbors():
     r"""
@@ -757,6 +762,9 @@ class approximate_neighbors():
                 "model. Expected 'float32' or 'float64'."
             )
         return
+
+    def print_model_versions(self):
+        return self._approx_nn.pybind_print_model_versions()
 
     @property
     def cluster_centroids(self):

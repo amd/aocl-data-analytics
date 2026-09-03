@@ -353,6 +353,8 @@ void radius_nn_serialization_test(const radius_nn_serial_params &pr, da_int n_sa
             da_status_success);
         EXPECT_EQ(minkowski_p_loaded, (T)pr.minkowski_p);
 
+        model_persistence_test_utils::test_print_model_versions(handle_loaded);
+
         da_handle_destroy(&handle_loaded);
     }
 }

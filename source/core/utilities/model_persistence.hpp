@@ -31,6 +31,9 @@
 #include "aoclda.h"
 #include "da_vector.hpp"
 #include "macros.h"
+#include "miscellaneous.hpp"
+
+#include <cstring>
 #include <fstream>
 #include <memory>
 #include <string>
@@ -40,6 +43,11 @@
 #include <vector>
 
 namespace da_model_persistence {
+
+// Minimum serialization version accepted during deserialization.
+// Update this value to globally invalidate all models saved before a breaking
+// infrastructure change. Use format: Major*10000+Minor*100+Patch.
+constexpr da_int model_persistence_min_version = 50301; // v5.3.1
 
 constexpr std::string_view header_keyword = "AOCLDA_STORED_MODEL";
 
@@ -113,14 +121,20 @@ class serialization_buffer {
     const char *read_ptr = nullptr;
     // Points to the output vector that accumulates serialized bytes.
     std::vector<char> *write_buf = nullptr;
+    da_int saved_serialization_version = 0;
+    std::string saved_aoclda_version;
     size_t size = 0;
     uint64_t offset = 0;
     buffer_mode mode = buffer_mode::reserve;
+
+    template <typename T> da_status insert_data_in_buffer(const T &data);
 
   public:
     serialization_buffer(da_handle_type handle_type) : handle_type(handle_type){};
 
     ~serialization_buffer(){};
+
+    std::string get_saved_aoclda_version() { return this->saved_aoclda_version; }
 
     // Setter use when serialization will be completed
     da_status set_buffer_data(std::vector<char> *buffer_data);
@@ -139,26 +153,30 @@ class serialization_buffer {
 
     template <typename T> da_status dispatch_buffer_io(T &data);
 
-    template <typename T> void serialize_user_data_impl(const T *X, da_int inner_dim);
+    template <typename T>
+    da_status serialize_user_data_impl(const T *X, da_int inner_dim);
 
     template <typename T>
     da_status serialize_user_data(const T *X, da_order order, da_int m, da_int n,
                                   da_int ldx);
 
-    da_status serialize_metadata(std::size_t precision, da_int min_lib_version);
+    da_status serialize_metadata(std::size_t precision, da_int serialization_version);
     da_status deserialize_metadata(da_int &precision);
 
-    constexpr void add_metadata_size() {
+    void add_metadata_size() {
         // header_keyword size
         this->size += sizeof(save_type_t<da_int>);
         this->size += header_keyword.size();
         // da_int_size
         this->size += sizeof(save_type_t<da_int>);
-        // precision size
-        this->size += sizeof(save_type_t<da_int>);
-        // min_library_version (supported)
+        // saved_serialization_version
         this->size += sizeof(save_type_t<da_int>);
         this->size += sizeof(save_type_t<da_handle_type>);
+        // precision size
+        this->size += sizeof(save_type_t<da_int>);
+        // aoclda_version size
+        this->size += sizeof(save_type_t<da_int>);
+        this->size += std::strlen(da_get_version());
         return;
     }
 
@@ -166,12 +184,16 @@ class serialization_buffer {
     da_status clear_data();
 
     void set_handle_type(da_handle_type type) { this->handle_type = type; }
-    da_handle_type get_handle_type() { return this->handle_type; }
+    da_handle_type get_handle_type() const noexcept { return this->handle_type; }
 
     void set_mode(buffer_mode mode) { this->mode = mode; }
-    buffer_mode get_mode() { return this->mode; }
+    buffer_mode get_mode() const noexcept { return this->mode; }
 
-    size_t get_size() { return this->size; }
+    da_int get_saved_serialization_version() const noexcept {
+        return this->saved_serialization_version;
+    }
+
+    size_t get_size() const noexcept { return this->size; }
     // Addition method for the size member
     da_status add_size(size_t value);
 
@@ -179,6 +201,9 @@ class serialization_buffer {
     // Used when model is going to be saved and in reserve mode.
     da_status reserve();
 };
+
+da_status print_model_metadata(const std::vector<char> &file_data);
+da_status print_model_metadata(const std::string &filename);
 
 } // namespace da_model_persistence
 

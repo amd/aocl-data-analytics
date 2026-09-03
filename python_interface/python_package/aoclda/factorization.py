@@ -310,6 +310,9 @@ class PCA():
             )
         return
 
+    def print_model_versions(self):
+        return self.pca.pybind_print_model_versions()
+
 
 class KernelPCA():
     """
@@ -587,3 +590,6 @@ class KernelPCA():
                 "model. Expected 'float32' or 'float64'."
             )
         return
+
+    def print_model_versions(self):
+        return self.kpca.pybind_print_model_versions()

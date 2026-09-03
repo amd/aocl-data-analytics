@@ -36,6 +36,12 @@ set(FLAGS_COMMON "
     -fno-fast-math"
 )
 set(FLAGS_COMMON_TO_TEST "-Wno-macro-redefined -Wno-nan-infinity-disabled -Wno-variadic-macro-arguments-omitted -Wno-gnu-zero-variadic-macro-arguments")
+
+# Suppress warnings about unrecognized #pragma omp directives in serial builds
+if(NOT BUILD_SMP)
+    set(FLAGS_COMMON_TO_TEST "${FLAGS_COMMON_TO_TEST} -Wno-unknown-pragmas")
+endif()
+
 set(FLAGS_RELEASE "-falign-loops=32 -fmacro-prefix-map=${PROJECT_SOURCE_DIR}=. -fopenmp-simd")
 set(FLAGS_DEBUG "-O0 -gdwarf-5 -g3")
 

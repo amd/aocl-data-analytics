@@ -261,6 +261,8 @@ void dtree_serialization_test(const dtree_serial_params &pr, da_int n_samples_tr
                   da_status_success);
         EXPECT_EQ(seed_loaded, pr.seed);
 
+        model_persistence_test_utils::test_print_model_versions(handle_loaded);
+
         da_handle_destroy(&handle_loaded);
     }
 }

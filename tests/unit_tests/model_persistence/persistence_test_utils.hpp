@@ -28,7 +28,11 @@
 #ifndef TEST_UTILS_HPP
 #define TEST_UTILS_HPP
 
+#include "aoclda.hpp"
+
+#include <iostream>
 #include <mutex>
+#include <sstream>
 #include <string>
 
 #ifdef _WIN32
@@ -64,6 +68,14 @@ inline std::string get_test_file_dir() {
     });
 
     return test_dir;
+}
+
+inline void test_print_model_versions(da_handle handle) {
+    testing::internal::CaptureStdout();
+    EXPECT_EQ(da_handle_print_model_versions(handle), da_status_success);
+    std::string output = testing::internal::GetCapturedStdout();
+    EXPECT_NE(output.find("Serialization version:"), std::string::npos);
+    EXPECT_NE(output.find("Saved AOCL-DA build version:"), std::string::npos);
 }
 
 } // namespace model_persistence_test_utils

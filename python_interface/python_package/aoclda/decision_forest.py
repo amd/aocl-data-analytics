@@ -369,3 +369,6 @@ class decision_forest():
                 "model. Expected 'float32' or 'float64'."
             )
         return
+
+    def print_model_versions(self):
+        return self._decision_forest.pybind_print_model_versions()
