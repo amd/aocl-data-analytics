@@ -51,7 +51,10 @@ class linmod : public pyda_handle {
            std::string constraint = "ssc", bool warm_start = false,
            bool mixed_precision = false,
            std::optional<da_int> low_precision_max_iter = 500,
-           std::string prec = "double", bool check_data = false)
+           std::string prec = "double", bool check_data = false,
+           std::optional<da_int> optim_coord_skip_min = 2,
+           std::optional<da_int> optim_coord_skip_max = 100,
+           std::optional<da_int> print_level = 0)
         : intercept(intercept), warm_start(warm_start), logreg_constraint_str(constraint),
           solver_str(solver) {
         da_status status;
@@ -92,6 +95,16 @@ class linmod : public pyda_handle {
                                         low_precision_max_iter.value());
             exception_check(status);
         }
+        if (optim_coord_skip_min.has_value()) {
+            status = da_options_set_int(handle, "optim coord skip min",
+                                        optim_coord_skip_min.value());
+            exception_check(status);
+        }
+        if (optim_coord_skip_max.has_value()) {
+            status = da_options_set_int(handle, "optim coord skip max",
+                                        optim_coord_skip_max.value());
+            exception_check(status);
+        }
         std::string yes_str = "yes";
         if (mixed_precision == true) {
             status = da_options_set(handle, "mixed precision", yes_str.c_str());
@@ -99,6 +112,12 @@ class linmod : public pyda_handle {
         }
         if (check_data == true) {
             status = da_options_set(handle, "check data", yes_str.c_str());
+            exception_check(status);
+        }
+        if (print_level.value_or(0) > 0) {
+            status = da_options_set(handle, "print level", print_level.value());
+            exception_check(status);
+            status = da_options_set(handle, "print options", "yes");
             exception_check(status);
         }
     }
@@ -109,7 +128,9 @@ class linmod : public pyda_handle {
     template <typename T>
     void fit(py::array_t<T> X, py::array_t<T> y, std::optional<py::array_t<T>> x0,
              std::optional<T> progress_factor, T reg_lambda = 0.0, T reg_alpha = 0.0,
-             T tol = 0.0001, T low_precision_tol = 0.001) {
+             T tol = 0.0001, T low_precision_tol = 0.001,
+             std::optional<T> dual_tol = 0.0001,
+             std::optional<T> optim_coord_skip_tol = 1.0e-4) {
         // floating point optional parameters are defined here since we cannot define those in the constructor (no template param)
 
         da_status status = da_status_success;
@@ -196,6 +217,16 @@ class linmod : public pyda_handle {
                 da_options_set(handle, "optim progress factor", progress_factor.value());
             exception_check(status);
         }
+        if (dual_tol.has_value()) {
+            status = da_options_set(handle, "optim dual gap tol", dual_tol.value());
+            exception_check(status);
+        }
+        if (optim_coord_skip_tol.has_value()) {
+            status = da_options_set(handle, "optim coord skip tol",
+                                    optim_coord_skip_tol.value());
+            exception_check(status);
+        }
+
         if (x0.has_value()) {
             da_int ncoef = x0->shape()[0];
             status = da_linmod_fit_start<T>(handle, ncoef, x0->data());

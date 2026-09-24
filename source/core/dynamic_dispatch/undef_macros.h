@@ -42,6 +42,7 @@
 #undef NN_UTILS_HPP
 #undef PCA_HPP
 #undef KERNEL_PCA_HPP
+#undef NMF_HPP
 #undef TSNE_HPP
 #undef TTS_INTERNAL_HPP
 #undef TTS_HPP
@@ -52,6 +53,8 @@
 #undef DA_RANDSVD_HPP
 #undef DA_QR_HPP
 #undef BINARY_TREE_HPP
+#undef QUANTIZED_BACKEND_HPP
+#undef SCALAR_QUANTIZER_HPP
 
 // Decision forest headers
 #undef DECISION_TREE_HPP

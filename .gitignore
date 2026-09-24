@@ -13,6 +13,9 @@ tags
 # Compiled Python
 *.pyc
 
+# Compiled R wrappers
+RcppExports.cpp
 AI_plans/
+.github/agents
 paper
 

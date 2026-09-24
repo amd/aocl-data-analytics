@@ -125,6 +125,23 @@ class linmod():
             convergence tolerance for the low precision phase. Default = None.
 
         check_data (bool, optional): Whether to check the data for NaNs. Default = False.
+
+        optim_coord_skip_min (int, optional): Applies only to 'coord' solver. Minimum number of \
+            iterations before coordinate optimization can be skipped. Default = 2.
+
+        optim_coord_skip_max (int, optional): Applies only to 'coord' solver. Maximum number of \
+            iterations that can be skipped during coordinate optimization. Default = 100.
+
+        dual_tol (float, optional): Tolerance for the dual gap convergence criterion.\
+            Default = 1.0e-4.
+
+        optim_coord_skip_tol (float, optional): Applies only to 'coord' solver. Tolerance for \
+            skipping coordinate optimization iterations. Default = 1.0e-4.
+
+        print_level (int, optional): Controls the amount of information printed during the fitting \
+            process. Default = 0 (no output). Set to 1 for basic information, \
+            2 for more detailed information, and 3..5 for even more verbose output.
+
     """
 
     def __init__(
@@ -143,7 +160,12 @@ class linmod():
             mixed_precision=False,
             low_precision_max_iter=5000,
             low_precision_tol=1e-3,
-            check_data=False):
+            check_data=False,
+            optim_coord_skip_min = 2,
+            optim_coord_skip_max = 100,
+            dual_tol = 0.0001,
+            optim_coord_skip_tol = 1.0e-4,
+            print_level=0):
         self.linmod_double = pybind_linmod(
             mod=mod,
             max_iter=max_iter,
@@ -155,7 +177,11 @@ class linmod():
             precision="double",
             mixed_precision=mixed_precision,
             low_precision_max_iter=low_precision_max_iter,
-            check_data=check_data)
+            check_data=check_data,
+            optim_coord_skip_min = optim_coord_skip_min,
+            optim_coord_skip_max = optim_coord_skip_max,
+            print_level=print_level
+            )
         self.linmod_single = pybind_linmod(
             mod=mod,
             max_iter=max_iter,
@@ -167,7 +193,11 @@ class linmod():
             precision="single",
             mixed_precision=mixed_precision,
             low_precision_max_iter=low_precision_max_iter,
-            check_data=check_data)
+            check_data=check_data,
+            optim_coord_skip_min = optim_coord_skip_min,
+            optim_coord_skip_max = optim_coord_skip_max,
+            print_level=print_level
+            )
         self.order = 'A'
         self.dtype = 'float'
         self.reg_lambda = reg_lambda
@@ -177,6 +207,10 @@ class linmod():
         self.low_precision_tol = low_precision_tol
         self.progress_factor = progress_factor
         self.linmod = self.linmod_double
+        self.optim_coord_skip_min = optim_coord_skip_min
+        self.optim_coord_skip_max = optim_coord_skip_max
+        self.dual_tol = dual_tol
+        self.optim_coord_skip_tol = optim_coord_skip_tol
 
     def fit(self, X, y, x0=None):
         """
@@ -210,6 +244,8 @@ class linmod():
             self.reg_alpha = np.float32(self.reg_alpha)
             self.reg_lambda = np.float32(self.reg_lambda)
             self.tol = np.float32(self.tol)
+            self.dual_tol = np.float32(self.dual_tol)
+            self.optim_coord_skip_tol = np.float32(self.optim_coord_skip_tol)
             if self.progress_factor is not None:
                 self.progress_factor = np.float32(self.progress_factor)
             # Ensure low_precision_tol is never None for pybind compatibility
@@ -221,6 +257,8 @@ class linmod():
             self.reg_alpha = np.float64(self.reg_alpha)
             self.reg_lambda = np.float64(self.reg_lambda)
             self.tol = np.float64(self.tol)
+            self.dual_tol = np.float64(self.dual_tol)
+            self.optim_coord_skip_tol = np.float64(self.optim_coord_skip_tol)
             if self.progress_factor is not None:
                 self.progress_factor = np.float64(self.progress_factor)
             # Ensure low_precision_tol is never None for pybind compatibility
@@ -237,7 +275,9 @@ class linmod():
             reg_lambda=self.reg_lambda,
             reg_alpha=self.reg_alpha,
             tol=self.tol,
-            low_precision_tol=self.low_precision_tol)
+            low_precision_tol=self.low_precision_tol,
+            dual_tol=self.dual_tol,
+            optim_coord_skip_tol=self.optim_coord_skip_tol)
         return self
 
     def predict(self, X):
@@ -290,7 +330,9 @@ class linmod():
             'tol': self.tol,
             'progress_factor': self.progress_factor,
             'x0': self.x0,
-            'low_precision_tol': self.low_precision_tol
+            'low_precision_tol': self.low_precision_tol,
+            'dual_tol': self.dual_tol,
+            'optim_coord_skip_tol': self.optim_coord_skip_tol
         }
 
     def __setstate__(self, state):
@@ -304,6 +346,8 @@ class linmod():
         self.progress_factor = state['progress_factor']
         self.x0 = state["x0"]
         self.low_precision_tol = state['low_precision_tol']
+        self.dual_tol = state.get('dual_tol', 1.0e-4)
+        self.optim_coord_skip_tol = state.get('optim_coord_skip_tol', 1.0e-4)
 
         if self.dtype == 'float64':
             self.linmod_double = self.linmod
@@ -318,6 +362,13 @@ class linmod():
             )
 
     def print_model_versions(self):
+        """
+        Print the versions of the linear model library.
+
+        Returns
+        -------
+        str: Version information of the underlying linear model implementation.
+        """
         return self.linmod.pybind_print_model_versions()
 
     @property

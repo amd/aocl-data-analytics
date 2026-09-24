@@ -1147,6 +1147,16 @@ template <typename T> da_status tsne<T>::compute() {
         this->opts.get("mixed precision", opt_mp, int_mp);
         use_mixed_precision = (int_mp == 1);
 
+        if constexpr (std::is_same_v<T, float>) {
+            if (use_mixed_precision && !da_arch::fp16_available()) {
+                return da_error(
+                    this->err, da_status_invalid_option,
+                    "Mixed precision iterative refinement with float32 data requires "
+                    "AVX-512-FP16 hardware support, which is not available on this "
+                    "system.");
+            }
+        }
+
         // Auto learning rate: max(N / early_exaggeration / 4, 50)
         if (learning_rate <= (T)0) {
             learning_rate = std::max(n_samples / early_exaggeration / (T)4, (T)50);

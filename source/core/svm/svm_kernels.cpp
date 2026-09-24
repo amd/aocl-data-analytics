@@ -81,7 +81,7 @@ void wssi_kernel<double, vectorization_type::avx>(da_int *I_up, double *gradient
                                                   da_int ws_size) {
     v2df_t v_smallest_gradients;
     v2i64_t v_smallest_idx;
-    // Initialise vectors with the initial min values
+    // Initialize vectors with the initial min values
     v_smallest_gradients.v = _mm_set1_pd(min_grad_value);
     v_smallest_idx.v = _mm_set1_epi64x(min_grad_idx);
     // I_up and gradient arrays are expected to be padded at this point
@@ -202,7 +202,7 @@ void wssi_kernel<double, vectorization_type::avx2>(da_int *I_up, double *gradien
                                                    da_int ws_size) {
     v4df_t v_smallest_gradients;
     v4i64_t v_smallest_idx;
-    // Initialise vectors with the initial min values
+    // Initialize vectors with the initial min values
     v_smallest_gradients.v = _mm256_set1_pd(min_grad_value);
     v_smallest_idx.v = _mm256_set1_epi64x(min_grad_idx);
     // I_up and gradient arrays are expected to be padded at this point
@@ -575,7 +575,7 @@ void wssj_kernel<double, vectorization_type::avx>(
     double &delta, double &tau, da_int ws_size) {
     v2df_t v_largest_gradients, v_largest_fun, v_delta;
     v2i64_t v_largest_idx;
-    // Initialise vectors with the initial values
+    // Initialize vectors with the initial values
     v_largest_gradients.v = _mm_set1_pd(max_grad_value);
     v_largest_fun.v = _mm_set1_pd(max_fun);
     v_largest_idx.v = _mm_set1_epi64x(max_grad_idx);
@@ -664,7 +664,7 @@ void wssj_kernel<float, vectorization_type::avx>(da_int *I_low, float *gradient,
     v4i32_t v_largest_idx;
     v_largest_idx.v = _mm_set1_epi32(max_grad_idx);
 #endif
-    // Initialise vectors with the initial values
+    // Initialize vectors with the initial values
     v_largest_gradients.v = _mm_set1_ps(max_grad_value);
     v_largest_fun.v = _mm_set1_ps(max_fun);
     v_delta.v = _mm_set1_ps(delta);
@@ -761,7 +761,7 @@ void wssj_kernel<double, vectorization_type::avx2>(
     double &delta, double &tau, da_int ws_size) {
     v4df_t v_largest_gradients, v_largest_fun, v_delta;
     v4i64_t v_largest_idx;
-    // Initialise vectors with the initial values
+    // Initialize vectors with the initial values
     v_largest_gradients.v = _mm256_set1_pd(max_grad_value);
     v_largest_fun.v = _mm256_set1_pd(max_fun);
     v_largest_idx.v = _mm256_set1_epi64x(max_grad_idx);
@@ -860,7 +860,7 @@ void wssj_kernel<float, vectorization_type::avx2>(da_int *I_low, float *gradient
     v8i32_t v_largest_idx;
     v_largest_idx.v = _mm256_set1_epi32(max_grad_idx);
 #endif
-    // Initialise vectors with the initial values
+    // Initialize vectors with the initial values
     v_largest_gradients.v = _mm256_set1_ps(max_grad_value);
     v_largest_fun.v = _mm256_set1_ps(max_fun);
     v_delta.v = _mm256_set1_ps(delta);
@@ -967,7 +967,7 @@ void wssj_kernel<double, vectorization_type::avx512>(
     double &delta, double &tau, da_int ws_size) {
     v8df_t v_largest_gradients, v_largest_fun, v_delta;
     v8i64_t v_largest_idx;
-    // Initialise vectors with the initial values
+    // Initialize vectors with the initial values
     v_largest_gradients.v = _mm512_set1_pd(max_grad_value);
     v_largest_fun.v = _mm512_set1_pd(max_fun);
     v_largest_idx.v = _mm512_set1_epi64(max_grad_idx);
@@ -1073,7 +1073,7 @@ void wssj_kernel<float, vectorization_type::avx512>(
     v16i32_t v_largest_idx;
     v_largest_idx.v = _mm512_set1_epi32(max_grad_idx);
 #endif
-    // Initialise vectors with the initial values
+    // Initialize vectors with the initial values
     v_largest_gradients.v = _mm512_set1_ps(max_grad_value);
     v_largest_fun.v = _mm512_set1_ps(max_fun);
     v_delta.v = _mm512_set1_ps(delta);

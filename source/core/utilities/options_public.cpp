@@ -44,15 +44,22 @@ da_status da_options_set(da_handle handle, const char *option, T value) {
     }
 
     da_options::OptionRegistry *opts;
-    status = handle->get_current_opts(&opts, true);
+    status = handle->get_current_opts(&opts);
     if (status != da_status_success)
         return status; // Error message already loaded
 
-    status = opts->set(option, value, da_options::user);
+    bool destructive = true;
+    status = opts->set(option, value, da_options::user, &destructive);
     if (status != da_status_success) {
         // Construct error based on status & opts->errmsg string
         return da_error(handle->err, status, opts->errmsg);
     }
+    if (destructive)
+        /* call the appropriate sub-handle's refresh() member to indicate that substantial
+         * changes have occurred in the handle.
+         * E.g. options changes that alter the model requiring re-training, etc...  
+         */
+        handle->handle_refresh();
     return da_status_success;
 }
 
@@ -144,7 +151,8 @@ da_status da_datastore_options_set(da_datastore store, const char *option, T val
         return da_status_store_not_initialized;
     store->clear(); // Clean up store logs
 
-    status = store->opts->set(option, value, da_options::user);
+    bool destructive = true;
+    status = store->opts->set(option, value, da_options::user, &destructive);
     if (status != da_status_success) {
         // Construct error based on status & opts->errmsg string
         return da_error(store->err, status, store->opts->errmsg);

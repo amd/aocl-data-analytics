@@ -28,7 +28,7 @@ aoclda.factorization module
 """
 
 import pickle
-from ._aoclda.factorization import pybind_PCA, pybind_KernelPCA
+from ._aoclda.factorization import pybind_PCA, pybind_KernelPCA, pybind_NMF
 from ._internal_utils import check_convert_data
 import numpy as np
 
@@ -593,3 +593,308 @@ class KernelPCA():
 
     def print_model_versions(self):
         return self.kpca.pybind_print_model_versions()
+
+
+class NMF():
+    """
+    Nonnegative Matrix Factorization (NMF).
+
+    Find two nonnegative matrices :math:`W` (transform) and :math:`H` (components)
+    whose product approximates the nonnegative input matrix :math:`A`:
+
+    .. math::
+
+        A \\approx W H, \\quad W \\geq 0, \\quad H \\geq 0.
+
+    Args:
+        n_components (int or ``'auto'`` or None, optional): Number of components.
+            If ``'auto'`` or ``None``, it is set to ``min(n_samples, n_features)``
+            when ``fit`` is called. For ``fit_transform`` with custom ``W`` and ``H``,
+            it is inferred from ``W``. Default = ``'auto'``.
+        solver (str, optional): Numerical solver. Only ``'mu'`` is supported.
+            Default = ``'mu'``.
+        beta_loss (str, optional): Beta divergence to be minimized. Only
+            ``'frobenius'`` is supported. Default = ``'frobenius'``.
+        max_iter (int, optional): Maximum number of iterations. Default = 200.
+        tol (float, optional): Tolerance for the stopping condition.
+            Default = 1.0e-4.
+        init (str or None, optional): Initialization method. One of ``'nndsvd'``,
+            ``'nndsvda'``, ``'nndsvdar'``, ``'random'``, ``'custom'``, or
+            ``'auto'`` (also ``None``). ``'auto'`` uses ``'nndsvda'`` when
+            ``n_components < min(n_samples, n_features)``, otherwise ``'random'``.
+            Default = ``'auto'``.
+        random_state (int or None, optional): Seed for the random number
+            generator used by the ``'random'`` and ``'nndsvdar'`` init methods.
+            Set to ``None`` for non-deterministic results. Default = ``None``.
+        check_every (int, optional): Number of MU iterations between successive
+            convergence checks. The relative change of the Frobenius residual is
+            evaluated once every ``check_every`` iterations and compared against
+            ``tol``. Larger values reduce residual-computation overhead at the
+            cost of potentially running extra iterations after convergence.
+            Must be at least 1. Only effective when ``tol > 0``. Default = 10.
+        check_data (bool, optional): Whether to check the input matrix for NaN
+            values before fitting. Enabling this adds a small overhead but can
+            help diagnose ill-formed inputs. Default = False.
+    """
+
+    def __init__(
+            self,
+            n_components='auto',
+            solver='mu',
+            beta_loss='frobenius',
+            max_iter=200,
+            tol=1.0e-4,
+            init='auto',
+            random_state=None,
+            check_every=10,
+            check_data=False):
+        if n_components is not None and n_components != 'auto':
+            if not isinstance(n_components, (int, np.integer)) or int(n_components) < 1:
+                raise ValueError(
+                    "n_components must be a positive integer, None, or 'auto', "
+                    f"got {n_components!r}.")
+            n_components = int(n_components)
+        self._n_components = n_components
+        # Set the number of components correctly for the C API, which expects 0 to
+        # indicate "all components" (min(n_samples, n_features)).
+        _n_comp = 0 if (n_components is None or n_components == 'auto') else n_components
+        # None is an alias for 'auto' at the C++ layer.
+        if init is None:
+            init = 'auto'
+        # Test validity of random_state
+        if random_state is not None and (not isinstance(random_state, (int, np.integer))):
+            raise ValueError(
+                "random_state must be an integer or None, "
+                f"got {random_state!r}.")
+        # The C API expects a nonnegative integer seed, with -1 reserved to
+        # indicate non-deterministic behavior.
+        random_internal = random_state if random_state is not None else -1
+        # check_every must be an integer.
+        if not isinstance(check_every, (int, np.integer)) or int(check_every) < 1:
+            raise ValueError(
+                "check_every must be a positive integer, "
+                f"got {check_every!r}.")
+        self.nmf_double = pybind_NMF(
+            _n_comp, solver, beta_loss, max_iter, tol, init,
+            random_internal, check_every, 'double', check_data)
+        self.nmf_single = pybind_NMF(
+            _n_comp, solver, beta_loss, max_iter, tol, init,
+            random_internal, check_every, 'single', check_data)
+        self.nmf = self.nmf_double
+        self.order = 'A'
+        self.dtype = 'float'
+
+    @property
+    def h(self):
+        r"""numpy.ndarray of shape (:nref:`n_components`, :nref:`n_features`): The right
+            factor :math:`H` of the factorization :math:`A \approx WH`. Each row
+            is a basis vector in feature space. Available after :meth:`fit` or
+            :meth:`fit_transform` has been called."""
+        return self.nmf.get_components()
+
+    @property
+    def w(self):
+        r"""numpy.ndarray of shape (:nref:`n_samples`, :nref:`n_components`): The left
+            factor :math:`W` of the factorization :math:`A \approx WH`, i.e. the
+            representation of the training data in the component space. Available
+            after :meth:`fit` or :meth:`fit_transform` has been called."""
+        return self.nmf.get_transform()
+
+    @property
+    def reconstruction_err(self):
+        r"""float: Frobenius reconstruction error :math:`\|A - WH\|_F` evaluated
+            at the final iterate. Available after :meth:`fit` or
+            :meth:`fit_transform` has been called."""
+        return self.nmf.get_reconstruction_error()
+
+    @property
+    def n_iter(self):
+        """int: Number of multiplicative-update iterations actually performed.
+            May be less than ``max_iter`` if convergence was detected earlier.
+            Available after :meth:`fit` or :meth:`fit_transform` has been called."""
+        return self.nmf.get_n_iter()
+
+    @property
+    def n_components(self):
+        """int: Rank of the factorization, i.e. the number of columns of :math:`W`
+            and rows of :math:`H`. Available after :meth:`fit` or
+            :meth:`fit_transform` has been called."""
+        return self.nmf.get_n_components()
+
+    @property
+    def n_samples(self):
+        """int: Number of samples in the training matrix supplied to :meth:`fit`
+            or :meth:`fit_transform`."""
+        return self.nmf.get_n_samples()
+
+    @property
+    def n_features(self):
+        """int: Number of features in the training matrix supplied to :meth:`fit`
+            or :meth:`fit_transform`."""
+        return self.nmf.get_n_features()
+
+    def fit(self, A, W=None, H=None):
+        r"""
+        Fit the NMF model to the supplied data matrix.
+
+        Computes the factorization :math:`A \approx WH` using multiplicative
+        updates. After this call the fitted factors :math:`W` and :math:`H` are
+        available via :attr:`w` and :attr:`h` respectively.
+
+        When ``init='custom'``, supply initial factors ``W`` and ``H``. Both
+        must be provided together. Supplying only one raises a :class:`ValueError`.
+        If ``n_components`` was set to ``'auto'`` or ``None``, the rank is
+        inferred from the inner dimension of the supplied ``W``.
+
+        Args:
+            A (array-like): Nonnegative data matrix of shape
+              (:nref:`n_samples`, :nref:`n_features`). All entries must be
+              nonnegative.
+            W (array-like, optional): Initial left factor of shape
+              (:nref:`n_samples`, :nref:`n_components`). Required when
+              ``init='custom'``, ignored otherwise.
+            H (array-like, optional): Initial right factor of shape
+              (:nref:`n_components`, :nref:`n_features`). Required when
+              ``init='custom'``, ignored otherwise.
+
+        Returns:
+            self (object): Returns the instance itself.
+        """
+        A, self.order, self.dtype = check_convert_data(
+            A, order=self.order, dtype=self.dtype, force_dtype=True
+        )
+        if W is not None and H is not None:
+            W, _, _ = check_convert_data(
+                W, order=self.order, dtype=self.dtype, force_dtype=True
+            )
+            H, _, _ = check_convert_data(
+                H, order=self.order, dtype=self.dtype, force_dtype=True
+            )
+            if self._n_components is None or self._n_components == 'auto':
+                n_comp = W.shape[1]
+                for handle in (self.nmf_double, self.nmf_single):
+                    if handle is not None:
+                        handle.set_n_components(n_comp)
+            if self.dtype == "float32":
+                self.nmf = self.nmf_single
+                self.nmf_double = None
+            self.nmf.pybind_fit_custom(A, W, H)
+            return self
+        if W is not None or H is not None:
+            raise ValueError(
+                "W and H must both be supplied together for init='custom'.")
+        if self.dtype == "float32":
+            self.nmf = self.nmf_single
+            self.nmf_double = None
+        self.nmf.pybind_fit(A)
+        return self
+
+    def transform(self, X):
+        r"""
+        Transform a data matrix into the NMF component space.
+
+        Solves for the left factor :math:`W` that minimizes
+        :math:`\|X - W H\|_F` with :math:`H` frozen at the matrix computed
+        by :meth:`fit` or :meth:`fit_transform`. Only :math:`W` is updated,
+        :math:`H` is not modified.
+
+        Args:
+            X (array-like): Data matrix to be transformed. It has shape
+              (m_samples, :nref:`n_features`). Note that the number of features
+              must match :nref:`n_features`, the number of features in the
+              matrix originally supplied to :meth:`fit`.
+
+        Returns:
+            numpy.ndarray of shape (m_samples, :nref:`n_components`): Transformed
+            matrix representing ``X`` in the component space.
+        """
+        X, _, _ = check_convert_data(
+            X, order=self.order, dtype=self.dtype, force_dtype=True
+        )
+        return self.nmf.pybind_transform(X)
+
+    def inverse_transform(self, Y):
+        r"""
+        Transform data back to the original feature space.
+
+        Reconstructs approximate data in the original feature space by computing
+        :math:`Y H`, where :math:`H` is the components matrix computed by
+        :meth:`fit` or :meth:`fit_transform`.
+
+        Args:
+            Y (array-like): Transformed data matrix. It has shape
+              (k_samples, :nref:`n_components`). Note that the number of columns
+              must match :nref:`n_components`.
+
+        Returns:
+            numpy.ndarray of shape (k_samples, :nref:`n_features`): Reconstructed
+            matrix in the original feature space.
+        """
+        Y, _, _ = check_convert_data(
+            Y, order=self.order, dtype=self.dtype, force_dtype=True
+        )
+        return self.nmf.pybind_inverse_transform(Y)
+
+    def fit_transform(self, A, W=None, H=None):
+        r"""
+        Fit the NMF model to ``A`` and return the left factor :math:`W`.
+
+        Equivalent to calling :meth:`fit` followed by reading :attr:`w`.
+        Note that this is distinct from calling :meth:`fit` followed by :meth:`transform`:
+        :meth:`transform` re-solves for :math:`W` with :math:`H` frozen, performing an
+        additional optimization pass, whereas this method returns the :math:`W` already
+        computed during fitting.
+
+        When ``init='custom'``, supply initial factors ``W`` and ``H``. Both
+        must be provided together. Supplying only one raises a :class:`ValueError`.
+        If ``n_components`` was set to ``'auto'`` or ``None``, the rank is
+        inferred from the inner dimension of the supplied ``W``.
+
+        Args:
+            A (array-like): Nonnegative data matrix of shape
+              (:nref:`n_samples`, :nref:`n_features`). All entries must be
+              nonnegative.
+            W (array-like, optional): Initial left factor of shape
+              (:nref:`n_samples`, :nref:`n_components`). Required when
+              ``init='custom'``, ignored otherwise.
+            H (array-like, optional): Initial right factor of shape
+              (:nref:`n_components`, :nref:`n_features`). Required when
+              ``init='custom'``, ignored otherwise.
+
+        Returns:
+            numpy.ndarray of shape (:nref:`n_samples`, :nref:`n_components`):
+            Left factor :math:`W` of the factorization.
+        """
+        self.fit(A, W=W, H=H)
+        return self.nmf.get_transform()
+
+    def __getstate__(self):
+        """Support for pickle serialization."""
+        return {
+            'pybind_state': pickle.dumps(self.nmf),
+            'order': self.order,
+            'dtype': self.dtype,
+            '_n_components': self._n_components,
+        }
+
+    def __setstate__(self, state):
+        """Support for pickle deserialization."""
+        self.nmf = pickle.loads(state['pybind_state'])
+        self.order = state['order']
+        self.dtype = state['dtype']
+        self._n_components = state.get('_n_components', None)
+        if self.dtype == 'float64':
+            self.nmf_double = self.nmf
+            self.nmf_single = None
+        elif self.dtype == 'float32':
+            self.nmf_double = None
+            self.nmf_single = self.nmf
+        else:
+            raise ValueError(
+                f"Invalid dtype '{self.dtype}' when loading " +
+                "model. Expected 'float32' or 'float64'."
+            )
+        return
+
+    def print_model_versions(self):
+        return self.nmf.pybind_print_model_versions()

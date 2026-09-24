@@ -31,6 +31,7 @@
 #include "decision_tree_utils.hpp"
 #include "gmock/gmock.h"
 #include "gtest/gtest.h"
+#include <cmath>
 #include <iostream>
 #include <limits>
 #include <list>
@@ -48,7 +49,13 @@ TYPED_TEST_SUITE(decision_tree_public_test, FloatTypes);
 
 TYPED_TEST(decision_tree_public_test, trivial_trees) {
     std::function<void(test_data_type<TypeParam> & data)> set_test_data[] = {
-        set_test_data_8x2_nonunique_const_feat<TypeParam>};
+        set_test_data_8x2_unique<TypeParam>,
+        set_test_data_8x1<TypeParam>,
+        set_test_data_6x2_categorical<TypeParam>,
+        set_test_data_8x2_ldx<TypeParam>,
+        set_test_data_8x2_nonunique<TypeParam>,
+        set_test_data_8x2_nonunique_const_feat<TypeParam>,
+    };
     test_data_type<TypeParam> data;
 
     da_int i = 0;
@@ -126,54 +133,6 @@ TYPED_TEST(decision_tree_public_test, categorical_features) {
               da_status_success);
     EXPECT_ARR_EQ(data.n_samples_test, y_pred, data.y_test, 1, 1, 0, 0);
     da_handle_destroy(&tree_handle);
-
-    // Do the same with automatic dectection
-    // ordered
-    tree_handle = nullptr;
-    EXPECT_EQ(da_handle_init<TypeParam>(&tree_handle, da_handle_decision_tree),
-              da_status_success);
-    EXPECT_EQ(da_options_set(tree_handle, "detect categorical data", "yes"),
-              da_status_success);
-    EXPECT_EQ(da_tree_set_training_data(tree_handle, data.n_samples_train, data.n_feat, 0,
-                                        data.X_train.data(), data.ldx_train,
-                                        data.y_train.data()),
-              da_status_success);
-    EXPECT_EQ(da_tree_fit<TypeParam>(tree_handle), da_status_success);
-    EXPECT_EQ(da_tree_score(tree_handle, data.n_samples_test, data.n_feat,
-                            data.X_test.data(), data.ldx_test, data.y_test.data(),
-                            &accuracy),
-              da_status_success);
-    EXPECT_NEAR(accuracy, 1.0, 1.0e-05);
-    EXPECT_EQ(da_tree_predict(tree_handle, data.n_samples_test, data.n_feat,
-                              data.X_test.data(), data.ldx_test, y_pred.data()),
-              da_status_success);
-    EXPECT_ARR_EQ(data.n_samples_test, y_pred, data.y_test, 1, 1, 0, 0);
-    da_handle_destroy(&tree_handle);
-    // one vs all
-    tree_handle = nullptr;
-    EXPECT_EQ(da_handle_init<TypeParam>(&tree_handle, da_handle_decision_tree),
-              da_status_success);
-    EXPECT_EQ(da_options_set(tree_handle, "detect categorical data", "yes"),
-              da_status_success);
-    EXPECT_EQ(da_options_set(tree_handle, "Category split strategy", "one-vs-all"),
-              da_status_success);
-
-    EXPECT_EQ(da_tree_set_training_data(tree_handle, data.n_samples_train, data.n_feat, 0,
-                                        data.X_train.data(), data.ldx_train,
-                                        data.y_train.data()),
-              da_status_success);
-    EXPECT_EQ(da_tree_fit<TypeParam>(tree_handle), da_status_success);
-    EXPECT_EQ(da_tree_score(tree_handle, data.n_samples_test, data.n_feat,
-                            data.X_test.data(), data.ldx_test, data.y_test.data(),
-                            &accuracy),
-              da_status_success);
-    EXPECT_NEAR(accuracy, 1.0, 1.0e-05);
-    EXPECT_EQ(da_tree_predict(tree_handle, data.n_samples_test, data.n_feat,
-                              data.X_test.data(), data.ldx_test, y_pred.data()),
-              da_status_success);
-    EXPECT_ARR_EQ(data.n_samples_test, y_pred, data.y_test, 1, 1, 0, 0);
-
-    da_handle_destroy(&tree_handle);
 }
 
 TYPED_TEST(decision_tree_public_test, small_bins) {
@@ -236,6 +195,53 @@ TYPED_TEST(decision_tree_public_test, small_bins) {
     da_handle_destroy(&tree_handle);
 }
 
+template <typename T>
+void check_onevall_inference(da_handle tree_handle, da_int n_samples_test,
+                             da_int n_features, const std::vector<T> &X_test,
+                             da_int ldx_test, da_int n_class,
+                             const std::vector<da_int> &y_expected) {
+    // predict: the predicted labels must match the expected ones
+    std::vector<da_int> y_pred(n_samples_test);
+    EXPECT_EQ(da_tree_predict(tree_handle, n_samples_test, n_features, X_test.data(),
+                              ldx_test, y_pred.data()),
+              da_status_success);
+    EXPECT_ARR_EQ(n_samples_test, y_pred, y_expected, 1, 1, 0, 0);
+
+    // predict_proba and predict_log_proba (column-major output, ldy = n_samples_test)
+    const da_int ldy = n_samples_test;
+    std::vector<T> y_proba(n_samples_test * n_class);
+    std::vector<T> y_log_proba(n_samples_test * n_class);
+    EXPECT_EQ(da_tree_predict_proba(tree_handle, n_samples_test, n_features,
+                                    X_test.data(), ldx_test, y_proba.data(), n_class,
+                                    ldy),
+              da_status_success);
+    EXPECT_EQ(da_tree_predict_log_proba(tree_handle, n_samples_test, n_features,
+                                        X_test.data(), ldx_test, y_log_proba.data(),
+                                        n_class, ldy),
+              da_status_success);
+
+    for (da_int i = 0; i < n_samples_test; i++) {
+        T row_sum = (T)0;
+        da_int argmax = 0;
+        T max_proba = y_proba[i]; // probability of class 0 for sample i
+        for (da_int j = 0; j < n_class; j++) {
+            T p = y_proba[j * ldy + i];
+            row_sum += p;
+            if (p > max_proba) {
+                max_proba = p;
+                argmax = j;
+            }
+            // log-probabilities must be the log of the probabilities
+            EXPECT_NEAR(std::exp(y_log_proba[j * ldy + i]), p, 1.0e-5);
+        }
+        // probabilities form a valid distribution
+        EXPECT_NEAR(row_sum, 1.0, 1.0e-5);
+        // the most likely class matches both the prediction and the expected label
+        EXPECT_EQ(argmax, y_pred[i]);
+        EXPECT_EQ(argmax, y_expected[i]);
+    }
+}
+
 TYPED_TEST(decision_tree_public_test, onevall) {
     using T = TypeParam;
     // Simple, 2 categorical features case, tree should train in 2 splits
@@ -257,16 +263,19 @@ TYPED_TEST(decision_tree_public_test, onevall) {
     EXPECT_EQ(da_options_set(tree_handle, "category split strategy", "one-vs-all"),
               da_status_success);
     EXPECT_EQ(da_options_set(tree_handle, "Maximum bins", (da_int)8), da_status_success);
-    EXPECT_EQ(da_tree_set_training_data(tree_handle, n_samples_train, n_features, 3,
+    EXPECT_EQ(da_tree_set_training_data(tree_handle, n_samples_train, n_features, 2,
                                         X_train.data(), n_samples_train, y_train.data(),
                                         cat_var.data()),
               da_status_success);
     EXPECT_EQ(da_tree_fit<T>(tree_handle), da_status_success);
     T accuracy;
+    da_int n_class = 2;
     EXPECT_EQ(da_tree_score(tree_handle, n_samples_test, n_features, X_test.data(),
                             n_samples_test, y_test.data(), &accuracy),
               da_status_success);
     EXPECT_NEAR(accuracy, 1.0, 1.0e-05);
+    check_onevall_inference<T>(tree_handle, n_samples_test, n_features, X_test,
+                               n_samples_test, n_class, y_test);
 
     // solve again without histograms
     EXPECT_EQ(da_options_set(tree_handle, "histogram", "no"), da_status_success);
@@ -277,6 +286,8 @@ TYPED_TEST(decision_tree_public_test, onevall) {
                             n_samples_test, y_test.data(), &accuracy),
               da_status_success);
     EXPECT_NEAR(accuracy, 1.0, 1.0e-05);
+    check_onevall_inference<T>(tree_handle, n_samples_test, n_features, X_test,
+                               n_samples_test, n_class, y_test);
     da_int s_rinfo = 100;
     std::vector<T> rinfo(s_rinfo);
     EXPECT_EQ(
@@ -300,6 +311,7 @@ TYPED_TEST(decision_tree_public_test, onevall) {
     n_features = 2;
     n_samples_test = 8;
     cat_var = {3, -1};
+    n_class = 2;
     // clang-format on
     tree_handle = nullptr;
     EXPECT_EQ(da_handle_init<T>(&tree_handle, da_handle_decision_tree),
@@ -318,6 +330,8 @@ TYPED_TEST(decision_tree_public_test, onevall) {
                             n_samples_test, y_test.data(), &accuracy),
               da_status_success);
     EXPECT_NEAR(accuracy, 1.0, 1.0e-05);
+    check_onevall_inference<T>(tree_handle, n_samples_test, n_features, X_test,
+                               n_samples_test, n_class, y_test);
 
     // solve again with histograms
     EXPECT_EQ(da_options_set(tree_handle, "histogram", "yes"), da_status_success);
@@ -325,16 +339,9 @@ TYPED_TEST(decision_tree_public_test, onevall) {
     EXPECT_EQ(da_tree_score(tree_handle, n_samples_test, n_features, X_test.data(),
                             n_samples_test, y_test.data(), &accuracy),
               da_status_success);
-    std::vector<da_int> y_pred(n_samples_test);
-    EXPECT_EQ(da_tree_predict(tree_handle, n_samples_test, n_features, X_test.data(),
-                              n_samples_test, y_pred.data()),
-              da_status_success);
-    std::cout << "Predicted labels: ";
-    for (const auto &val : y_pred) {
-        std::cout << val << " ";
-    }
-    std::cout << std::endl;
     EXPECT_NEAR(accuracy, 1.0, 1.0e-05);
+    check_onevall_inference<T>(tree_handle, n_samples_test, n_features, X_test,
+                               n_samples_test, n_class, y_test);
     da_handle_destroy(&tree_handle);
 }
 
@@ -653,3 +660,112 @@ TEST_P(decision_tree_positive, Single) {
 
 INSTANTIATE_TEST_SUITE_P(decision_tree_pos_suite, decision_tree_positive,
                          testing::ValuesIn(decision_tree_param_pos));
+
+/***********************************
+ ******** Storage order tests ******
+ ***********************************/
+// Train a tree once (on column-major data), then run inference on the same test data
+// passed both in column-major and row-major layouts and check that the results agree.
+template <typename T>
+void test_decision_tree_storage_order(const std::string &csvname, T target_score) {
+
+    // Read the training data in column-major order and train the tree
+    std::string train_fname = std::string(DATA_DIR) + "/df_data/" + csvname + "_data.csv";
+    std::vector<T> X;
+    std::vector<da_int> y;
+    da_int nrows, nfeat;
+    ASSERT_TRUE(da_test::read_features_response_csv(train_fname, X, nrows, nfeat,
+                                                    column_major, y));
+    da_int nsamples = nrows;
+
+    da_handle tree_handle = nullptr;
+    ASSERT_EQ(da_handle_init<T>(&tree_handle, da_handle_decision_tree),
+              da_status_success);
+    EXPECT_EQ(da_options_set_int(tree_handle, "seed", (da_int)42), da_status_success);
+    EXPECT_EQ(da_options_set_string(tree_handle, "storage order", "column-major"),
+              da_status_success);
+    EXPECT_EQ(da_options_set_int(tree_handle, "node minimum samples", 1),
+              da_status_success);
+
+    EXPECT_EQ(da_tree_set_training_data(tree_handle, nsamples, nfeat, 0, X.data(),
+                                        nsamples, y.data()),
+              da_status_success);
+    EXPECT_EQ(da_tree_fit<T>(tree_handle), da_status_success);
+
+    // Read the same test data in both storage orders
+    std::string test_fname = std::string(DATA_DIR) + "/df_data/" + csvname + "_test.csv";
+    std::vector<T> X_test_col, X_test_row;
+    std::vector<da_int> y_test;
+    std::vector<da_int> y_test_row;
+    da_int nrows_test, nfeat_test, nrows_test_row, nfeat_test_row;
+    ASSERT_TRUE(da_test::read_features_response_csv(test_fname, X_test_col, nrows_test,
+                                                    nfeat_test, column_major, y_test));
+    ASSERT_TRUE(da_test::read_features_response_csv(
+        test_fname, X_test_row, nrows_test_row, nfeat_test_row, row_major, y_test_row));
+    da_int nsamples_test = nrows_test;
+
+    // Inference on the column-major test matrix (ldx = number of samples)
+    EXPECT_EQ(da_options_set_string(tree_handle, "storage order", "column-major"),
+              da_status_success);
+    T accuracy_col;
+    std::vector<da_int> y_pred_col(nsamples_test);
+    EXPECT_EQ(da_tree_score(tree_handle, nsamples_test, nfeat_test, X_test_col.data(),
+                            nsamples_test, y_test.data(), &accuracy_col),
+              da_status_success);
+    EXPECT_EQ(da_tree_predict(tree_handle, nsamples_test, nfeat_test, X_test_col.data(),
+                              nsamples_test, y_pred_col.data()),
+              da_status_success);
+    EXPECT_GT(accuracy_col, target_score);
+
+    // Inference on the row-major test matrix (ldx = number of features)
+    EXPECT_EQ(da_options_set_string(tree_handle, "storage order", "row-major"),
+              da_status_success);
+    T accuracy_row;
+    std::vector<da_int> y_pred_row(nsamples_test);
+    EXPECT_EQ(da_tree_score(tree_handle, nsamples_test, nfeat_test, X_test_row.data(),
+                            nfeat_test, y_test_row.data(), &accuracy_row),
+              da_status_success);
+    EXPECT_EQ(da_tree_predict(tree_handle, nsamples_test, nfeat_test, X_test_row.data(),
+                              nfeat_test, y_pred_row.data()),
+              da_status_success);
+
+    // Both storage orders must give identical inference results
+    EXPECT_EQ(accuracy_col, accuracy_row);
+    EXPECT_ARR_EQ(nsamples_test, y_pred_col, y_pred_row, 1, 1, 0, 0);
+
+    da_handle_destroy(&tree_handle);
+}
+
+typedef struct decision_tree_order_param_t {
+    std::string test_name; // name of the ctest test
+    std::string data_name; // name of the files to read in
+    float target_score;
+} decision_tree_order_param_t;
+
+// clang-format off
+const decision_tree_order_param_t decision_tree_order_param[] = {
+    {"iris", "iris", 0.9f},
+    {"gen_200x10_3class", "gen_200x10_3class", 0.9f},
+    {"gen_500x20_4class", "gen_500x20_4class", 0.8f},
+};
+// clang-format on
+
+class decision_tree_storage_order
+    : public testing::TestWithParam<decision_tree_order_param_t> {};
+// Teach GTest how to print the param type using the user's unique test name
+void PrintTo(const decision_tree_order_param_t &param, ::std::ostream *os) {
+    *os << param.test_name;
+}
+
+// Storage order tests with double and single type
+TEST_P(decision_tree_storage_order, Double) {
+    const decision_tree_order_param_t &param = GetParam();
+    test_decision_tree_storage_order<double>(param.data_name, (double)param.target_score);
+}
+TEST_P(decision_tree_storage_order, Single) {
+    const decision_tree_order_param_t &param = GetParam();
+    test_decision_tree_storage_order<float>(param.data_name, (float)param.target_score);
+}
+
+INSTANTIATE_TEST_SUITE_P(decision_tree_order_suite, decision_tree_storage_order,
+                         testing::ValuesIn(decision_tree_order_param));

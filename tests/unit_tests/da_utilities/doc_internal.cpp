@@ -62,6 +62,7 @@ const static std::map<da_handle_type, std::string> htypes{
     {da_handle_approx_nn, "Approximate Nearest Neighbors"},
     {da_handle_interpolation, "Interpolation"},
     {da_handle_kernel_pca, "Kernel Principal Component Analysis"},
+    {da_handle_nmf, "Nonnegative Matrix Factorization"},
 };
 
 void options_print(da_handle_type htype) {

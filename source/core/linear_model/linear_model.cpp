@@ -31,8 +31,10 @@
 #include "basic_statistics.hpp"
 #include "da_cblas.hh"
 #include "da_error.hpp"
+#include "da_omp.hpp"
 #include "da_std.hpp"
 #include "da_syrk.hpp"
+#include "da_utils.hpp"
 #include "fp16_helpers.hpp"
 #include "lapack_templates.hpp"
 #include "linmod_options.hpp"
@@ -91,14 +93,15 @@ linear_model<T>::linear_model(da_errors::da_error_t &err, linmod_model mod,
                               logistic_constraint logistic_constraint_model,
                               scaling_t user_scaling, T optim_convergence_tol,
                               T optim_progress_factor, T optim_dual_gap_tol,
-                              da_int optim_iteration_limit, da_int optim_coord_skip_min,
-                              da_int optim_coord_skip_max)
+                              T optim_coord_skip_tol, da_int optim_iteration_limit,
+                              da_int optim_coord_skip_min, da_int optim_coord_skip_max)
     : basic_handle<T>(err), mod(mod), method_id(method_id),
       logistic_constraint_model(logistic_constraint_model), intercept(intercept),
       user_scaling(user_scaling), optim_iteration_limit(optim_iteration_limit),
       optim_convergence_tol(optim_convergence_tol),
       optim_progress_factor(optim_progress_factor),
-      optim_dual_gap_tol(optim_dual_gap_tol), optim_coord_skip_min(optim_coord_skip_min),
+      optim_dual_gap_tol(optim_dual_gap_tol), optim_coord_skip_tol(optim_coord_skip_tol),
+      optim_coord_skip_min(optim_coord_skip_min),
       optim_coord_skip_max(optim_coord_skip_max), alpha(alpha), lambda(lambda) {
     register_linmod_options<T>(this->opts, *this->err);
     this->order = order;
@@ -108,7 +111,29 @@ linear_model<T>::linear_model(da_errors::da_error_t &err, linmod_model mod,
     read_public_options = false;
 }
 
+// Read Options from the option registry and allow to override with hidden registry
+// (da_debug_set(...) so wrappers not exposing handle can still set some options)
 template <typename T> da_status linear_model<T>::read_options() {
+
+    // Set some hidden options
+    const da_int prnlvl =
+        da_utils::hidden_settings_query("print level", static_cast<da_int>(-1));
+    if (prnlvl != static_cast<da_int>(-1)) {
+        if (this->opts.set("print level", prnlvl)) {
+            return da_error(this->err, da_status_internal_error,
+                            "hidden registry: invalid value for <print level>.");
+        }
+    }
+
+    const da_int prnopts =
+        da_utils::hidden_settings_query("print options", static_cast<da_int>(-1));
+    if (prnopts != static_cast<da_int>(-1)) {
+        if (this->opts.set("print options", prnopts ? "yes" : "no")) {
+            return da_error(this->err, da_status_internal_error,
+                            "hidden registry: invalid value for <print options>.");
+        }
+    }
+
     da_int tmp_int;
     std::string tmp_str;
 
@@ -141,6 +166,7 @@ template <typename T> da_status linear_model<T>::read_options() {
     this->opts.get("optim convergence tol", this->optim_convergence_tol);
     this->opts.get("optim progress factor", this->optim_progress_factor);
     this->opts.get("optim dual gap tol", this->optim_dual_gap_tol);
+    this->opts.get("optim coord skip tol", this->optim_coord_skip_tol);
     this->opts.get("optim coord skip min", this->optim_coord_skip_min);
     this->opts.get("optim coord skip max", this->optim_coord_skip_max);
     this->opts.get("optim time limit", this->optim_time_limit);
@@ -501,14 +527,6 @@ template <typename T> da_status linear_model<T>::init_opt_method(linmod_method m
                     "> option.");
         }
     } else if (slv == "coord") {
-        // Specific options for coord
-        optstr = "coord skip tol";
-        if (opt->opts.set(optstr, optim_convergence_tol) != da_status_success) {
-            return da_error(
-                opt->err, da_status_internal_error, // LCOV_EXCL_LINE
-                "Unexpectedly linear model provided an invalid value to the <" + optstr +
-                    "> option.");
-        }
         // optimality tolerance - is rescaled by <y,y>/nsamples in fit_linreg_coord(...)
         optstr = "coord optimality tol";
         if (opt->opts.set(optstr, optim_dual_gap_tol) != da_status_success) {
@@ -519,6 +537,13 @@ template <typename T> da_status linear_model<T>::init_opt_method(linmod_method m
         }
 
         // Pass ledger parameters
+        optstr = "coord skip tol";
+        if (opt->opts.set(optstr, optim_coord_skip_tol) != da_status_success) {
+            return da_error(opt->err, da_status_internal_error, // LCOV_EXCL_LINE
+                            "Unexpectedly linear model provided an invalid value to the "
+                            "<" +
+                                optstr + "> option.");
+        }
         optstr = "coord skip min";
         if (opt->opts.set(optstr, optim_coord_skip_min) != da_status_success) {
             return da_error(opt->err, da_status_internal_error, // LCOV_EXCL_LINE
@@ -1279,24 +1304,7 @@ template <class T> da_status linear_model<T>::fit_linreg_coord() {
     }
 
     // "coord optimality tol" is rescaled by <y,y>/nsamples
-    T yty{T(0)};
-    switch (scaling) {
-    case scaling_t::none:
-    case scaling_t::centering:
-        yty = da_blas::cblas_dot(nsamples, y, 1, y, 1);
-        break;
-    case scaling_t::scale_only:
-        // inv_int avoids low-precision casting of nsamples
-        yty = da_fp16::inv_int<T>(nsamples);
-        break;
-    case scaling_t::standardize:
-        yty = T(1);
-        break;
-    default:
-        return da_error(opt->err, da_status_internal_error, // LCOV_EXCL_LINE
-                        "Unexpectedly invalid scale type was provided.");
-        break;
-    }
+    const T yty{da_blas::cblas_dot(nsamples, y, 1, y, 1)};
 
     T tol{0};
     const std::string optstr{"coord optimality tol"};
@@ -1312,8 +1320,17 @@ template <class T> da_status linear_model<T>::fit_linreg_coord() {
                             optstr + "> option.");
     }
 
+    const da_int maxth = omp_get_max_threads();
+    // Reasonable thread count based on type
+    constexpr da_int optth{std::is_same_v<T, double> ? 8 : 32};
+    const da_int stepth{
+        std::min(maxth, da_utils::hidden_settings_query("coord num threads", optth))};
+    omp_set_num_threads(stepth); // Cap number of threads
+
     // Ready to solve
     status = opt->solve(coef, udata);
+
+    omp_set_num_threads(maxth); // Restore thread count
     if (status == da_status_success || this->err->get_severity() != DA_ERROR) {
         // Either success or warning with usable solution, continue
         status = this->err->clear();
@@ -1712,6 +1729,12 @@ template <typename T> da_status linear_model<T>::validate_options(linmod_method 
                 "Mixed precision iterative refinement with float32 data is only "
                 "supported with the coordinate descent solver ('coord').");
         }
+        if (use_mixed_precision && !da_arch::fp16_available()) {
+            return da_error(
+                this->err, da_status_incompatible_options,
+                "Mixed precision iterative refinement with float32 data requires "
+                "AVX-512-FP16 hardware support, which is not available on this system.");
+        }
     } else if constexpr (std::is_same_v<T, _Float16>) {
         if (use_mixed_precision) {
             return da_error(this->err, da_status_incompatible_options,
@@ -1856,7 +1879,8 @@ template <typename T>
 bool linear_model<T>::requires_column_major(linmod_method method) const {
     // SVD always needs column-major (gesdd call assumes it)
     return method == linmod_method::svd ||
-           (method == linmod_method::qr && is_well_determined);
+           (method == linmod_method::qr && is_well_determined) ||
+           method == linmod_method::coord;
 }
 
 template <typename T>
@@ -2525,7 +2549,8 @@ da_status linear_model<T>::lower_precision_init(da_int &ncoefs, const T *coefs_i
             this->logistic_constraint_model, this->user_scaling,
             static_cast<lp_type>(this->lp_convergence_tol),
             static_cast<lp_type>(this->optim_progress_factor),
-            static_cast<lp_type>(this->optim_dual_gap_tol), this->lp_iteration_limit,
+            static_cast<lp_type>(this->optim_dual_gap_tol),
+            static_cast<lp_type>(this->optim_coord_skip_tol), this->lp_iteration_limit,
             this->optim_coord_skip_min, this->optim_coord_skip_max);
 
         std::vector<lp_type> XUSR_lp, yusr_lp, coefs_lp;

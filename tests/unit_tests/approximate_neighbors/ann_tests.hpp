@@ -31,8 +31,10 @@
 #include "gmock/gmock.h"
 #include "gtest/gtest.h"
 #include <cmath>
+#include <iostream>
 #include <limits>
 #include <list>
+#include <numeric>
 #include <random>
 #include <string.h>
 #include <unordered_set>
@@ -88,12 +90,31 @@ template <typename T> struct ANNParamType {
     da_int list_blk_sz_override{0};
     da_int add_blk_sz_override{0};
 
+    // Quantization options (used only when algorithm is ivfsq)
+    std::string quantization = "bfloat16";
+    std::string quantization_scheme = "per_dimension";
+    std::string quantization_residual = "yes";
+
     ANNParamType(){};
     ANNParamType(da_int nlist, da_int nprobe, da_int k, std::string metric,
                  std::string algorithm, std::string order)
         : nlist(nlist), nprobe(nprobe), k(k), metric(metric), algorithm(algorithm),
           order(order){};
 };
+
+// Clone a fixture and turn on quantization, for building quantized variants of
+// already-correct fixtures without duplicating their data
+template <typename T>
+ANNParamType<T> WithQuantization(ANNParamType<T> base, const std::string &scheme,
+                                 const std::string &residual, const std::string &suffix,
+                                 const std::string &quantization = "int8") {
+    base.algorithm = "ivfsq";
+    base.quantization = quantization;
+    base.quantization_scheme = scheme;
+    base.quantization_residual = residual;
+    base.test_name += suffix;
+    return base;
+}
 
 // Helper function - use kmeans handle to compute expected centroids
 template <typename T> da_status GetExpectedResults(ANNParamType<T> &test) {
@@ -332,32 +353,91 @@ T compute_recall(ANNParamType<T> param, da_int n_features, da_int *approx_neighb
     compute_exact_knn(param, n_features, true_neighbors.data(), X_train, n_samples_train,
                       ldx_train, X_test, n_samples_test, ldx_test);
 
-    // approx_neighbors is in storage order; transpose to row-major for column-major inputs
-    if (param.order == "column-major") {
-#if defined(AOCLDA_ILP64)
-        datest_blas::imatcopy('T', n_samples_test, param.k, 1.0,
-                              reinterpret_cast<double *>(approx_neighbors),
-                              n_samples_test, param.k);
-#else
-        datest_blas::imatcopy('T', n_samples_test, param.k, 1.0,
-                              reinterpret_cast<float *>(approx_neighbors), n_samples_test,
-                              param.k);
-#endif
-    }
-
-    // Both arrays are now row-major: true_neighbors[q*k..q*k+k-1] for each query q
     da_int count = 0;
     for (da_int i = 0; i < n_samples_test; i++) {
         std::unordered_set<da_int> true_set(true_neighbors.data() + i * param.k,
                                             true_neighbors.data() + (i + 1) * param.k);
         for (da_int j = 0; j < param.k; j++) {
-            da_int val = approx_neighbors[j + i * param.k];
+            const size_t position = param.order == "column-major"
+                                        ? i + static_cast<size_t>(j) * n_samples_test
+                                        : static_cast<size_t>(i) * param.k + j;
+            da_int val = approx_neighbors[position];
             if ((val != -1) && (true_set.count(val) == 1)) {
                 count++;
             }
         }
     }
     return count / (T)(param.k * n_samples_test);
+}
+
+template <typename T> T test_ann_recall(const ANNParamType<T> &param) {
+    da_handle ann_handle = nullptr;
+    EXPECT_EQ(da_handle_init<T>(&ann_handle, da_handle_approx_nn), da_status_success);
+    EXPECT_EQ(da_options_set_string(ann_handle, "metric", param.metric.c_str()),
+              da_status_success);
+    EXPECT_EQ(da_options_set_string(ann_handle, "storage order", param.order.c_str()),
+              da_status_success);
+    EXPECT_EQ(da_options_set_string(ann_handle, "algorithm", param.algorithm.c_str()),
+              da_status_success);
+    EXPECT_EQ(da_options_set_int(ann_handle, "number of neighbors", param.k),
+              da_status_success);
+    EXPECT_EQ(da_options_set_int(ann_handle, "n_list", param.nlist), da_status_success);
+    EXPECT_EQ(da_options_set_int(ann_handle, "n_probe", param.nprobe), da_status_success);
+    EXPECT_EQ(da_options_set_int(ann_handle, "seed", param.seed), da_status_success);
+    EXPECT_EQ(da_options_set_int(ann_handle, "k-means_iter", param.kmeans_iter),
+              da_status_success);
+    EXPECT_EQ(da_options_set(ann_handle, "train fraction", param.train_fraction),
+              da_status_success);
+    EXPECT_EQ(
+        da_options_set_string(ann_handle, "quantization", param.quantization.c_str()),
+        da_status_success);
+    EXPECT_EQ(da_options_set_string(ann_handle, "quantization_scheme",
+                                    param.quantization_scheme.c_str()),
+              da_status_success);
+    EXPECT_EQ(da_options_set_string(ann_handle, "quantization_residual",
+                                    param.quantization_residual.c_str()),
+              da_status_success);
+
+    da_order order = param.order == "column-major" ? column_major : row_major;
+    std::string input_file =
+        std::string(DATA_DIR) + "/ann_data/" + param.csvname + "_data.csv";
+    std::vector<T> X_train;
+    da_int n_samples_train, n_features;
+    if (!da_test::read_csv_data(input_file, X_train, n_samples_train, n_features,
+                                order)) {
+        ADD_FAILURE() << "Failed to read training data: " << input_file;
+        da_handle_destroy(&ann_handle);
+        return T(0);
+    }
+    const da_int ldx_train = order == column_major ? n_samples_train : n_features;
+
+    EXPECT_EQ(da_approx_nn_set_training_data(ann_handle, n_samples_train, n_features,
+                                             X_train.data(), ldx_train),
+              da_status_success);
+    EXPECT_EQ(da_approx_nn_train_and_add<T>(ann_handle), da_status_success);
+
+    input_file = std::string(DATA_DIR) + "/ann_data/" + param.csvname + "_test.csv";
+    std::vector<T> X_test;
+    da_int n_samples_test;
+    if (!da_test::read_csv_data(input_file, X_test, n_samples_test, n_features, order)) {
+        ADD_FAILURE() << "Failed to read test data: " << input_file;
+        da_handle_destroy(&ann_handle);
+        return T(0);
+    }
+    const da_int ldx_test = order == column_major ? n_samples_test : n_features;
+
+    std::vector<da_int> computed_indices(param.k * n_samples_test);
+    EXPECT_EQ(da_approx_nn_kneighbors<T>(ann_handle, n_samples_test, n_features,
+                                         X_test.data(), ldx_test, computed_indices.data(),
+                                         nullptr, param.k, false),
+              da_status_success);
+    const T recall = compute_recall(param, n_features, computed_indices.data(),
+                                    X_train.data(), n_samples_train, ldx_train,
+                                    X_test.data(), n_samples_test, ldx_test);
+    EXPECT_GT(recall, param.target_recall);
+    std::cout << "Recall on the test data: " << recall << std::endl;
+    da_handle_destroy(&ann_handle);
+    return recall;
 }
 
 // For cases where many expected indices are valid (e.g., zero data),
@@ -1990,6 +2070,67 @@ template <typename T> void GetANNRecallData(std::vector<ANNParamType<T>> &params
     UnitSphereEuclideanRow(params);
     UnitSphereIPCol(params);
     UnitSphereIPRow(params);
+}
+
+// A paired baseline/quantized recall case: both are run with test_ann_recall and the
+// quantized recall is checked against the baseline recall measured in the same run,
+// rather than against a separately-guessed absolute threshold.
+template <typename T> struct ANNRecallPair {
+    std::string name;
+    ANNParamType<T> baseline;
+    ANNParamType<T> quantized;
+    T minimum_recall = T(0.75);
+    T maximum_recall_drop = T(0.25);
+};
+
+template <typename T> void PrintTo(const ANNRecallPair<T> &pair, std::ostream *os) {
+    *os << pair.name;
+}
+
+template <typename T>
+void AddQuantizedQualityPair(std::vector<ANNRecallPair<T>> &pairs,
+                             void (*base_fn)(std::vector<ANNParamType<T>> &),
+                             const std::string &scheme, const std::string &residual,
+                             const std::string &name,
+                             const std::string &quantization = "int8",
+                             const std::string &metric = "") {
+    std::vector<ANNParamType<T>> baseline_params;
+    base_fn(baseline_params);
+    ANNRecallPair<T> pair;
+    pair.name = name;
+    pair.baseline = baseline_params.back();
+    if (!metric.empty())
+        pair.baseline.metric = metric;
+    pair.quantized =
+        WithQuantization(pair.baseline, scheme, residual, " " + name, quantization);
+    pair.minimum_recall = pair.baseline.target_recall;
+    pair.quantized.target_recall = T(0);
+    pairs.push_back(pair);
+}
+
+template <typename T>
+void GetANNQuantizedQualityData(std::vector<ANNRecallPair<T>> &pairs) {
+    AddQuantizedQualityPair<T>(pairs, RandomUniformEuclideanCol, "per_dimension", "yes",
+                               "anisotropic_euclidean");
+    AddQuantizedQualityPair<T>(pairs, RandomUniformEuclideanRow, "uniform", "no",
+                               "broad_range_euclidean");
+    AddQuantizedQualityPair<T>(pairs, RandomUniformIPCol, "per_dimension", "yes",
+                               "inner_product");
+    AddQuantizedQualityPair<T>(pairs, RandomUniformEuclideanCol, "uniform", "yes",
+                               "int4_euclidean", "int4");
+    pairs.back().minimum_recall = T(0.75);
+    AddQuantizedQualityPair<T>(pairs, RandomUniformIPCol, "per_dimension", "yes",
+                               "int4_inner_product", "int4");
+    pairs.back().minimum_recall = T(0.75);
+    AddQuantizedQualityPair<T>(pairs, UnitSphereIPCol, "per_dimension", "yes",
+                               "int4_cosine", "int4", "cosine");
+    pairs.back().minimum_recall = T(0.55);
+    AddQuantizedQualityPair<T>(pairs, RandomUniformEuclideanCol, "direct_signed", "yes",
+                               "bfloat16_euclidean", "bfloat16");
+    AddQuantizedQualityPair<T>(pairs, RandomUniformIPCol, "direct_signed", "yes",
+                               "bfloat16_inner_product", "bfloat16");
+    AddQuantizedQualityPair<T>(pairs, UnitSphereIPCol, "direct_signed", "yes",
+                               "bfloat16_cosine", "bfloat16", "cosine");
 }
 
 // Generate one IVF blocking test case with random data in the requested storage layout.

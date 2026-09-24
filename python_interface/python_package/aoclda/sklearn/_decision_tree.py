@@ -58,7 +58,6 @@ class DecisionTreeClassifier(DecisionTreeClassifier_sklearn):
         class_weight=None,
         ccp_alpha=0.0,
         monotonic_cst=None,
-        detect_categorical_data=False,
         histogram=False,
         maximum_bins=256
     ):
@@ -127,9 +126,6 @@ class DecisionTreeClassifier(DecisionTreeClassifier_sklearn):
             min_impurity_decrease=min_impurity_decrease,
             min_split_score=1.0e-05,
             feat_thresh=1.0e-05,
-            detect_categorical_data=detect_categorical_data,
-            max_category=50,
-            category_tolerance=1.0e-05,
             histogram=histogram,
             maximum_bins=maximum_bins,
             check_data=False)

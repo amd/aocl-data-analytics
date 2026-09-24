@@ -164,7 +164,7 @@ da_status base_svm<T>::compute_impl(const std::vector<T> *initial_alpha) {
         X = new T[n * p];
         y = new T[n];
 
-        // 0 is transformed to -1 in initialisation
+        // 0 is transformed to -1 in initialization
         for (da_int i = 0; i < n; i++)
             y[i] = idx_is_positive[i] ? (T)1.0 : (T)0.0;
 
@@ -220,7 +220,7 @@ da_status base_svm<T>::compute_impl(const std::vector<T> *initial_alpha) {
         cache_smaller_than_ws = true;
     else
         cache_smaller_than_ws = false;
-    // Initialise which kernel function will be used
+    // Initialize which kernel function will be used
     switch (kernel_function) {
     case svm_kernel::rbf:
         kernel_f = &rbf_wrapper<T>;
@@ -252,22 +252,22 @@ da_status base_svm<T>::compute_impl(const std::vector<T> *initial_alpha) {
     status = cache.set_size(cache_col_capacity, n);
     if (status != da_status_success) {
         return da_error(err, status,
-                        "Memory allocation error inside cache initialisation.");
+                        "Memory allocation error inside cache initialization.");
     }
     try {
         // Outer WSS
         ws_indicator.resize(actual_size);
-        index_aux.resize(actual_size); // For nu problem also used in initialisation
+        index_aux.resize(actual_size); // For nu problem also used in initialization
         // Compute kernel
         ws_indexes.resize(ws_size);
         ptr_kernel_col.resize(ws_size);
-        // Large matrix, don't initialise (performance)
+        // Large matrix, don't initialize (performance)
         kernel_matrix.resize(ws_size * n);
         X_temp.resize(ws_size * p);
         // Local SMO
         gradient.resize(actual_size);
         // This is because if compute() is called many times one after another, it causes problems in
-        // nu variant because in nusvm::initialisation() gradient is not explicitly set to 0, but relies on 0 initialisation here
+        // nu variant because in nusvm::initialization() gradient is not explicitly set to 0, but relies on 0 initialization here
         // (can be modified if it's unusual design)
         da_std::fill(gradient.begin(), gradient.end(), T(0));
         response.resize(actual_size);
@@ -297,7 +297,7 @@ da_status base_svm<T>::compute_impl(const std::vector<T> *initial_alpha) {
         return da_error(err, da_status_invalid_input,                   // LCOV_EXCL_LINE
                         "initial_alpha size mismatch in warm start.");
 
-    status = initialisation(n, gradient, response, alpha, cache);
+    status = initialization(n, gradient, response, alpha, cache);
     if (status != da_status_success)
         return status;
 

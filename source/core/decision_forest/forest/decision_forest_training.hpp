@@ -79,8 +79,6 @@ template <typename T> da_status decision_forest<T>::fit() {
     opt_pass &= this->opts.get("seed", seed) == da_status_success;
     opt_pass &=
         this->opts.get("node minimum samples", min_node_sample) == da_status_success;
-    opt_pass &=
-        this->opts.get("node minimum samples", min_node_sample) == da_status_success;
     opt_pass &= this->opts.get("scoring function", opt_val, method) == da_status_success;
     opt_pass &=
         this->opts.get("features selection", opt_val, feat_select) == da_status_success;
@@ -189,15 +187,11 @@ template <typename T> da_status decision_forest<T>::fit() {
                X_binned, cat_split_strat, tree_threads) default(none) schedule(dynamic)
     for (da_int i = 0; i < n_tree; i++) {
         // Set tree optional parameters
-        bool check_categorical_data = false;
-        da_int opt_max_cat = 10;
-        T cat_tol = (T)0.0;
         try {
-            forest[i] = std::make_unique<decision_tree<T>>(
-                decision_tree(X_binned, max_depth, min_node_sample, method, nfeat_split,
-                              seed_tree[i], min_split_score, feat_thresh, min_improvement,
-                              bootstrap, check_categorical_data, opt_max_cat, use_hist,
-                              usr_max_bins, cat_tol, cat_split_strat, tree_threads[i]));
+            forest[i] = std::make_unique<decision_tree<T>>(decision_tree(
+                X_binned, max_depth, min_node_sample, method, nfeat_split, seed_tree[i],
+                min_split_score, feat_thresh, min_improvement, bootstrap, use_hist,
+                usr_max_bins, cat_split_strat, tree_threads[i], column_major));
         } catch (std::bad_alloc &) {
 #pragma omp atomic
             n_failed_tree++;
@@ -206,7 +200,7 @@ template <typename T> da_status decision_forest<T>::fit() {
         da_status tree_status;
         tree_status =
             forest[i]->set_training_data(n_samples, n_features, X, ldx, y, n_class, n_obs,
-                                         nullptr, usr_categorical_feat);
+                                         nullptr, usr_categorical_feat, true);
         tree_status = forest[i]->fit();
         forest[i]->clear_working_memory();
         if (tree_status != da_status_success) {

@@ -81,6 +81,9 @@ enum da_handle_type_ {
     da_handle_tsne, ///< @rst
                     ///< the handle is to be used with functions for computing the :ref:`t-SNE <tsne_intro>`.
                     ///< @endrst
+    da_handle_nmf, ///< @rst
+                   ///< the handle is to be used with functions for computing the :ref:`nonnegative matrix factorization <nmf_intro>`.
+                   ///< @endrst
 };
 // clang-format on
 

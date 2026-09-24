@@ -40,6 +40,7 @@
 #include <unistd.h>
 #endif
 #include <iostream>
+#include <optional>
 #include <string>
 #include <vector>
 
@@ -155,6 +156,42 @@ bool read_csv_data(const std::string &filename, std::vector<T> &data, da_int &n_
     }
     if (!ok)
         std::cerr << "read_csv_data: failed to load '" << filename << "'" << std::endl;
+    da_datastore_destroy(&csv_store);
+    return ok;
+}
+
+template <typename T>
+bool read_features_response_csv(const std::string &filename, std::vector<T> &features,
+                                da_int &n_rows, da_int &n_cols, da_order order,
+                                std::vector<da_int> &response) {
+    da_datastore csv_store = nullptr;
+    bool ok =
+        da_datastore_init(&csv_store) == da_status_success &&
+        da_datastore_options_set_string(csv_store, "datastore precision",
+                                        prec_name<T>()) == da_status_success &&
+        da_data_load_from_csv(csv_store, filename.c_str()) == da_status_success &&
+        da_data_get_n_cols(csv_store, &n_cols) == da_status_success &&
+        da_data_get_n_rows(csv_store, &n_rows) == da_status_success &&
+        da_data_select_columns(csv_store, "data", 0, n_cols - 2) == da_status_success;
+    ok &= da_data_select_columns(csv_store, "response", n_cols - 1, n_cols - 1) ==
+          da_status_success;
+    if (ok) {
+        n_cols = n_cols - 1;
+        features.resize(n_rows * n_cols);
+        da_int ld = (order == row_major) ? n_cols : n_rows;
+        ok = da_data_extract_selection(csv_store, "data", order, features.data(), ld) ==
+             da_status_success;
+
+        if (ok) {
+            response.resize(n_rows);
+            da_int ld_resp = (order == row_major) ? 1 : n_rows;
+            ok = da_data_extract_selection(csv_store, "response", order, response.data(),
+                                           ld_resp) == da_status_success;
+        }
+    }
+    if (!ok)
+        std::cerr << "read_features_response_csv: failed to load '" << filename << "'"
+                  << std::endl;
     da_datastore_destroy(&csv_store);
     return ok;
 }

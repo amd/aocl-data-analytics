@@ -41,11 +41,11 @@ namespace da_decision_forest {
                 Initialiazation & destruction
  **************************************************************/
 template <typename T>
-da_status decision_tree<T>::set_training_data(da_int n_samples, da_int n_features,
-                                              const T *X, da_int ldx, const da_int *y,
-                                              da_int n_class, da_int n_obs,
-                                              da_int *samples_subset,
-                                              const da_int *usr_cat_feat) {
+da_status
+decision_tree<T>::set_training_data(da_int n_samples, da_int n_features, const T *X,
+                                    da_int ldx, const da_int *y, da_int n_class,
+                                    da_int n_obs, da_int *samples_subset,
+                                    const da_int *usr_cat_feat, bool internal_tree) {
 
     // Guard against errors due to multiple calls using the same class instantiation
     if (X_temp) {
@@ -53,21 +53,25 @@ da_status decision_tree<T>::set_training_data(da_int n_samples, da_int n_feature
         X_temp = nullptr;
     }
 
+    // mode 2 skips checks/transposition: forest trees already get validated column major data
+    da_int mode = internal_tree ? 2 : 0;
     da_status status =
         this->store_2D_array(n_samples, n_features, X, ldx, &X_temp, &this->X, this->ldx,
-                             "n_samples", "n_features", "X", "ldx");
+                             "n_samples", "n_features", "X", "ldx", mode);
     if (status != da_status_success)
         return status;
 
-    status = this->check_1D_array(n_samples, y, "n_samples", "y", 1);
-    if (status != da_status_success)
-        return status;
+    if (!internal_tree) {
+        status = this->check_1D_array(n_samples, y, "n_samples", "y", 1);
+        if (status != da_status_success)
+            return status;
 
-    if (n_obs > n_samples || n_obs < 0) {
-        return da_error_bypass(this->err, da_status_invalid_input,
-                               "n_obs = " + std::to_string(n_obs) +
-                                   ", it must be set between 0 and n_samples = " +
-                                   std::to_string(n_samples));
+        if (n_obs > n_samples || n_obs < 0) {
+            return da_error_bypass(this->err, da_status_invalid_input,
+                                   "n_obs = " + std::to_string(n_obs) +
+                                       ", it must be set between 0 and n_samples = " +
+                                       std::to_string(n_samples));
+        }
     }
 
     this->refresh();
@@ -103,18 +107,18 @@ template <typename T>
 decision_tree<T>::decision_tree(bins<T> *X_binned, da_int max_depth,
                                 da_int min_node_sample, da_int method, da_int nfeat_split,
                                 da_int seed, T min_split_score, T feat_thresh,
-                                T min_improvement, bool bootstrap, da_int check_cat_data,
-                                da_int opt_max_cat, da_int use_hist, da_int usr_max_bins,
-                                T cat_tol, da_int cat_split_strat, da_int max_threads)
+                                T min_improvement, bool bootstrap, da_int use_hist,
+                                da_int usr_max_bins, da_int cat_split_strat,
+                                da_int max_threads, da_order order)
     : X_binned(X_binned), max_depth(max_depth), min_node_sample(min_node_sample),
       method(method), nfeat_split(nfeat_split), seed(seed),
       min_split_score(min_split_score), feat_thresh(feat_thresh),
-      min_improvement(min_improvement), bootstrap(bootstrap),
-      check_cat_data(check_cat_data), opt_max_cat(opt_max_cat), use_hist(use_hist),
-      usr_max_bins(usr_max_bins), cat_tol(cat_tol), cat_split_strat(cat_split_strat),
+      min_improvement(min_improvement), bootstrap(bootstrap), use_hist(use_hist),
+      usr_max_bins(usr_max_bins), cat_split_strat(cat_split_strat),
       max_threads(max_threads) {
     this->err = nullptr;
     read_public_options = false;
+    this->order = order;
 }
 
 template <typename T> decision_tree<T>::~decision_tree() {
@@ -132,12 +136,8 @@ template <typename T> void decision_tree<T>::refresh() {
 }
 
 template <typename T> void decision_tree<T>::clear_working_memory() {
-    samples_idx = std::vector<da_int>();
-    count_classes = std::vector<da_int>();
-    cat_feat = std::vector<da_int>();
-    features_idx = std::vector<da_int>();
-    selected_features = std::vector<da_int>();
-    thread_workspaces = std::vector<split_workspace<T>>();
+
+    // Internal user data
     if (X_temp) {
         delete[] (X_temp);
         X = nullptr;
@@ -146,8 +146,20 @@ template <typename T> void decision_tree<T>::clear_working_memory() {
         delete X_binned;
         X_binned = nullptr;
     }
+
+    // Working memory for training
+    samples_idx = std::vector<da_int>();
+    count_classes = std::vector<da_int>();
+    bootstrap_sample_frequency = std::vector<da_int>();
+    features_idx = std::vector<da_int>();
+    thread_workspaces = std::vector<split_workspace<T>>();
+    selected_features = std::vector<da_int>();
+    thread_workspaces = std::vector<split_workspace<T>>();
 }
 
+template <typename T> void decision_tree<T>::clear_training_tree() {
+    tree = std::vector<node<T>>();
+}
 /*************************************************************************
                         Stat extraction
  *************************************************************************/
@@ -256,7 +268,7 @@ template <typename T> void decision_tree<T>::set_bootstrap(bool bs) {
 
 using namespace da_model_persistence;
 
-template <typename T> da_status node<T>::serialize(serialization_buffer &buffer) {
+template <typename T> da_status compact_node<T>::serialize(serialization_buffer &buffer) {
     da_status status = da_status_success;
     auto io_dispatch = [&buffer, &status](auto &data) -> void {
         if (status != da_status_success) {
@@ -266,22 +278,9 @@ template <typename T> da_status node<T>::serialize(serialization_buffer &buffer)
         return;
     };
 
-    io_dispatch(this->parent_idx);
-    io_dispatch(this->right_child_idx);
-    io_dispatch(this->left_child_idx);
-    io_dispatch(this->is_leaf);
-    io_dispatch(this->depth);
-    io_dispatch(this->score);
-    io_dispatch(this->prop);
-    io_dispatch(this->y_pred);
-    io_dispatch(this->feature);
-    io_dispatch(this->x_threshold);
-    io_dispatch(this->category);
-    io_dispatch(this->start_idx);
-    io_dispatch(this->end_idx);
-    io_dispatch(this->n_samples);
-    io_dispatch(this->const_feat_idx);
-    io_dispatch(this->children_const_idx);
+    io_dispatch(this->feature_idx);
+    io_dispatch(this->next_idx);
+    io_dispatch(this->threshold);
 
     return status;
 }
@@ -296,7 +295,7 @@ decision_tree<T>::tree_serialization(da_model_persistence::serialization_buffer 
             return da_status_invalid_file_data;
 
         try {
-            this->tree.resize(this->n_nodes);
+            this->compact_tree.resize(this->n_nodes);
         } catch (std::bad_alloc const &) {
             return da_error_bypass(
                 this->err, da_status_memory_error,
@@ -307,7 +306,7 @@ decision_tree<T>::tree_serialization(da_model_persistence::serialization_buffer 
     for (da_int i = 0; i < this->n_nodes; ++i) {
         if (status != da_status_success)
             return status;
-        status = this->tree[i].serialize(buffer);
+        status = this->compact_tree[i].serialize(buffer);
     }
     return status;
 }
@@ -324,6 +323,7 @@ da_status decision_tree<T>::serialize(serialization_buffer &buffer) {
         return;
     };
 
+    // tree properties
     io_dispatch(this->model_trained);
     io_dispatch(this->predict_proba_opt);
     io_dispatch(this->n_samples);
@@ -335,8 +335,11 @@ da_status decision_tree<T>::serialize(serialization_buffer &buffer) {
     io_dispatch(this->n_nodes);
     io_dispatch(this->n_leaves);
     io_dispatch(this->class_props);
-    io_dispatch(this->samples_idx);
+    // categorical data properties
+    io_dispatch(this->feat_prop);
     io_dispatch(this->max_cat);
+
+    // optional parameters
     io_dispatch(this->max_depth);
     io_dispatch(this->min_node_sample);
     io_dispatch(this->method);
@@ -346,12 +349,16 @@ da_status decision_tree<T>::serialize(serialization_buffer &buffer) {
     io_dispatch(this->feat_thresh);
     io_dispatch(this->min_improvement);
     io_dispatch(this->bootstrap);
-    io_dispatch(this->check_cat_data);
-    io_dispatch(this->opt_max_cat);
     io_dispatch(this->use_hist);
     io_dispatch(this->usr_max_bins);
-    io_dispatch(this->cat_tol);
     io_dispatch(this->cat_split_strat);
+
+    // SOA representation of the inference tree
+    io_dispatch(this->has_onevall_features);
+    io_dispatch(this->feat_is_onevall);
+    io_dispatch(this->f_idx_cont);
+    io_dispatch(this->next_idx_cont);
+    io_dispatch(this->threshold_cont);
 
     if (status != da_status_success)
         return status;

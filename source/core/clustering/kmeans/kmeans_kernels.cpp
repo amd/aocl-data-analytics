@@ -40,6 +40,14 @@ namespace da_kmeans {
 
 using namespace kernel_templates;
 
+#if defined(__GNUC__) && !defined(__clang__) && __GNUC__ >= 12 && __GNUC__ < 15 &&       \
+    defined(__AVX512FP16__)
+// Keep GCC 12-14 from combining the comparison with an invalid zero-masked store.
+__attribute__((noipa)) static _Float16 clamp_lower_bound_fp16(_Float16 value) {
+    return value < (_Float16)0.0 ? (_Float16)0.0 : value;
+}
+#endif
+
 /* These functions contain performance-critical loops which must vectorize for performance. */
 
 /* Reduction part of the elkan iteration, on a pair of scattered vectors */
@@ -125,10 +133,23 @@ void elkan_iteration_kernel_scalar(da_int block_size, T *l_bound, da_int ldl_bou
         u_bound[i] += centre_shift[labels[i]];
 #pragma omp simd
         for (da_int j = 0; j < n_clusters; j++) {
+#if defined(__GNUC__) && !defined(__clang__) && __GNUC__ >= 12 && __GNUC__ < 15 &&       \
+    defined(__AVX512FP16__)
+            if constexpr (std::is_same_v<T, _Float16>) {
+                l_bound[index + j] =
+                    clamp_lower_bound_fp16(l_bound[index + j] - centre_shift[j]);
+            } else {
+                l_bound[index + j] -= centre_shift[j];
+                if (l_bound[index + j] < 0) {
+                    l_bound[index + j] = (T)0.0;
+                }
+            }
+#else
             l_bound[index + j] -= centre_shift[j];
             if (l_bound[index + j] < 0) {
                 l_bound[index + j] = (T)0.0;
             }
+#endif
         }
         index += ldl_bound;
     }

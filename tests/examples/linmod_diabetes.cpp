@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2023-2025 Advanced Micro Devices, Inc. All rights reserved.
+ * Copyright (C) 2023-2026 Advanced Micro Devices, Inc. All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without modification,
  * are permitted provided that the following conditions are met:
@@ -139,6 +139,8 @@ int main() {
            da_options_set_string(handle, "print options", "yes") == da_status_success;
     pass = pass && da_options_set_int(handle, "intercept", 0) == da_status_success;
     pass = pass && da_options_set_int(handle, "print level", 1) == da_status_success;
+    pass = pass &&
+           da_options_set_real_d(handle, "optim coord skip tol", 0) == da_status_success;
     pass = pass && da_linmod_define_features_d(handle, m, n, features.data(), m,
                                                rhs.data()) == da_status_success;
     if (!pass) {
@@ -160,9 +162,14 @@ int main() {
         std::cout.precision(3);
 
         bool oki;
-        ok = !ok;
+        ok = true;
         for (da_int i = 0; i < nx; i++) {
-            oki = std::abs(x[i] - x_ref[i]) <= 1.0e-3;
+            double xrefi = x_ref[i];
+            if (xrefi == 0) {
+                oki = x[i] == 0;
+            } else {
+                oki = std::abs((x[i] - xrefi) / xrefi) <= 1.0e-2;
+            }
             std::cout << " x[" << std::setw(2) << i << "] = " << std::setw(9) << x[i]
                       << " expecting " << std::setw(9) << x_ref[i]
                       << (oki ? " (OK)" : " [WRONG]") << std::endl;

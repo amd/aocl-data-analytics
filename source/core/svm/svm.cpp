@@ -31,6 +31,7 @@
 #include "da_error.hpp"
 #include "da_omp.hpp"
 #include "da_std.hpp"
+#include "da_utils.hpp"
 #include "fp16_helpers.hpp"
 #include "macros.h"
 #include "options.hpp"
@@ -531,6 +532,14 @@ template <typename T> da_status svm<T>::compute() {
     da_int int_mp;
     this->opts.get("mixed precision", opt_mp, int_mp);
     use_mixed_precision = (int_mp == 1);
+    if constexpr (std::is_same_v<T, float>) {
+        if (use_mixed_precision && !da_arch::fp16_available()) {
+            return da_error(
+                this->err, da_status_incompatible_options,
+                "Mixed precision iterative refinement with float32 data requires "
+                "AVX-512-FP16 hardware support, which is not available on this system.");
+        }
+    }
     // Lower precision copies of the data used for the mixed precision warm
     // start. lp_type is float for T==double and _Float16 for T==float.
     std::vector<lp_type> X_lp, y_lp;
@@ -676,8 +685,6 @@ template <typename T> da_status svm<T>::compute() {
     // NOTE: support coefficients have quite an unusual layout to match scikit-learn (LibSVM)
     // The shape of support_coefficients is (n_class-1, n_sv) where columns are filled from left to right
     // with coefficients corresponding to support vectors of the first class, then the second class, etc.
-    // References: https://www.csie.ntu.edu.tw/~cjlin/libsvm/faq.html#f402 and
-    // https://scikit-learn.org/stable/modules/svm.html#svm-multi-class (expand "details on multi-class strategies")
     if (ismulticlass) {
         // starting_col_idx - will tell at which position (column) to start filling support_coefficients for each class, effectively partial sum of n_sv_per_class
         // starting_row_idx - will tell at which row to start filling support_coefficients for each class

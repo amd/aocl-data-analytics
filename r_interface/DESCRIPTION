@@ -1,0 +1,24 @@
+Package: aoclda
+Type: Package
+Title: R Interface for AOCL Data Analytics Library
+Version: 6.0.0
+Authors@R: c(person("Advanced Micro Devices, Inc.", "AMD", email = "toolchainsupport@amd.com", role = c("aut", "cre")))
+Description: Experimental R interface for the AMD Optimizing CPU Libraries Data
+ Analytics (AOCL-DA) library. This package is an early-stage implementation and
+ is not yet part of the official AOCL-DA release; APIs may change without notice.
+ Provides high-performance data analytics functions optimized
+ for AMD processors, including basic statistics, clustering (k-means, DBSCAN),
+ classification and regression (SVM, k-nearest neighbors, linear models,
+ decision trees, decision forests), dimensionality reduction (PCA, Kernel PCA,
+ t-SNE), cubic spline interpolation, nonlinear least squares, kernel functions,
+ distance metrics, and utility functions. For license details see the LICENSE
+ file. For support
+ contact toolchainsupport@amd.com or refer to
+ https://www.amd.com/en/developer/aocl/data-analytics.html.
+Encoding: UTF-8
+LazyData: true
+SystemRequirements: C++17
+LinkingTo: Rcpp (>= 1.1.2)
+Imports: Rcpp (>= 1.1.2), R6
+Suggests: testthat (>= 3.0.0), covr, knitr, rmarkdown, roxygen2
+Config/roxygen2/version: 8.1.0

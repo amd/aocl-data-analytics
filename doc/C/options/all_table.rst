@@ -48,6 +48,7 @@ The following options are supported.
    
    "mixed precision", "string", ":math:`s=` `no`", "Whether to use mixed precision iterative refinement, in which lower precision arithmetic is used before switching to the working precision for the final iterations.", ":math:`s=` `no`, or `yes`."
    "optim method", "string", ":math:`s=` `auto`", "Select optimization method to use.", ":math:`s=` `auto`, `bfgs`, `cg`, `chol`, `cholesky`, `coord`, `lbfgs`, `lbfgsb`, `qr`, `sparse_cg`, or `svd`."
+   "optim coord skip tol", "real", ":math:`r=10^{-4}`", "Coordinate skip tolerance, a given coordinate could be skipped if the change between two consecutive iterates is less than tolerance. Any negative value disables the skipping scheme.", "There are no constraints on :math:`r`."
    "low precision convergence tol", "real", ":math:`r=10^{-3}`", "If mixed precision iterative refinement is enabled, convergence tolerance for the low precision phase.", ":math:`0 \le r`"
    "scaling", "string", ":math:`s=` `auto`", "Scale or standardize feature matrix and response vector. Matrix is copied and then rescaled. Option key value auto indicates that rescaling type is chosen by the solver (this also includes no scaling).", ":math:`s=` `auto`, `centering`, `no`, `none`, `scale`, `scale only`, `standardise`, or `standardize`."
    "print options", "string", ":math:`s=` `no`", "Print options.", ":math:`s=` `no`, or `yes`."
@@ -155,23 +156,20 @@ The following options are supported.
    :escape: ~
    :header: "Option name", "Type", "Default", "Description", "Constraints"
    
-   "maximum bins", "integer", ":math:`i=256`", "Maximum number of bins in histograms.", ":math:`2 \le i \le 65535`"
-   "histogram", "string", ":math:`s=` `no`", "Choose whether to use histograms constructed from the data matrix X.", ":math:`s=` `no`, or `yes`."
-   "category split strategy", "string", ":math:`s=` `ordered`", "Strategy to split categorical features. For a given categorical feature, 'one-vs-all' tries to split each categorical value from all the others while 'ordered' will try to split the smaller categories from the bigger ones.", ":math:`s=` `one-vs-all`, or `ordered`."
    "storage order", "string", ":math:`s=` `column-major`", "Whether data is supplied and returned in row- or column-major order.", ":math:`s=` `c`, `column-major`, `f`, `fortran`, or `row-major`."
+   "category split strategy", "string", ":math:`s=` `ordered`", "Strategy to split categorical features. For a given categorical feature, 'one-vs-all' tries to split each categorical value from all the others while 'ordered' will try to split the smaller categories from the bigger ones.", ":math:`s=` `one-vs-all`, or `ordered`."
    "check data", "string", ":math:`s=` `no`", "Check input data for NaNs prior to performing computation.", ":math:`s=` `no`, or `yes`."
    "feature threshold", "real", ":math:`r=1e-05`", "Minimum difference in feature value required for splitting.", ":math:`0 \le r`"
    "node minimum samples", "integer", ":math:`i=2`", "The minimum number of samples required to split an internal node.", ":math:`1 \le i`"
    "predict probabilities", "string", ":math:`s=` `yes`", "evaluate class probabilities (in addition to class predictions). Needs to be set to 'yes' if calls to predict_proba or predict_log_proba are made after fit.", ":math:`s=` `no`, or `yes`."
-   "detect categorical data", "string", ":math:`s=` `no`", "Check if the data is categorical, encoded in [0, n_categories-1].", ":math:`s=` `no`, or `yes`."
    "scoring function", "string", ":math:`s=` `gini`", "Select scoring function to use.", ":math:`s=` `cross-entropy`, `entropy`, `gini`, `misclass`, `misclassification`, or `misclassification-error`."
    "maximum depth", "integer", ":math:`i=29`", "Set the maximum depth of trees.", ":math:`0 \le i \le 29`"
    "seed", "integer", ":math:`i=-1`", "Set the random seed for the random number generator. If the value is -1, a random seed is automatically generated. In this case the resulting classification will create non-reproducible results.", ":math:`-1 \le i`"
    "maximum features", "integer", ":math:`i=0`", "Set the number of features to consider when splitting a node. 0 means take all the features.", ":math:`0 \le i`"
    "minimum split score", "real", ":math:`r=0`", "Minimum score needed for a node to be considered for splitting.", ":math:`0 \le r \le 1`"
-   "category tolerance", "real", ":math:`r=1e-05`", "How far data can be from an integer to be considered not categorical.", ":math:`0 \le r < 1`"
-   "maximum categories", "integer", ":math:`i=50`", "Number of distinct values required for each feature for it to be considered categorical.", ":math:`2 \le i`"
    "minimum impurity decrease", "real", ":math:`r=0`", "Minimum score improvement needed to consider a split from the parent node.", ":math:`0 \le r`"
+   "maximum bins", "integer", ":math:`i=256`", "Maximum number of bins in histograms.", ":math:`2 \le i \le 65535`"
+   "histogram", "string", ":math:`s=` `no`", "Choose whether to use histograms constructed from the data matrix X.", ":math:`s=` `no`, or `yes`."
 
 
 .. _opts_decisionforests:
@@ -250,7 +248,7 @@ The following options are supported.
    "coord convergence tol", "real", ":math:`r=50\;\sqrt{2\,\varepsilon}`", "Tolerance of the projected gradient infinity norm to declare convergence.", ":math:`0 < r < 1`"
    "coord optimality tol", "real", ":math:`r=50\;\sqrt{2\,\varepsilon}`", "Tolerance to declare optimality, e.g. dual-gap, KKT conditions, etc.", ":math:`0 \le r`"
    "ralfit convergence rel tol fun", "real", ":math:`r=10/21\sqrt{2\,\varepsilon}`", "Relative tolerance to declare convergence for the iterative optimization step. See details in optimization solver documentation.", ":math:`0 < r < 1`"
-   "coord skip tol", "real", ":math:`r=50\;\sqrt{2\,\varepsilon}`", "Coordinate skip tolerance, a given coordinate could be skipped if the change between two consecutive iterates is less than tolerance. Any negative value disables the skipping scheme.", ":math:`-1 \le r`"
+   "coord skip tol", "real", ":math:`r=10^{-4}`", "Coordinate skip tolerance, a given coordinate could be skipped if the change between two consecutive iterates is less than tolerance. Any negative value disables the skipping scheme.", "There are no constraints on :math:`r`."
    "ralfit convergence abs tol grd", "real", ":math:`r=500\;\sqrt{2\,\varepsilon}`", "Absolute tolerance on the gradient norm to declare convergence for the iterative optimization step. See details in optimization solver documentation.", ":math:`0 < r < 1`"
 
 
@@ -339,7 +337,10 @@ The following options are supported.
    :escape: ~
    :header: "Option name", "Type", "Default", "Description", "Constraints"
    
-   "algorithm", "string", ":math:`s=` `ivfflat`", "Algorithm used to compute the approximate nearest neighbors.", ":math:`s=` `auto`, or `ivfflat`."
+   "quantization_scheme", "string", ":math:`s=` `per_dimension`", "Scheme used by ivfsq to map values to integer codes. The direct schemes assume values already lie in the format's reconstructed range: int4 uses [-8, 7] signed or [0, 15] unsigned; int8 uses [-128, 127] signed or [0, 255] unsigned. Direct unsigned is unsuitable for residual encoding because IVF residuals may be negative. bfloat16 requires 'direct_signed', which performs direct round-to-nearest-even conversion without scaling.", ":math:`s=` `direct_signed`, `direct_unsigned`, `per_dimension`, or `uniform`."
+   "quantization_residual", "string", ":math:`s=` `yes`", "Whether ivfsq codes encode residuals (x - nearest centroid) rather than raw vectors.", ":math:`s=` `no`, or `yes`."
+   "quantization", "string", ":math:`s=` `bfloat16`", "Storage format used for the indexed database when algorithm is ivfsq.", ":math:`s=` `bfloat16`, `int4`, or `int8`."
+   "algorithm", "string", ":math:`s=` `auto`", "Algorithm used to compute the approximate nearest neighbors. Auto selects ivfflat.", ":math:`s=` `auto`, `ivfflat`, or `ivfsq`."
    "train fraction", "real", ":math:`r=1`", "Fraction of training data to use for k-means clustering.", ":math:`0 < r \le 1`"
    "k-means_iter", "integer", ":math:`i=10`", "Maximum number of k-means iterations to perform at train time", ":math:`1 \le i`"
    "metric", "string", ":math:`s=` `sqeuclidean`", "Metric used to compute distances.", ":math:`s=` `cosine`, `euclidean`, `inner product`, or `sqeuclidean`."
@@ -406,6 +407,29 @@ The following options are supported.
    "min_grad_norm", "real", ":math:`r=1e-07`", "Stop if the gradient norm is below this threshold.", ":math:`0 \le r`"
    "theta", "real", ":math:`r=0.5`", "Barnes-Hut approximation parameter (0 for exact).", ":math:`0 \le r \le 1`"
    "low precision min_grad_norm", "real", ":math:`r=0.0001`", "If mixed precision iterative refinement is enabled, gradient norm convergence threshold for the low precision phase.", ":math:`0 \le r`"
+
+
+.. _opts_nonnegativematrixfactorization:
+
+Nonnegative Matrix Factorization
+==============================================
+
+The following options are supported.
+
+.. csv-table:: :strong:`Table of Options for Nonnegative Matrix Factorization.`
+   :escape: ~
+   :header: "Option name", "Type", "Default", "Description", "Constraints"
+   
+   "init", "string", ":math:`s=` `auto`", "Procedure used to initialize W and H.", ":math:`s=` `auto`, `custom`, `nndsvd`, `nndsvda`, `nndsvdar`, or `random`."
+   "beta_loss", "string", ":math:`s=` `frobenius`", "Loss function to minimize. Currently only Frobenius norm.", ":math:`s=` `frobenius`."
+   "solver", "string", ":math:`s=` `mu`", "NMF solver to use. Currently only multiplicative update.", ":math:`s=` `mu`."
+   "check_every", "integer", ":math:`i=10`", "Number of MU iterations between successive convergence checks. The convergence criterion (relative change of the Frobenius residual against tol) is evaluated once every check_every iterations. Larger values reduce the overhead of the residual computation at the cost of potentially running extra iterations after the threshold is met. Only effective when tol > 0.", ":math:`1 \le i`"
+   "max_iter", "integer", ":math:`i=200`", "Maximum number of MU iterations.", ":math:`1 \le i`"
+   "tol", "real", ":math:`r=0.0001`", "Tolerance for the stopping condition: iterations stop when the relative improvement of the Frobenius residual falls below this value. Set to 0 to disable early stopping. The check frequency is controlled by the 'check_every' option.", ":math:`0 \le r`"
+   "random_state", "integer", ":math:`i=-1`", "Random seed used to initialize W and H.", ":math:`-1 \le i`"
+   "n_components", "integer", ":math:`i=0`", "Number of components to compute. If 0 (default), all components are kept.", ":math:`0 \le i`"
+   "check data", "string", ":math:`s=` `no`", "Check input data for NaNs prior to performing computation.", ":math:`s=` `no`, or `yes`."
+   "storage order", "string", ":math:`s=` `column-major`", "Whether data is supplied and returned in row- or column-major order.", ":math:`s=` `c`, `column-major`, `f`, `fortran`, or `row-major`."
 
 
 .. _opts_datastore:

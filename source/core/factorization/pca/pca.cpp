@@ -36,6 +36,7 @@
 #include "options.hpp"
 #include "pca/pca_options.hpp"
 #include "pca_types.hpp"
+#include "svd/thin_svd.hpp"
 #include <algorithm>
 #include <iostream>
 #include <string.h>
@@ -636,36 +637,13 @@ template <typename T> da_status pca<T>::compute() {
     }
 
     case solver_gesdd: {
-        char JOBZ = 'S';
-
-        // Query gesdd for optimal work space required
-        da::gesdd(&JOBZ, &m_svd, &n_svd, A_svd, &m_svd, sigma.data(), u.data(), &ldu,
-                  vt.data(), &ldvt, estworkspace, &lwork, iwork.data(), &INFO);
-
-        // Handle error
-        if (INFO != 0) {
-            return da_error(
-                this->err, da_status_internal_error,
-                "An internal error occurred while computing the PCA. Please check "
-                "the input data for undefined values.");
-        }
-
-        // Allocate the workspace required
-        lwork = (da_int)estworkspace[0];
-        try {
-            work.resize(lwork);
-        } catch (std::bad_alloc const &) {
-            return da_status_memory_error; // LCOV_EXCL_LINE
-        }
-
-        INFO = 0;
-
-        // Call gesdd
-        da::gesdd(&JOBZ, &m_svd, &n_svd, A_svd, &m_svd, sigma.data(), u.data(), &ldu,
-                  vt.data(), &ldvt, work.data(), &lwork, iwork.data(), &INFO);
-
-        // Handle error
-        if (INFO != 0) {
+        // Delegate the gesdd thin SVD to the dedicated helper. The helper
+        // mirrors LAPACK's gesdd contract: A_svd is destroyed and outputs
+        // are written directly into u / sigma / vt with the supplied
+        // leading dimensions (ldu may exceed m_svd in the QR pre-step path).
+        da_status status = da_svd::thin_svd<T>(A_svd, m_svd, n_svd, m_svd, u.data(), ldu,
+                                               sigma.data(), vt.data(), ldvt, *this->err);
+        if (status != da_status_success) {
             return da_error(
                 this->err, da_status_internal_error,
                 "An internal error occurred while computing the PCA. Please check "

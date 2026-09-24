@@ -23,12 +23,24 @@
 # POSSIBILITY OF SUCH DAMAGE.
 #
 
+# pylint: disable = missing-module-docstring, missing-function-docstring
+# pylint: disable = unused-argument
+
 import pytest
 import faiss
 from aoclda.faiss import faiss_patch, undo_faiss_patch
 from aoclda.faiss._index_ivfflat import IndexIVFFlat as IndexIVFFlat_da
+from aoclda.faiss._index_ivfsq import IndexIVFScalarQuantizer as IndexIVFScalarQuantizer_da
+from aoclda.faiss._index_sq import IndexScalarQuantizer as IndexScalarQuantizer_da
 from aoclda.faiss._index_flat_l2 import IndexFlatL2 as IndexFlatL2_da
-from conftest import _native_IndexFlatL2, _native_IndexIVFFlat, D, NLIST
+from conftest import (
+    _native_IndexFlatL2,
+    _native_IndexIVFFlat,
+    _native_IndexIVFScalarQuantizer,
+    _native_IndexScalarQuantizer,
+    D,
+    NLIST,
+)
 
 
 # ---------------------------------------------------------------------------
@@ -38,6 +50,8 @@ from conftest import _native_IndexFlatL2, _native_IndexIVFFlat, D, NLIST
 def test_patch_installs(capsys):
     faiss_patch(print_patched=True)
     assert faiss.IndexIVFFlat is IndexIVFFlat_da
+    assert faiss.IndexIVFScalarQuantizer is IndexIVFScalarQuantizer_da
+    assert faiss.IndexScalarQuantizer is IndexScalarQuantizer_da
     assert faiss.IndexFlatL2 is IndexFlatL2_da
     out = capsys.readouterr().out
     assert "AOCL Extension for faiss enabled" in out
@@ -48,6 +62,8 @@ def test_unpatch_restores(capsys):
     faiss_patch(print_patched=False)
     undo_faiss_patch(print_patched=True)
     assert faiss.IndexIVFFlat is _native_IndexIVFFlat
+    assert faiss.IndexIVFScalarQuantizer is _native_IndexIVFScalarQuantizer
+    assert faiss.IndexScalarQuantizer is _native_IndexScalarQuantizer
     assert faiss.IndexFlatL2 is _native_IndexFlatL2
     out = capsys.readouterr().out
     assert "AOCL Extension for faiss disabled" in out
@@ -57,6 +73,8 @@ def test_double_patch_idempotent():
     faiss_patch(print_patched=False)
     faiss_patch(print_patched=False)
     assert faiss.IndexIVFFlat is IndexIVFFlat_da
+    assert faiss.IndexIVFScalarQuantizer is IndexIVFScalarQuantizer_da
+    assert faiss.IndexScalarQuantizer is IndexScalarQuantizer_da
     undo_faiss_patch(print_patched=False)
 
 
@@ -68,8 +86,13 @@ def test_selective_patch_by_string():
 
 
 def test_selective_patch_by_list():
-    faiss_patch(['IndexIVFFlat', 'IndexFlatL2'], print_patched=False)
+    faiss_patch(
+        ['IndexIVFFlat', 'IndexIVFScalarQuantizer',
+         'IndexScalarQuantizer', 'IndexFlatL2'],
+        print_patched=False)
     assert faiss.IndexIVFFlat is IndexIVFFlat_da
+    assert faiss.IndexIVFScalarQuantizer is IndexIVFScalarQuantizer_da
+    assert faiss.IndexScalarQuantizer is IndexScalarQuantizer_da
     assert faiss.IndexFlatL2 is IndexFlatL2_da
     undo_faiss_patch(print_patched=False)
 
@@ -110,28 +133,88 @@ def test_da_index_rejected_by_native_composite(patched_faiss):
 
 def test_index_factory_ivfflat_string(patched_faiss):
     idx = faiss.index_factory(D, "IVF64,Flat")
-    assert type(idx) is IndexIVFFlat_da
+    assert isinstance(idx, IndexIVFFlat_da)
     assert idx.nlist == 64
 
 
 def test_index_factory_flat_string_returns_da_wrapper(patched_faiss):
     # _aoclda_index_factory routes "Flat" + METRIC_L2 to IndexFlatL2_da
     idx = faiss.index_factory(D, "Flat")
-    assert type(idx) is IndexFlatL2_da
+    assert isinstance(idx, IndexFlatL2_da)
 
 
 def test_index_factory_metric_inner_product(patched_faiss):
     idx = faiss.index_factory(D, "IVF32,Flat", faiss.METRIC_INNER_PRODUCT)
-    assert type(idx) is IndexIVFFlat_da
+    assert isinstance(idx, IndexIVFFlat_da)
     assert idx.metric_type == faiss.METRIC_INNER_PRODUCT
+
+
+@pytest.mark.parametrize(
+    "description",
+    ["IVF32,SQ4", "IVF32,SQ8", "IVF32,SQ8_direct", "IVF32,SQ8_direct_signed",
+     "IVF32,SQbf16"])
+def test_index_factory_ivfsq_string(patched_faiss, description):
+    idx = faiss.index_factory(D, description)
+    assert isinstance(idx, IndexIVFScalarQuantizer_da)
+    assert idx.nlist == 32
+    assert idx.by_residual is True
+
+
+def test_index_factory_ivfsq_inner_product(patched_faiss):
+    idx = faiss.index_factory(D, "IVF32,SQ8", faiss.METRIC_INNER_PRODUCT)
+    assert isinstance(idx, IndexIVFScalarQuantizer_da)
+    assert idx.metric_type == faiss.METRIC_INNER_PRODUCT
+
+
+@pytest.mark.parametrize(
+    "description",
+    ["SQ4", "SQ8", "SQ8_direct", "SQ8_direct_signed", "SQbf16"])
+def test_index_factory_sq_string(patched_faiss, description):
+    idx = faiss.index_factory(D, description)
+    assert isinstance(idx, IndexScalarQuantizer_da)
+
+
+def test_index_factory_sq_inner_product(patched_faiss):
+    idx = faiss.index_factory(D, "SQ8", faiss.METRIC_INNER_PRODUCT)
+    assert isinstance(idx, IndexScalarQuantizer_da)
+    assert idx.metric_type == faiss.METRIC_INNER_PRODUCT
+
+
+@pytest.mark.parametrize("description", ["SQfp16", "SQ6"])
+def test_index_factory_native_sq_falls_through(patched_faiss, description):
+    idx = faiss.index_factory(D, description)
+    assert isinstance(idx, _native_IndexScalarQuantizer)
+
+
+@pytest.mark.parametrize("description", ["SQ4_uniform", "SQ8_uniform"])
+def test_index_factory_invalid_flat_sq_raises(patched_faiss, description):
+    with pytest.raises(RuntimeError):
+        faiss.index_factory(D, description)
+
+
+@pytest.mark.parametrize("description", ["IVF32,SQfp16"])
+def test_index_factory_unsupported_sq_falls_through(patched_faiss, description):
+    idx = faiss.index_factory(D, description)
+    assert isinstance(idx, _native_IndexIVFScalarQuantizer)
+
+
+@pytest.mark.parametrize(
+    "description",
+    [pytest.param("IVF32,SQ4_uniform", id="uniform-has-no-factory-token"),
+     pytest.param("IVF32,SQ4_direct", id="direct-qtype-does-not-exist"),
+     pytest.param("IVF32,SQ4_direct_signed",
+                  id="direct-signed-qtype-does-not-exist")])
+def test_index_factory_invalid_sq4_falls_through(patched_faiss, description):
+    with pytest.raises(RuntimeError):
+        faiss.index_factory(D, description)
 
 
 def test_index_factory_unpatched_algo_falls_through_to_native(patched_faiss):
     # IVFPQ is not intercepted; _aoclda_index_factory falls through to native faiss
     idx = faiss.index_factory(D, "IVF64,PQ8")
-    assert type(idx) is not IndexIVFFlat_da
-    assert type(idx) is not IndexFlatL2_da
-    assert type(idx) is faiss.IndexIVFPQ
+    assert not isinstance(idx, IndexIVFFlat_da)
+    assert not isinstance(idx, IndexFlatL2_da)
+    assert isinstance(idx, faiss.IndexIVFPQ)
 
 
 if __name__ == "__main__":

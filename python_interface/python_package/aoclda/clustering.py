@@ -57,8 +57,8 @@ class kmeans():
         n_init (int, optional): Number of runs with different random seeds (ignored if you specify
             initial cluster centres). Default=10.
 
-        max_iter (int, optional): Number of runs with different random seeds (ignored if you specify
-            initial cluster centres). Default=300.
+        max_iter (int, optional): Maximum number of iterations performed by the algorithm.
+            Default=300.
 
         seed (int, optional): Seed for random number generation; set to -1 for non-deterministic
             results. Default=-1.

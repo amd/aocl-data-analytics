@@ -75,9 +75,7 @@ da_status serialization_buffer::add_size(size_t value) {
     // Size of buffer can be modified only in reserve mode
     if (this->mode != buffer_mode::reserve)
         return da_status_invalid_option;
-
-    constexpr size_t max_size = static_cast<size_t>(std::numeric_limits<da_int>::max());
-    if (this->size > max_size || value > max_size - this->size)
+    if (value > std::numeric_limits<size_t>::max() - this->size)
         return da_status_invalid_input;
 
     this->size += value;
@@ -458,10 +456,12 @@ template da_status serialization_buffer::insert_data_in_buffer(const char &data)
 
 template da_status serialization_buffer::serialize_data(const bool &data);
 template da_status serialization_buffer::serialize_data(const da_int &data);
+template da_status serialization_buffer::serialize_data(const uint8_t &data);
 template da_status serialization_buffer::serialize_data(const std::string &data);
 template da_status serialization_buffer::serialize_data(const char &data);
 template da_status serialization_buffer::serialize_data(const float &data);
 template da_status serialization_buffer::serialize_data(const double &data);
+template da_status serialization_buffer::serialize_data(const int16_t &data);
 template da_status serialization_buffer::serialize_data(const da_order &data);
 template da_status serialization_buffer::serialize_data(const da_svm_model &data);
 template da_status serialization_buffer::serialize_data(const da_metric &data);
@@ -471,30 +471,44 @@ template da_status serialization_buffer::serialize_data(const logistic_constrain
 template da_status serialization_buffer::serialize_data(const split_property &data);
 template da_status serialization_buffer::serialize_data(const approx_nn_metric &data);
 template da_status serialization_buffer::serialize_data(const da_handle_type &data);
-
 template da_status serialization_buffer::serialize_data(const std::vector<da_int> &data);
+template da_status serialization_buffer::serialize_data(const std::vector<uint8_t> &data);
 template da_status serialization_buffer::serialize_data(const std::vector<float> &data);
 template da_status serialization_buffer::serialize_data(const std::vector<double> &data);
 template da_status
 serialization_buffer::serialize_data(const da_vector::da_vector<da_int> &data);
 template da_status
+serialization_buffer::serialize_data(const da_vector::da_vector<uint8_t> &data);
+template da_status
 serialization_buffer::serialize_data(const da_vector::da_vector<float> &data);
 template da_status
 serialization_buffer::serialize_data(const da_vector::da_vector<double> &data);
+template da_status
+serialization_buffer::serialize_data(const da_vector::da_vector<int16_t> &data);
 template da_status serialization_buffer::serialize_data(
     const std::vector<da_vector::da_vector<da_int>> &data);
 template da_status serialization_buffer::serialize_data(
     const std::vector<da_vector::da_vector<float>> &data);
 template da_status serialization_buffer::serialize_data(
     const std::vector<da_vector::da_vector<double>> &data);
+template da_status serialization_buffer::serialize_data(
+    const std::vector<da_vector::da_vector<int16_t>> &data);
+template da_status serialization_buffer::serialize_data(
+    const std::vector<da_vector::da_vector<uint8_t>> &data);
+template da_status
+serialization_buffer::serialize_data(const da_vector::da_vector<int8_t> &data);
+template da_status serialization_buffer::serialize_data(
+    const std::vector<da_vector::da_vector<int8_t>> &data);
 
 // LOAD
 template da_status serialization_buffer::deserialize_data(bool &data);
 template da_status serialization_buffer::deserialize_data(da_int &data);
+template da_status serialization_buffer::deserialize_data(uint8_t &data);
 template da_status serialization_buffer::deserialize_data(std::string &data);
 template da_status serialization_buffer::deserialize_data(char &data);
 template da_status serialization_buffer::deserialize_data(float &data);
 template da_status serialization_buffer::deserialize_data(double &data);
+template da_status serialization_buffer::deserialize_data(int16_t &data);
 template da_status serialization_buffer::deserialize_data(da_order &data);
 template da_status serialization_buffer::deserialize_data(da_svm_model &data);
 template da_status serialization_buffer::deserialize_data(da_metric &data);
@@ -504,8 +518,8 @@ template da_status serialization_buffer::deserialize_data(logistic_constraint &d
 template da_status serialization_buffer::deserialize_data(split_property &data);
 template da_status serialization_buffer::deserialize_data(approx_nn_metric &data);
 template da_status serialization_buffer::deserialize_data(da_handle_type &data);
-
 template da_status serialization_buffer::deserialize_data(std::vector<da_int> &data);
+template da_status serialization_buffer::deserialize_data(std::vector<uint8_t> &data);
 template da_status serialization_buffer::deserialize_data(std::vector<float> &data);
 template da_status serialization_buffer::deserialize_data(std::vector<double> &data);
 template da_status
@@ -514,6 +528,8 @@ template da_status
 serialization_buffer::deserialize_data(da_vector::da_vector<float> &data);
 template da_status
 serialization_buffer::deserialize_data(da_vector::da_vector<double> &data);
+template da_status
+serialization_buffer::deserialize_data(da_vector::da_vector<int16_t> &data);
 
 template da_status
 serialization_buffer::deserialize_data(std::vector<da_vector::da_vector<da_int>> &data);
@@ -521,14 +537,27 @@ template da_status
 serialization_buffer::deserialize_data(std::vector<da_vector::da_vector<float>> &data);
 template da_status
 serialization_buffer::deserialize_data(std::vector<da_vector::da_vector<double>> &data);
+template da_status
+serialization_buffer::deserialize_data(std::vector<da_vector::da_vector<int16_t>> &data);
+template da_status
+serialization_buffer::deserialize_data(da_vector::da_vector<uint8_t> &data);
+template da_status
+serialization_buffer::deserialize_data(std::vector<da_vector::da_vector<uint8_t>> &data);
+template da_status
+serialization_buffer::deserialize_data(da_vector::da_vector<int8_t> &data);
+template da_status
+serialization_buffer::deserialize_data(std::vector<da_vector::da_vector<int8_t>> &data);
 
 // REROUTE
 
 template da_status serialization_buffer::dispatch_buffer_io(bool &data);
-template da_status serialization_buffer::dispatch_buffer_io(da_int &data);
+template da_status serialization_buffer::dispatch_buffer_io(int32_t &data);
+template da_status serialization_buffer::dispatch_buffer_io(int64_t &data);
+template da_status serialization_buffer::dispatch_buffer_io(uint8_t &data);
 template da_status serialization_buffer::dispatch_buffer_io(std::string &data);
 template da_status serialization_buffer::dispatch_buffer_io(float &data);
 template da_status serialization_buffer::dispatch_buffer_io(double &data);
+template da_status serialization_buffer::dispatch_buffer_io(int16_t &data);
 template da_status serialization_buffer::dispatch_buffer_io(da_order &data);
 template da_status serialization_buffer::dispatch_buffer_io(da_svm_model &data);
 template da_status serialization_buffer::dispatch_buffer_io(da_metric &data);
@@ -538,7 +567,9 @@ template da_status serialization_buffer::dispatch_buffer_io(logistic_constraint 
 template da_status serialization_buffer::dispatch_buffer_io(split_property &data);
 template da_status serialization_buffer::dispatch_buffer_io(approx_nn_metric &data);
 
-template da_status serialization_buffer::dispatch_buffer_io(std::vector<da_int> &data);
+template da_status serialization_buffer::dispatch_buffer_io(std::vector<int32_t> &data);
+template da_status serialization_buffer::dispatch_buffer_io(std::vector<int64_t> &data);
+template da_status serialization_buffer::dispatch_buffer_io(std::vector<uint8_t> &data);
 template da_status serialization_buffer::dispatch_buffer_io(std::vector<float> &data);
 template da_status serialization_buffer::dispatch_buffer_io(std::vector<double> &data);
 
@@ -548,6 +579,8 @@ template da_status
 serialization_buffer::dispatch_buffer_io(da_vector::da_vector<float> &data);
 template da_status
 serialization_buffer::dispatch_buffer_io(da_vector::da_vector<double> &data);
+template da_status
+serialization_buffer::dispatch_buffer_io(da_vector::da_vector<int16_t> &data);
 
 template da_status
 serialization_buffer::dispatch_buffer_io(std::vector<da_vector::da_vector<da_int>> &data);
@@ -555,6 +588,17 @@ template da_status
 serialization_buffer::dispatch_buffer_io(std::vector<da_vector::da_vector<float>> &data);
 template da_status
 serialization_buffer::dispatch_buffer_io(std::vector<da_vector::da_vector<double>> &data);
+template da_status serialization_buffer::dispatch_buffer_io(
+    std::vector<da_vector::da_vector<int16_t>> &data);
+
+template da_status
+serialization_buffer::dispatch_buffer_io(da_vector::da_vector<uint8_t> &data);
+template da_status serialization_buffer::dispatch_buffer_io(
+    std::vector<da_vector::da_vector<uint8_t>> &data);
+template da_status
+serialization_buffer::dispatch_buffer_io(da_vector::da_vector<int8_t> &data);
+template da_status
+serialization_buffer::dispatch_buffer_io(std::vector<da_vector::da_vector<int8_t>> &data);
 
 // USER DATA KERNELS
 

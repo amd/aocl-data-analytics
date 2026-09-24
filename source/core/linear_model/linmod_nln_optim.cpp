@@ -886,29 +886,11 @@ da_int stepfun_linreg_sklearn(da_int nfeat, T *coef, T *knew, da_int k, T *f, vo
     const T l2{da_fp16::mul_int(data->l2reg, nsamples * 2)};
     T betak;
 
-    if (coef[k] != T(0)) {
-        if (k < nmod) {
-            // <X[:,k], residual[:]>
-            da_blas::cblas_axpy(nsamples, coef[k], &data->X[k * data->Xcinc], data->Xrinc,
-                                data->residual.data(), 1);
-        } else { // Intercept
-            if constexpr (simd_ok<T>) {
-#pragma omp simd
-                for (da_int i = 0; i < nsamples; ++i) {
-                    data->residual[i] += coef[k];
-                }
-            } else {
-                for (da_int i = 0; i < nsamples; ++i) {
-                    data->residual[i] += coef[k];
-                }
-            }
-        }
-    }
-
     T gk = T(0);
     if (k < nmod) {
         gk = da_blas::cblas_dot(nsamples, &data->X[k * data->Xcinc], data->Xrinc,
                                 data->residual.data(), 1);
+        gk += coef[k] * static_cast<T>(data->xv[k]);
     } else { // Intercept
         if constexpr (simd_ok<T>) {
 #pragma omp simd reduction(+ : gk)
@@ -920,6 +902,7 @@ da_int stepfun_linreg_sklearn(da_int nfeat, T *coef, T *knew, da_int k, T *f, vo
                 gk += data->residual[i];
             }
         }
+        gk += da_fp16::mul_int(coef[k], nsamples);
     }
 
     if (positive && gk < T(0))
@@ -938,20 +921,20 @@ da_int stepfun_linreg_sklearn(da_int nfeat, T *coef, T *knew, da_int k, T *f, vo
         betak = static_cast<T>(static_cast<W>(num) / (xv + static_cast<W>(l2)));
     }
 
-    if (betak != T(0)) {
+    const T deltak = coef[k] - betak;
+    if (deltak != T(0)) {
         if (k < nmod) {
-            da_blas::cblas_axpy(nsamples, -betak, &data->X[k * data->Xcinc], data->Xrinc,
+            da_blas::cblas_axpy(nsamples, deltak, &data->X[k * data->Xcinc], data->Xrinc,
                                 data->residual.data(), 1);
-        } else {
+        } else { // Intercept
             if constexpr (simd_ok<T>) {
 #pragma omp simd
                 for (da_int i = 0; i < nsamples; ++i) {
-                    // Intercept
-                    data->residual[i] -= betak;
+                    data->residual[i] += deltak;
                 }
             } else {
                 for (da_int i = 0; i < nsamples; ++i) {
-                    data->residual[i] -= betak;
+                    data->residual[i] += deltak;
                 }
             }
         }
@@ -960,6 +943,7 @@ da_int stepfun_linreg_sklearn(da_int nfeat, T *coef, T *knew, da_int k, T *f, vo
     *knew = betak;
 
     data = nullptr;
+
     return 0;
 }
 

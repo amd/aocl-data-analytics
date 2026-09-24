@@ -46,6 +46,7 @@ function(aoclda_add_dependencies OBJ_NAME)
             core/kernel_functions
             core/interpolation
             core/approximate_neighbors
+            core/approximate_neighbors/quantization
             core/dimension_reduction
             ${PROJECT_SOURCE_DIR}/external/Lbfgsb.3.0
             ${PROJECT_SOURCE_DIR}/external/RALFit
@@ -72,7 +73,8 @@ set(DA_LINMOD_PUBLIC core/linear_model/linmod_public.cpp)
 set(DA_BASIC_STATISTICS_PUBLIC
   core/basic_statistics/basic_statistics_public.cpp)
 set(DA_FACTORIZATION_PUBLIC core/factorization/pca_public.cpp
-  core/factorization/kernel_pca_public.cpp)
+  core/factorization/kernel_pca_public.cpp
+  core/factorization/nmf_public.cpp)
 set(DA_UTILS_PUBLIC core/utilities/utils_public.cpp
   core/utilities/fp16_helpers.cpp
   core/utilities/aoclda_c_wrapper.cpp)
@@ -113,7 +115,9 @@ set(DA_BASIC_STATISTICS_INTERNAL
   core/basic_statistics/order_statistics.cpp
   core/basic_statistics/row_to_col_major.cpp)
 set(DA_FACTORIZATION_INTERNAL core/factorization/pca/pca.cpp
-  core/factorization/kernel_pca/kernel_pca.cpp)
+  core/factorization/kernel_pca/kernel_pca.cpp
+  core/factorization/svd/thin_svd.cpp
+  core/factorization/nmf/nmf.cpp)
 set(DA_DECISION_FOREST_INTERNAL
   core/decision_forest/common/histogram.cpp
   core/decision_forest/common/scoring.cpp
@@ -158,7 +162,8 @@ set(DA_INTERPOLATION_INTERNAL
   core/interpolation/interpolation.cpp
   core/interpolation/cubic_spline/cubic_spline.cpp)
 set(DA_APPROXIMATE_NEIGHBORS_INTERNAL
-  core/approximate_neighbors/approximate_neighbors.cpp)
+  core/approximate_neighbors/approximate_neighbors.cpp
+  core/approximate_neighbors/quantization/scalar_quantizer.cpp)
 set(DA_DIMENSION_REDUCTION_INTERNAL
   core/dimension_reduction/tsne/tsne.cpp
   core/dimension_reduction/tsne/tsne_kernels.cpp

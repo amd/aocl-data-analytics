@@ -44,6 +44,8 @@
 #undef min
 #undef max
 
+// DOCUMENTATION NEED: Print destructive
+
 /*
  * da_options namespace provides a Registry class that "registers"
  * options and an Option class that defines an "option" element.
@@ -203,6 +205,9 @@ struct OptionUtils {
 };
 
 class OptionBase {
+  protected:
+    bool destructive{true};
+
   public:
     const string setby_l[3] = {"(default)", "(user)", "(solver)"};
 
@@ -227,6 +232,8 @@ class OptionBase {
     string get_name(void) const { return name; }
     option_t get_option_t(void) const { return otype; }
     string get_errmsg(void) const { return errmsg; }
+    bool is_destructive() { return destructive; }
+    void set_destructive(bool value) { destructive = value; }
     template <typename T>
     da_status validate(T lower, lbound_t lbound, T upper, ubound_t ubound, T value,
                        bool checkall = true) {
@@ -329,11 +336,12 @@ template <typename T> class OptionNumeric : public OptionBase {
 
   public:
     OptionNumeric(string name, string desc, T lower, lbound_t lbound, T upper,
-                  ubound_t ubound, T vdefault, string vddesc = "",
-                  bool be_strict = false) {
+                  ubound_t ubound, T vdefault, string vddesc = "", bool be_strict = false,
+                  bool destructive = true) {
         static_assert(is_same<T, da_int>::value || is_floating_point<T>::value,
                       "Constructor only valid for non boolean numeric type");
         strict = be_strict;
+        OptionNumeric::destructive = destructive;
         da_status status = set_name(name);
         if (status != da_status_success)
             throw std::invalid_argument(errmsg);
@@ -351,7 +359,8 @@ template <typename T> class OptionNumeric : public OptionBase {
         OptionNumeric::otype = get_type<T>();
         OptionNumeric::vddesc = vddesc;
     };
-    OptionNumeric(string name, string desc, bool vdefault, bool be_strict = false) {
+    OptionNumeric(string name, string desc, bool vdefault, bool be_strict = false,
+                  bool destructive = true) {
         static_assert(is_same<T, bool>::value, "Constructor only valid for boolean");
         strict = be_strict;
         da_status status = set_name(name);
@@ -366,6 +375,7 @@ template <typename T> class OptionNumeric : public OptionBase {
         OptionNumeric::upper = true;
         OptionNumeric::ubound = ubound_t::lessequal;
         OptionNumeric::otype = get_type<bool>();
+        OptionNumeric::destructive = destructive;
     };
 
     virtual ~OptionNumeric(){};
@@ -533,7 +543,7 @@ class OptionString : public OptionBase {
 
   public:
     OptionString(string name, string desc, map<string, da_int> labels, string vdefault,
-                 bool be_strict = false) {
+                 bool be_strict = false, bool destructive = true) {
         strict = be_strict;
         string label, label_vdefault;
         bool defok = false;
@@ -591,6 +601,7 @@ class OptionString : public OptionBase {
         OptionString::value = label_vdefault;
         OptionString::desc = desc;
         OptionString::otype = get_type<string>();
+        OptionString::destructive = destructive;
     };
 
     virtual ~OptionString(){};
@@ -812,7 +823,8 @@ class OptionRegistry {
      * setby - flag 0 (default), 1 (user), 2 (solver)
      */
     template <typename U>
-    da_status set(string name, U value, setby_t setby = setby_t::user) {
+    da_status set(string name, U value, setby_t setby = setby_t::user,
+                  bool *destructive = nullptr) {
         if (readonly) {
             errmsg = "Registry is locked";
             return da_status_option_locked;
@@ -850,13 +862,16 @@ class OptionRegistry {
         if (status != da_status_success) {
             // Get the error message
             errmsg = std::static_pointer_cast<OptionType>(search->second)->get_errmsg();
-        }
+        } else if (destructive)
+            *destructive =
+                std::static_pointer_cast<OptionType>(search->second)->is_destructive();
         return status;
     }
 
     // _Float16 overload: options are stored as float, so promote and delegate
-    da_status set(string name, _Float16 value, setby_t setby = setby_t::user) {
-        return set(name, static_cast<float>(value), setby);
+    da_status set(string name, _Float16 value, setby_t setby = setby_t::user,
+                  bool *destructive = nullptr) {
+        return set(name, static_cast<float>(value), setby, destructive);
     }
 
     /* Registry Getter
@@ -1044,6 +1059,21 @@ class OptionRegistry {
         }
         return std::static_pointer_cast<OptionString>(search->second)
             ->query_map(value, id, find_by_value);
+    }
+
+    da_status set_destructive(string name, bool destructive) {
+        auto search = registry.find(name); // search assuming name is tidy
+        if (search == registry.end()) {
+            string oname{name};
+            OptionUtils::prep_str(oname); // this is expensive: done only if search failed
+            search = registry.find(oname); // search again with oname tidy
+            if (search == registry.end()) {
+                errmsg = "Option '" + oname + "' not found in the option registry";
+                return da_status_option_not_found;
+            }
+        }
+        search->second->set_destructive(destructive);
+        return da_status_success;
     }
 
     // Auxiliary

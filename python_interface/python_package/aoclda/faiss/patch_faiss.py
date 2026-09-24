@@ -28,11 +28,23 @@
 import re
 import faiss
 from ._index_ivfflat import IndexIVFFlat as IndexIVFFlat_da
+from ._index_ivfsq import IndexIVFScalarQuantizer as IndexIVFScalarQuantizer_da
+from ._index_sq import IndexScalarQuantizer as IndexScalarQuantizer_da
 from ._index_flat_l2 import IndexFlatL2 as IndexFlatL2_da
 from ._kmeans import Kmeans as Kmeans_da
 
 _orig_index_factory = faiss.index_factory
 _orig_kmeans = faiss.Kmeans
+
+# Map FAISS's canonical factory tokens to the qtypes accepted by the wrapper.
+# QT_4bit_uniform is constructor-only in FAISS; there is no SQ4_uniform token.
+_SQ_FACTORY_QTYPES = {
+    'SQ4': faiss.ScalarQuantizer.QT_4bit,
+    'SQ8': faiss.ScalarQuantizer.QT_8bit,
+    'SQ8_direct': faiss.ScalarQuantizer.QT_8bit_direct,
+    'SQ8_direct_signed': faiss.ScalarQuantizer.QT_8bit_direct_signed,
+    'SQbf16': faiss.ScalarQuantizer.QT_bf16,
+}
 
 
 def _aoclda_index_factory(d, description, metric=faiss.METRIC_L2):
@@ -44,6 +56,15 @@ def _aoclda_index_factory(d, description, metric=faiss.METRIC_L2):
         # IndexFlatL2 coarse quantizer is fine regardless of the search metric.
         quantizer = faiss.IndexFlatL2(d)
         return IndexIVFFlat_da(quantizer, d, nlist, metric)
+    m = re.fullmatch(
+        r'IVF(\d+),(SQ4|SQ8|SQ8_direct|SQ8_direct_signed|SQbf16)', desc)
+    if m and m.group(2) in _SQ_FACTORY_QTYPES:
+        nlist = int(m.group(1))
+        quantizer = faiss.IndexFlatL2(d)
+        return IndexIVFScalarQuantizer_da(
+            quantizer, d, nlist, _SQ_FACTORY_QTYPES[m.group(2)], metric)
+    if desc in _SQ_FACTORY_QTYPES:
+        return IndexScalarQuantizer_da(d, _SQ_FACTORY_QTYPES[desc], metric)
     if desc == 'Flat' and metric == faiss.METRIC_L2:
         return IndexFlatL2_da(d)
     return _orig_index_factory(d, description, metric)
@@ -54,6 +75,16 @@ AMD_FAISS_SYMBOLS = {
         'pack': faiss,
         'faiss_sym': getattr(faiss, 'IndexIVFFlat'),
         'da_sym': IndexIVFFlat_da,
+    },
+    'IndexIVFScalarQuantizer': {
+        'pack': faiss,
+        'faiss_sym': getattr(faiss, 'IndexIVFScalarQuantizer'),
+        'da_sym': IndexIVFScalarQuantizer_da,
+    },
+    'IndexScalarQuantizer': {
+        'pack': faiss,
+        'faiss_sym': getattr(faiss, 'IndexScalarQuantizer'),
+        'da_sym': IndexScalarQuantizer_da,
     },
     'IndexFlatL2': {
         'pack': faiss,

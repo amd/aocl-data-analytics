@@ -1,7 +1,6 @@
 error_notifications:
   recipients:
     - dl.CSG_AIEnablement@amd.com
-    - andrew.sajo@amd.com
 assistantDefaults:
   skip_draft: true
   label_exclusions: []

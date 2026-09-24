@@ -232,18 +232,6 @@ def test_categorical_features(numpy_precision, numpy_order):
     score = tree.score(X_test, y_test)
     assert np.abs(score - 1.0) < 1.0e-04
 
-    # automatic detection of categorical data
-    tree = decision_tree(seed=42, detect_categorical_data=True)
-    tree.fit(X_train, y_train)
-    score = tree.score(X_test, y_test)
-    assert np.abs(score - 1.0) < 1.0e-04
-    # one vs all
-    tree = decision_tree(seed=42, detect_categorical_data=True,
-                         category_split_strategy="one-vs-all")
-    tree.fit(X_train, y_train)
-    score = tree.score(X_test, y_test)
-    assert np.abs(score - 1.0) < 1.0e-04
-
 
 def test_getters_errors():
     tree = decision_tree(seed=42)
@@ -306,7 +294,7 @@ def test_small_histograms(numpy_precision, numpy_order):
     # autopep8: on
 
     # Solve first without binning
-    tree = decision_tree(seed=42, detect_categorical_data=True)
+    tree = decision_tree(seed=42)
     tree.fit(X_train, y_train)
     score = tree.score(X_test, y_test)
     assert np.abs(score - 1.0) < 1.0e-04

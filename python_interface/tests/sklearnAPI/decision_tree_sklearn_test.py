@@ -1,4 +1,4 @@
-# Copyright (C) 2024-2025 Advanced Micro Devices, Inc. All rights reserved.
+# Copyright (C) 2024-2026 Advanced Micro Devices, Inc. All rights reserved.
 #
 # Redistribution and use in source and binary forms, with or without modification,
 # are permitted provided that the following conditions are met:
@@ -165,7 +165,7 @@ def test_small_histograms(numpy_precision, numpy_order):
     # Solve first without binning
     skpatch()
     from sklearn import tree
-    clf = tree.DecisionTreeClassifier(detect_categorical_data=True)
+    clf = tree.DecisionTreeClassifier()
     clf.fit(X_train, y_train)
     da_yp = clf.predict(X_test)
     da_yprob = clf.predict_proba(X_test)

@@ -25,7 +25,7 @@
  *
  */
 
-/* Based on code at https://people.sc.fsu.edu/~jburkardt/f77_src/asa136/asa136.html with minimal edits
+/*
 
   AMD CHANGES:
   - templating
@@ -74,7 +74,7 @@ void kmns(const T a[], da_int m, da_int n, da_int lda, T c[], da_int k, da_int i
 /*
   Purpose:
 
-    KMNS carries out the K-means algorithm.
+    KMNS carries out the k-means algorithm.
 
   Discussion:
 

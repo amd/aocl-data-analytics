@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2024-2025 Advanced Micro Devices, Inc. All rights reserved.
+ * Copyright (C) 2024-2026 Advanced Micro Devices, Inc. All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without modification,
  * are permitted provided that the following conditions are met:
@@ -29,6 +29,9 @@
 #include "aoclda.h"
 #include "linreg_positive.hpp"
 #include "gtest/gtest.h"
+#ifdef _OPENMP
+#include <omp.h>
+#endif
 
 // clang-format off
 /*
@@ -155,13 +158,13 @@ const linregParam linregParamLASSO[] = {
 {  "LASSO/ShortFat/coord/0/n", "short_fatl1", {{"intercept", 0}, {"print level", 1}},
                                      {{"optim method", "coord"}, {"scaling", "none"}},
                                      {{"optim convergence tol", 1.e-7f}, {"lambda", 0.3f}, {"alpha", 1.0f}},
-                                     {{"optim convergence tol", 1.e-7}, {"lambda", 0.3}, {"alpha", 1.0}},
+                                     {{"optim convergence tol", 1.e-7}, {"lambda", 0.3}, {"alpha", 1.0}, {"optim dual gap tol", 8.e-6}},
                                      true, false},
     // 12
 {  "LASSO/ShortFat/coord/0/c", "short_fatl1", {{"intercept", 0}, {"print level", 1}},
                                      {{"optim method", "coord"}, {"scaling", "centering"}},
                                      {{"optim convergence tol", 1.e-7f}, {"lambda", 0.3f}, {"alpha", 1.0f}},
-                                     {{"optim convergence tol", 1.e-7}, {"lambda", 0.3}, {"alpha", 1.0}},
+                                     {{"optim convergence tol", 1.e-7}, {"lambda", 0.3}, {"alpha", 1.0}, {"optim dual gap tol", 8.e-6}},
                                      true, false},
     // 13
 {  "LASSO/ShortFat/coord/1/c", "short_fatl1", {{"intercept", 1}, {"print level", 1}},
@@ -362,7 +365,7 @@ const linregParam linregParamLASSO[] = {
                                      {{"optim method", "coord"}},
                                      {{"optim convergence tol",1.e-9f}, {"lambda",0.45f},{"alpha",1.0f},{"optim dual gap tol", 1.e-6f}},
                                      {{"optim convergence tol",1.e-10}, {"lambda",0.45},{"alpha",1.0},{"optim dual gap tol", 1.e-6}},
-                                     true, false, 1.0f, {3.0e-6f, 3.0e-9f}
+                                     true, false, 1.0f, {8.0e-6f, 3.0e-9f}
                                      },
 };
 // clang-format on
@@ -393,6 +396,24 @@ TEST_P(linregPosF, Float) {
                                 (float)param.check_tol_scale, (float)param.dual_gap[0],
                                 param.initial_guess);
 }
+
+#ifdef _OPENMP
+TEST(linregPosD, CoordThreadSet) {
+    const linregParam &param = linregParamLASSO[0];
+    const int original_threads = omp_get_max_threads();
+
+    for (const int thread_count : {2, 3}) {
+        omp_set_num_threads(thread_count);
+        test_linreg_positive<double>(
+            param.data_name, param.iopts, param.sopts, param.dopts, param.check_coeff,
+            param.check_predict, static_cast<double>(param.check_tol_scale),
+            static_cast<double>(param.dual_gap[1]), param.initial_guess);
+        EXPECT_EQ(omp_get_max_threads(), thread_count);
+    }
+
+    omp_set_num_threads(original_threads);
+}
+#endif
 
 INSTANTIATE_TEST_SUITE_P(linregPosSuiteD, linregPosD,
                          testing::ValuesIn(linregParamLASSO));

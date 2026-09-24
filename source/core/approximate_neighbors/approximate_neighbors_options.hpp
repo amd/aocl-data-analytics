@@ -34,6 +34,7 @@
 #include "da_error.hpp"
 #include "macros.h"
 #include "options.hpp"
+#include "scalar_quantizer.hpp"
 
 namespace ARCH {
 
@@ -85,10 +86,13 @@ inline da_status register_approximate_neighbors_options(da_options::OptionRegist
         // String options
         std::shared_ptr<OptionString> os;
         os = std::make_shared<OptionString>(OptionString(
-            "algorithm", "Algorithm used to compute the approximate nearest neighbors.",
+            "algorithm",
+            "Algorithm used to compute the approximate nearest neighbors. Auto selects "
+            "ivfflat.",
             {{"auto", approx_nn_algorithm::automatic},
-             {"ivfflat", approx_nn_algorithm::ivfflat}},
-            "ivfflat"));
+             {"ivfflat", approx_nn_algorithm::ivfflat},
+             {"ivfsq", approx_nn_algorithm::ivfsq}},
+            "auto"));
         opts.register_opt(os);
         os = std::make_shared<OptionString>(
             OptionString("metric", "Metric used to compute distances.",
@@ -97,6 +101,35 @@ inline da_status register_approximate_neighbors_options(da_options::OptionRegist
                           {"inner product", inner_product},
                           {"cosine", cosine}},
                          "sqeuclidean"));
+        opts.register_opt(os);
+        os = std::make_shared<OptionString>(OptionString(
+            "quantization",
+            "Storage format used for the indexed database when algorithm is ivfsq.",
+            {{"int8", scalar_quantizer::int8},
+             {"int4", scalar_quantizer::int4},
+             {"bfloat16", scalar_quantizer::bfloat16}},
+            "bfloat16"));
+        opts.register_opt(os);
+        os = std::make_shared<OptionString>(OptionString(
+            "quantization_scheme",
+            "Scheme used by ivfsq to map values to integer codes. "
+            "The direct schemes assume values already lie in the format's "
+            "reconstructed range: int4 uses [-8, 7] signed or [0, 15] unsigned; "
+            "int8 uses [-128, 127] signed or [0, 255] unsigned. Direct unsigned "
+            "is unsuitable for residual encoding because IVF residuals may be "
+            "negative. bfloat16 requires 'direct_signed', which performs direct "
+            "round-to-nearest-even conversion without scaling.",
+            {{"per_dimension", scalar_quantizer::per_dimension},
+             {"uniform", scalar_quantizer::uniform},
+             {"direct_unsigned", scalar_quantizer::direct_unsigned},
+             {"direct_signed", scalar_quantizer::direct_signed}},
+            "per_dimension"));
+        opts.register_opt(os);
+        os = std::make_shared<OptionString>(OptionString(
+            "quantization_residual",
+            "Whether ivfsq codes encode residuals (x - nearest centroid) rather than "
+            "raw vectors.",
+            {{"yes", 1}, {"no", 0}}, "yes"));
         opts.register_opt(os);
     } catch (std::bad_alloc &) {
         return da_error(&err, da_status_memory_error, // LCOV_EXCL_LINE

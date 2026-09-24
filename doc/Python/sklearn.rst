@@ -96,6 +96,11 @@ The following scikit-learn classes are currently available in the AOCL-DA extens
      - * ``fit``, ``transform``, ``inverse_transform`` and ``fit_transform`` methods and various class attributes
        * user-callable and ``cosine`` kernels are not supported
        * ``randomized`` and ``arpack`` eigen solvers are not supported
+   * - ``sklearn.decomposition.NMF``
+     - * ``fit``, ``transform``, ``inverse_transform``, ``fit_transform`` and ``get_params`` methods and ``components_``, ``n_components_``, ``reconstruction_err_``, ``n_iter_``, ``n_features_in_`` attributes are supported.
+       * only ``mu`` solver and ``frobenius`` beta loss are supported.
+       * ``set_params``, ``set_output``, ``get_feature_names_out``, ``get_metadata_routing`` methods and ``feature_names_in_`` attribute are not supported.
+       * ``alpha_W``, ``alpha_H``, ``l1_ratio``, ``verbose`` and ``shuffle`` parameters are not supported.
    * - ``sklearn.linear_model.LinearRegression``
      - ``fit``, ``predict`` and ``score`` methods. LBFGSB solver is not available in precompiled Windows wheels.
    * - ``sklearn.linear_model.Ridge``

@@ -1,0 +1,99 @@
+---
+# Copyright (C) 2026 Advanced Micro Devices, Inc. All rights reserved.
+#
+# Redistribution and use in source and binary forms, with or without modification,
+# are permitted provided that the following conditions are met:
+# 1. Redistributions of source code must retain the above copyright notice,
+#    this list of conditions and the following disclaimer.
+# 2. Redistributions in binary form must reproduce the above copyright notice,
+#    this list of conditions and the following disclaimer in the documentation
+#    and/or other materials provided with the distribution.
+# 3. Neither the name of the copyright holder nor the names of its contributors
+#    may be used to endorse or promote products derived from this software without
+#    specific prior written permission.
+#
+# THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS "AS IS" AND
+# ANY EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED TO, THE IMPLIED
+# WARRANTIES OF MERCHANTABILITY AND FITNESS FOR A PARTICULAR PURPOSE ARE DISCLAIMED.
+# IN NO EVENT SHALL THE COPYRIGHT HOLDER OR CONTRIBUTORS BE LIABLE FOR ANY DIRECT,
+# INDIRECT, INCIDENTAL, SPECIAL, EXEMPLARY, OR CONSEQUENTIAL DAMAGES (INCLUDING,
+# BUT NOT LIMITED TO, PROCUREMENT OF SUBSTITUTE GOODS OR SERVICES; LOSS OF USE, DATA,
+# OR PROFITS; OR BUSINESS INTERRUPTION) HOWEVER CAUSED AND ON ANY THEORY OF LIABILITY,
+# WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE)
+# ARISING IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE
+# POSSIBILITY OF SUCH DAMAGE.
+
+title: "Logistic Regression Classifier"
+output: html_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+## Overview
+
+This example demonstrates multiclass logistic regression with an intercept using the `aoclda` package.
+
+```{r library}
+library(aoclda)
+```
+
+## Define Data
+
+```{r data}
+X <- matrix(
+  c(
+    -0.73018489, -0.77691935, -0.5531103, -0.53005191, -0.29156667,
+     0.1168031, -1.40480427, -0.33364746, -1.12263088, -1.48629103,
+    -0.86543502, -1.12070302, -0.9318949,  0.07586872, -0.66288856,
+     0.18171725, -0.737435,   0.22143158, -0.37855445,  0.99452555,
+    -0.11916944,  0.42473491,  1.08249098,  0.3675828,   0.45179015,
+     1.99695757,  2.88362735, -0.45059391,  1.60981248, -0.72399731,
+     0.79898074,  2.11187681, -1.43869773, -1.76823514,  2.48784366,
+     2.44513227,  0.07709601,  2.87190709,  0.05356797,  0.5230911,
+     1.01352685, -1.11759934, -0.75510393,  0.36976656, -1.71651458,
+    -0.67448552,  1.98517725,  0.56222941,  0.07899979,  1.76713307
+  ),
+  nrow = 25, ncol = 2
+)
+
+labels <- c(1, 1, 0, 1, 0, 2, 0, 0, 0, 1, 1, 0,
+            1, 2, 1, 2, 0, 0, 2, 2, 0, 2, 2, 2, 1)
+```
+
+## Train/Test Split
+
+```{r split}
+result <- train_test_split(X, labels, test_size = 0.2, seed = 2001L)
+X_train <- result[[1]]
+X_test <- result[[2]]
+labels_train <- result[[3]]
+labels_test <- result[[4]]
+```
+
+## Fit
+
+```{r fit}
+clss <- linmod$new("logistic", intercept = TRUE)
+clss$fit(X_train, labels_train)
+```
+
+## Score
+
+```{r score}
+acc <- clss$score(X_train, labels_train)
+cat(sprintf("Training accuracy: %.3f\n", acc))
+cat("Expected          : ~0.75\n")
+```
+
+## Predict
+
+```{r predict}
+pred <- clss$predict(X_test)
+
+cat("Predictions vs Expected:\n")
+for (i in seq_along(pred)) {
+  cat(sprintf("  predicted %d    expected %d\n", as.integer(pred[i]), as.integer(labels_test[i])))
+}
+```

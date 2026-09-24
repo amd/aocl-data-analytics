@@ -180,6 +180,7 @@ template <typename T> class linear_model : public basic_handle<T> {
     T optim_convergence_tol{T(1.e-4)};
     T optim_progress_factor{0};
     T optim_dual_gap_tol{T(1.e-4)};
+    T optim_coord_skip_tol{T(1.e-4)};
     T optim_time_limit{T(1000000)};
     da_int optim_coord_skip_min = 2;
     da_int optim_coord_skip_max = 100;
@@ -264,8 +265,8 @@ template <typename T> class linear_model : public basic_handle<T> {
                  bool intercept, linmod_method method_id, T alpha, T lambda,
                  logistic_constraint logistic_constraint_model, scaling_t user_scaling,
                  T optim_convergence_tol, T optim_progress_factor, T optim_dual_gap_tol,
-                 da_int optim_iteration_limit, da_int optim_coord_skip_min,
-                 da_int optim_coord_skip_max);
+                 T optim_coord_skip_tol, da_int optim_iteration_limit,
+                 da_int optim_coord_skip_min, da_int optim_coord_skip_max);
     ~linear_model();
 
     template <class> friend class linear_model;

@@ -30,20 +30,41 @@
 #include "aoclda.h"
 #include "approximate_neighbors_options.hpp"
 #include "basic_handle.hpp"
+#include "bfloat16_helpers.hpp"
 #include "binary_tree.hpp"
 #include "da_error.hpp"
 #include "da_vector.hpp"
 #include "macros.h"
 #include "model_persistence.hpp"
+#include "quantized_backend.hpp"
 
 #include <cmath>
+#include <cstdint>
 #include <random>
+#include <type_traits>
+#include <variant>
 
 namespace ARCH {
 
 namespace da_approx_nn {
 
 using namespace da_approx_nn_types;
+
+template <typename Q> struct dense_indexed_lists {
+    static_assert(std::is_trivially_copyable_v<Q>,
+                  "IVF dense storage requires trivially copyable elements.");
+
+    using value_type = Q;
+    std::vector<da_vector::da_vector<Q>> lists;
+};
+
+template <typename T>
+using ivf_indexed_storage =
+    std::variant<dense_indexed_lists<T>, dense_indexed_lists<int8_t>,
+                 dense_indexed_lists<da_bf16::storage_type>,
+                 // For uint8_t, each byte stores two signed int4 values. The
+                 // int4_packing helpers define its logical row layout.
+                 dense_indexed_lists<uint8_t>>;
 
 template <typename T> class approximate_neighbors : public basic_handle<T> {
   private:
@@ -53,15 +74,15 @@ template <typename T> class approximate_neighbors : public basic_handle<T> {
     // Number of neighbors at search time
     da_int n_neighbors = 5;
 
-    // Algorithm to use - only ivfflat for now
-    da_int algo = approx_nn_algorithm::ivfflat;
+    // Public algorithm selection; both variants share the IVF implementation.
+    da_int algo = approx_nn_algorithm::automatic;
     da_int internal_algo;
 
     // Distance metric to use
     approx_nn_metric internal_metric;
     approx_nn_metric metric;
 
-    // Seed to use for k-means initialisation (and subsampling of training data if performed)
+    // Seed to use for k-means initialization (and subsampling of training data if performed)
     std::mt19937 mt_engine;
     da_int internal_seed;
     da_int seed = 0;
@@ -83,7 +104,7 @@ template <typename T> class approximate_neighbors : public basic_handle<T> {
     da_int max_iter = 10;
     // Actual number of k-means iterations performed
     da_int kmeans_iter;
-    // Number of k-means initialisations to perform
+    // Number of k-means initializations to perform
     da_int n_init = 1;
     // Tolerance for k-means training
     T kmeans_tol = std::sqrt(std::numeric_limits<T>::epsilon());
@@ -93,16 +114,16 @@ template <typename T> class approximate_neighbors : public basic_handle<T> {
 
     // Number of rows of data added to the index
     da_int n_index;
-    // Inner vector contains rows assigned to each centroid
-    std::vector<da_vector::da_vector<T>> indexed_vectors;
-    // Squared L2 norms of every indexed vector, parallel structure to indexed_vectors
-    // list_norms[list_idx][i] == ||indexed_vectors[list_idx][i]||^2
-    // Only populated for euclidean metric; computed once in add_ivfflat
+    // Typed inverted lists. The active variant is selected once during training.
+    ivf_indexed_storage<T> indexed_storage;
+    // Squared L2 norms parallel to indexed_storage. Quantized indexes store norms of
+    // quantized vectors; unquantized indexes store norms of original vectors.
+    // Only populated for euclidean metric; computed once in add_ivfflat.
     std::vector<da_vector::da_vector<T>> list_norms;
     // Squared L2 norms of each centroid; only populated for euclidean metric
     // Computed once in train_ivfflat after k-means converges
     std::vector<T> centroid_norms;
-    // For each list: list_assignments maps each row in indexed_vectors to a global index
+    // For each list: list_assignments maps each stored row to a global index
     // which is returned at search time. Global index runs from 0 to n_index-1
     // and each sample is indexed by the order it is added.
     std::vector<da_vector::da_vector<da_int>> global_indices;
@@ -110,11 +131,105 @@ template <typename T> class approximate_neighbors : public basic_handle<T> {
     // old_list_sizes is needed for bookkeeping when add is called more than once
     std::vector<da_int> list_sizes, old_list_sizes;
 
+    // Whether quantized codes encode residuals (x - nearest centroid) rather than raw vectors
+    bool quantize_residual = true;
+    // Scalar quantizer configured from "quantization_scheme"/"quantization"
+    scalar_quantizer::scalar_quantizer<T> sq;
+
+    bool quantize_db() const {
+        return sq.get_code_kind() != scalar_quantizer::code_kind::none;
+    }
+
+    da_status
+    store_unquantized_rows(dense_indexed_lists<T> &storage,
+                           const std::vector<da_vector::da_vector<da_int>> &local_indices,
+                           const T *X_add, da_int ldx_add, da_int n_threads,
+                           bool is_euclidean);
+    template <typename Q>
+    da_status
+    store_quantized_rows(dense_indexed_lists<Q> &storage,
+                         const std::vector<da_vector::da_vector<da_int>> &local_indices,
+                         const T *X_add, da_int ldx_add, da_int n_threads,
+                         bool is_euclidean);
+
+    template <typename Q>
+    T reconstructed_squared_norm(const Q *codes, const T *centroid,
+                                 da_int centroid_stride);
+
+    // Per-thread scratch buffer pointers, set once per thread and reused across blocks.
+    // query_cos is null unless cosine metric; qnorms is null unless euclidean metric.
+    template <typename Backend> struct search_workspace {
+        da_int *heap_indices;
+        T *heap_distances;
+        da_binary_tree::MaxHeap<T> *heaps;
+        T *fine_distances;
+        T *queries;
+        T *query_cos;
+        T *qnorms;
+        T *coarse_dist;
+        da_int *cent_idx;
+        T *cent_sel_dists;
+        da_int *qpc;
+        da_int *qpc_count;
+        da_int *topk_indices;
+        // Quantized-search state, non-null only when quantize_db is set. Query
+        // preparation and product scratch are owned by the selected GEMM backend;
+        // bias_dot_products and distance_offsets belong to the metric correction shared by all
+        // storage formats and product approaches.
+        typename Backend::workspace_type *quantized;
+        T *bias_dot_products;
+        T *distance_offsets;
+    };
+
+    // Read-only search configuration, built once and shared across the parallel region.
+    struct search_params {
+        da_int n_queries, n_features, k_neigh;
+        bool return_distance;
+        const T *X_test_ptr;
+        da_int ldx_test;
+        const T *centroids_ptr;
+        da_int ld_centroids_local;
+        da_int query_blk_sz, list_blk_sz, n_blocks, final_query_blk_sz;
+        bool is_euclidean, is_cosine;
+        T *n_dist;
+        da_int *n_ind;
+    };
+
     void update_heaps_from_list_blk(da_int this_list_blk_sz, da_int q_count,
                                     const da_int *list_blk_global_idx,
                                     const T *fine_distances, da_int block_start,
                                     const da_int *queries_processed,
                                     da_binary_tree::MaxHeap<T> *heaps);
+
+    // Process one query block: coarse centroid selection, list scan, result write-back.
+    template <typename Backend>
+    bool process_block(search_workspace<Backend> &ws, const search_params &p,
+                       const dense_indexed_lists<typename Backend::stored_type> &storage,
+                       da_int i);
+
+    // Process one IVF list for the current block: gather probing queries, fine GEMM,
+    // heap updates.
+    template <typename Backend>
+    bool process_list(search_workspace<Backend> &ws, const search_params &p,
+                      const dense_indexed_lists<typename Backend::stored_type> &storage,
+                      da_int j, da_int block_start);
+
+    // Quantized counterpart of process_list. Backend owns the stored code type,
+    // query representation, GEMM approach, accumulator, and reconstruction.
+    template <typename Backend>
+    bool process_list_quantized(
+        search_workspace<Backend> &ws, const search_params &p,
+        const dense_indexed_lists<typename Backend::stored_type> &storage, da_int j,
+        da_int block_start);
+
+    template <typename Backend>
+    da_status ivfflat_search_query_parallel_impl(
+        const dense_indexed_lists<typename Backend::stored_type> &storage,
+        da_int n_queries, da_int n_features, da_int k_neigh, bool return_distance,
+        const T *X_test_ptr, da_int ldx_test, const T *centroids_ptr,
+        da_int ld_centroids_local, da_int query_blk_sz, da_int list_blk_sz,
+        da_int n_blocks, da_int final_query_blk_sz, da_int n_threads, da_int *n_ind,
+        T *n_dist);
 
     da_status ivfflat_search_query_parallel(da_int n_queries, da_int n_features,
                                             da_int k_neigh, bool return_distance,

@@ -26,7 +26,7 @@
 
 namespace da_approx_nn_types {
 
-enum approx_nn_algorithm { ivfflat = 0, automatic };
+enum approx_nn_algorithm { ivfflat = 0, automatic = 1, ivfsq = 2 };
 enum approx_nn_metric { euclidean = 0, sqeuclidean, inner_product, cosine };
 
 } // namespace da_approx_nn_types

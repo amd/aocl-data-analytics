@@ -23,6 +23,8 @@
 # POSSIBILITY OF SUCH DAMAGE.
 #
 
+# pylint: disable = missing-function-docstring
+
 """Shared pytest fixtures and test data for the FAISS extension tests.
 
 """
@@ -46,6 +48,8 @@ with warnings.catch_warnings():
 # can compare AOCL-DA results against native faiss.
 _native_IndexFlatL2 = faiss.IndexFlatL2
 _native_IndexIVFFlat = faiss.IndexIVFFlat
+_native_IndexIVFScalarQuantizer = faiss.IndexIVFScalarQuantizer
+_native_IndexScalarQuantizer = faiss.IndexScalarQuantizer
 
 # Small, fixed random dataset
 RNG = np.random.default_rng(0)

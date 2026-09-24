@@ -32,10 +32,8 @@ if(NOT WIN32)
   # AOCC flang rejects -march= in Ninja's two-phase preprocessing step (-E);
   # GCC, flang-new and Make+AOCC (one-shot) all accept it.
   IsAOCCFlang(IS_AOCC_FLANG)
-  if(NOT (CMAKE_GENERATOR MATCHES "Ninja" AND IS_AOCC_FLANG))
-    AppendFortranFlags(_Fortran_FLAGS REQUIRED -march=x86-64-v3)
-  endif()
-  AppendFortranFlags(_Fortran_FLAGS 
+  AppendFortranFlags(_Fortran_FLAGS
+    -march=x86-64-v3
     -Qunused-arguments
     -Wno-compare-reals
     -Wno-maybe-uninitialized

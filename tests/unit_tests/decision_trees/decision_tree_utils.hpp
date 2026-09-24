@@ -42,7 +42,7 @@ template <typename T> void set_test_data_8x1(test_data_type<T> &data) {
     data.X_train = {
         (T)0.1, (T)0.2, (T)0.3, (T)0.4, (T)0.6, (T)0.7, (T)0.8, (T)0.9,
     };
-    data.y_train = {0, 1, 0, 0, 1, 1, 0, 1};
+    data.y_train = {0, 0, 0, 0, 1, 1, 1, 1};
     data.X_test = {(T)0.1, (T)0.9};
     data.y_test = {0, 1};
     data.n_samples_train = 8, data.n_feat = 1;

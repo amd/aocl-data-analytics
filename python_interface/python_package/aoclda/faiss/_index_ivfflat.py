@@ -66,6 +66,7 @@ class IndexIVFFlat:
         self._metric_str = _METRIC_MAP[metric]
         self._ann = None
         self._is_trained = False
+        self._backend_options = {'algorithm': 'ivfflat'}
         self.cp = _ClusteringParameters(niter=25, seed=0)
         self._nprobe = 1
         self.aocl = True
@@ -109,7 +110,7 @@ class IndexIVFFlat:
         X = np.asarray(X)
         if X.ndim != 2 or X.shape[1] != self._d:
             raise ValueError(
-                f"IndexIVFFlat.train: expected array with {self._d} columns, "
+                f"{type(self).__name__}.train: expected array with {self._d} columns, "
                 f"got shape {X.shape}")
 
         if self.cp.max_points_per_centroid is not None:
@@ -129,6 +130,7 @@ class IndexIVFFlat:
             kmeans_iter=self.cp.niter,
             seed=self.cp.seed,
             train_fraction=train_frac,
+            **self._backend_options,
         )
         self._ann.train(X)
         self._is_trained = True
@@ -136,13 +138,13 @@ class IndexIVFFlat:
     def add(self, X):
         if not self._is_trained or self._ann is None:
             raise RuntimeError(
-                "IndexIVFFlat.add: index is not trained, call train() first")
+                f"{type(self).__name__}.add: index is not trained, call train() first")
         self._ann.add(X)
 
     def search(self, X, k):
         if not self._is_trained or self._ann is None:
             raise RuntimeError(
-                "IndexIVFFlat.search: index is not trained, call train() first")
+                f"{type(self).__name__}.search: index is not trained, call train() first")
         distances, indices = self._ann.kneighbors(X, n_neighbors=k)
         return distances, indices.astype(np.int64)
 
@@ -162,4 +164,4 @@ class IndexIVFFlat:
         if name.startswith('__'):
             raise AttributeError(name)
         raise NotImplementedError(
-            f"IndexIVFFlat.{name} is not supported by the AOCL-DA backend")
+            f"{type(self).__name__}.{name} is not supported by the AOCL-DA backend")

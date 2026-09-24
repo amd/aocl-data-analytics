@@ -130,17 +130,6 @@ TEST_F(SerializationKernelErrorTests, AddSizeModeNotReserve) {
     EXPECT_EQ(buffer.add_size(100), da_status_invalid_option);
 }
 
-TEST_F(SerializationKernelErrorTests, AddSizeValueAboveLimit) {
-    std::vector<char> data;
-    serialization_buffer buffer(da_handle_uninitialized);
-    buffer.set_buffer_data(&data);
-
-    // Try to add a value larger than da_int max
-    size_t big_value = static_cast<size_t>(std::numeric_limits<da_int>::max()) + 1;
-    da_status status = buffer.add_size(big_value);
-    EXPECT_EQ(status, da_status_invalid_input);
-}
-
 TEST_F(SerializationKernelErrorTests, AddSizeOverflow) {
     std::vector<char> data;
     serialization_buffer buffer(da_handle_uninitialized);
@@ -149,11 +138,11 @@ TEST_F(SerializationKernelErrorTests, AddSizeOverflow) {
     // Set size to near max, accounting for metadata size already in the buffer
     size_t metadata_size = buffer.get_size();
     size_t near_max =
-        static_cast<size_t>(std::numeric_limits<da_int>::max()) - metadata_size;
+        static_cast<size_t>(std::numeric_limits<size_t>::max()) - metadata_size;
     da_status status = buffer.add_size(near_max);
     EXPECT_EQ(status, da_status_success);
 
-    // Try to add more - should overflow
+    // Try to add more - should overflow size_t
     status = buffer.add_size(100);
     EXPECT_EQ(status, da_status_invalid_input);
 }

@@ -170,7 +170,7 @@ inline __attribute__((__always_inline__)) void pow_kt(da_int first_dim, da_int s
             // add coef0
             v_data = kt_add_p<SZ, SUF>(v_data, v_coef0);
             // Compute integer power using repeated multiplication;
-            // initialise the accumulator with the base to save one multiply.
+            // initialize the accumulator with the base to save one multiply.
             avxvector_t<SZ, SUF> v_result = v_data;
             for (da_int k = 1; k < degree; k++)
                 v_result = kt_mul_p<SZ, SUF>(v_result, v_data);

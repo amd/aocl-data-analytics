@@ -1,0 +1,61 @@
+# Copyright (C) 2026 Advanced Micro Devices, Inc. All rights reserved.
+#
+# Redistribution and use in source and binary forms, with or without modification,
+# are permitted provided that the following conditions are met:
+# 1. Redistributions of source code must retain the above copyright notice,
+#    this list of conditions and the following disclaimer.
+# 2. Redistributions in binary form must reproduce the above copyright notice,
+#    this list of conditions and the following disclaimer in the documentation
+#    and/or other materials provided with the distribution.
+# 3. Neither the name of the copyright holder nor the names of its contributors
+#    may be used to endorse or promote products derived from this software without
+#    specific prior written permission.
+#
+# THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS "AS IS" AND
+# ANY EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED TO, THE IMPLIED
+# WARRANTIES OF MERCHANTABILITY AND FITNESS FOR A PARTICULAR PURPOSE ARE DISCLAIMED.
+# IN NO EVENT SHALL THE COPYRIGHT HOLDER OR CONTRIBUTORS BE LIABLE FOR ANY DIRECT,
+# INDIRECT, INCIDENTAL, SPECIAL, EXEMPLARY, OR CONSEQUENTIAL DAMAGES (INCLUDING,
+# BUT NOT LIMITED TO, PROCUREMENT OF SUBSTITUTE GOODS OR SERVICES; LOSS OF USE, DATA,
+# OR PROFITS; OR BUSINESS INTERRUPTION) HOWEVER CAUSED AND ON ANY THEORY OF LIABILITY,
+# WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE)
+# ARISING IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE
+# POSSIBILITY OF SUCH DAMAGE.
+
+#' Pairwise distance metrics.
+#'
+#' @param X The feature matrix for which the distance matrix needs to be computed.
+#'   Its shape is (n_samples_X, n_features).
+#' @param Y The optional second feature matrix for which the distance
+#'   matrix needs to be computed. Its shape is (n_samples_Y, n_features).
+#' @param metric The type of metric used to compute the distance matrix. It can take
+#'   the values 'euclidean', 'l2', 'sqeuclidean', 'manhattan', 'l1', 'cityblock', 'cosine',
+#'   'minkowski', 'euclidean_gemm', 'sqeuclidean_gemm', or 'inner_product'.
+#'   Default: 'euclidean'.
+#' @param p The power parameter used for the Minkowski metric. For p = 1.0,
+#'   this defaults to 'manhattan' metric and for p = 2.0 this defaults to 'euclidean' metric.
+#'   p is only used for Minkowski distance and will be ignored otherwise. Will return an
+#'   error when p is not positive. Default p = 2.0.
+#' @return Matrix with shape (n_samples_X, n_samples_Y) if Y is provided, or
+#'   (n_samples_X, n_samples_X) if Y is NULL. For most metrics this is a distance
+#'   matrix. For 'inner_product' it is a similarity matrix whose entries can be negative.
+#' @export
+#' @examples
+#' # Compute Euclidean distances
+#' X <- matrix(rnorm(100), nrow = 10, ncol = 10)
+#' Y <- matrix(rnorm(100), nrow = 10, ncol = 10)
+#' D <- pairwise_distances(X, Y, metric = "euclidean")
+#' 
+#' # Compute Manhattan distances
+#' D_manhattan <- pairwise_distances(X, Y, metric = "manhattan")
+#' 
+#' # Compute Minkowski distances with p=3
+#' D_minkowski <- pairwise_distances(X, Y, metric = "minkowski", p = 3.0)
+pairwise_distances <- function(X, Y = NULL, metric = "euclidean", p = 2.0) {
+    X <- check_convert_data(X, "float", "matrix")
+    if (!is.null(Y)) {
+        Y <- check_convert_data(Y, "float", "matrix")
+    }
+
+    return(rcpp_pairwise_distances(X, Y, metric, p))
+}

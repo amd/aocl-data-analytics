@@ -422,7 +422,8 @@ da_status copy_options_to_ralfit(da_options::OptionRegistry &opts,
 
     // Set up automatic options
     if (reg_term > 0)
-        options.regularization = 1; // type 1 but can also be of type 2
+        options.regularization =
+            ireg_power == da_optim_types::regularization::quadratic ? 1 : 2;
     // Exact second derivative -> user provided HF?
     options.exact_second_derivatives = ok_eval_HF;
 

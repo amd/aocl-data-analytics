@@ -993,14 +993,14 @@ TYPED_TEST(svm_public_test, bad_handle_tests) {
 TYPED_TEST(svm_public_test, mixed_precision_svc) {
     // Mixed precision uses a lower precision warm start: double -> float, and
     // float -> _Float16. The _Float16 path relies on hardware that supports
-    // half precision (AVX-512-FP16), which is only available on Zen6, so
-    // skip the float case on older machines.
-    da_int len{100};
-    char arch[100], ns[100];
-    ASSERT_EQ(da_get_arch_info(&len, arch, ns), da_status_success);
-    const bool is_zen6 = (std::strcmp(arch, "zen6") == 0);
-    if (std::is_same_v<TypeParam, float> && !is_zen6) {
-        GTEST_SKIP() << "Mixed precision (float -> _Float16) requires Zen6 hardware";
+    // half precision (AVX-512-FP16), detected at runtime, so skip the float
+    // case when it is unavailable.
+    da_int fp16_avail{0};
+    ASSERT_EQ(da_check_fp16_available(&fp16_avail), da_status_success);
+    const bool fp16_available = (fp16_avail == 1);
+    if (std::is_same_v<TypeParam, float> && !fp16_available) {
+        GTEST_SKIP()
+            << "Mixed precision (float -> _Float16) requires AVX-512-FP16 hardware";
     }
     // Well-separated binary classification dataset (row-major, 10 samples, 2 features)
     // Class 0: cluster near (0,0);  Class 1: cluster near (10,10)
@@ -1086,14 +1086,14 @@ TYPED_TEST(svm_public_test, mixed_precision_svc) {
 
 TYPED_TEST(svm_public_test, mixed_precision_svr) {
     // Mixed precision uses a lower precision warm start: double -> float, and
-    // float -> _Float16. The _Float16 path requires Zen6 hardware (AVX-512-FP16),
-    // so skip the float case on older machines.
-    da_int len{100};
-    char arch[100], ns[100];
-    ASSERT_EQ(da_get_arch_info(&len, arch, ns), da_status_success);
-    const bool is_zen6 = (std::strcmp(arch, "zen6") == 0);
-    if (std::is_same_v<TypeParam, float> && !is_zen6) {
-        GTEST_SKIP() << "Mixed precision (float -> _Float16) requires Zen6 hardware";
+    // float -> _Float16. The _Float16 path requires AVX-512-FP16 hardware,
+    // detected at runtime, so skip the float case when it is unavailable.
+    da_int fp16_avail{0};
+    ASSERT_EQ(da_check_fp16_available(&fp16_avail), da_status_success);
+    const bool fp16_available = (fp16_avail == 1);
+    if (std::is_same_v<TypeParam, float> && !fp16_available) {
+        GTEST_SKIP()
+            << "Mixed precision (float -> _Float16) requires AVX-512-FP16 hardware";
     }
     // Simple regression: y = x, samples along a line
     // clang-format off

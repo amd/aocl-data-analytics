@@ -114,7 +114,7 @@ TYPED_TEST(svm_internal_test, local_smo) {
             svc_obj.wssi_vec_type = isa.second;
             svc_obj.wssj_vec_type = isa.second;
 
-            svc_obj.initialisation(data.n, gradient, response, alpha, cache);
+            svc_obj.initialization(data.n, gradient, response, alpha, cache);
 
             std::vector<TypeParam *> kernel_ptr_data(data.n);
             for (da_int i = 0; i < data.n; i++) {
@@ -151,8 +151,8 @@ TYPED_TEST(svm_internal_test, local_smo) {
             nusvc_obj.wssj_vec_type = isa.second;
 
             ////////
-            // This part of the code is initialisation of response, alpha and gradient which
-            // is doing similar computation to initialisation() method but with consideration of
+            // This part of the code is initialization of response, alpha and gradient which
+            // is doing similar computation to initialization() method but with consideration of
             // precomputed kernel matrix.
             for (da_int i = 0; i < data.n; i++) {
                 response[i] = nusvc_obj.y[i] == 0 ? -1.0 : nusvc_obj.y[i];

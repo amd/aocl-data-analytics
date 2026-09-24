@@ -65,7 +65,11 @@ The standard way of using cubic spline interpolation in AOCL-DA is as follows.
    .. tab-item:: Python
       :sync: Python
 
-      Python interface not yet available.
+      1. Create a :func:`cubic_spline <aoclda.interpolation.cubic_spline>` object, specifying the spline type (``natural``, ``clamped zero``, ``custom`` or ``hermite``) and other options on the constructor.
+      2. Fit the spline to your data using :func:`cubic_spline.fit <aoclda.interpolation.cubic_spline.fit>`, supplying the interpolation sites and values. For Hermite splines also supply the first derivatives via the ``y_derivative`` argument, and for custom splines supply the boundary conditions via the ``boundary_conditions`` argument.
+      3. Evaluate the spline (or its derivatives) at query points using :func:`cubic_spline.evaluate <aoclda.interpolation.cubic_spline.evaluate>`.
+      4. Optionally locate the cells containing query points using :func:`cubic_spline.search_cells <aoclda.interpolation.cubic_spline.search_cells>`.
+      5. Optionally extract the piecewise polynomial coefficients using the :attr:`cubic_spline.coefficients <aoclda.interpolation.cubic_spline.coefficients>` attribute.
 
    .. tab-item:: C
       :sync: C
@@ -175,7 +179,8 @@ Interpolation APIs
    .. tab-item:: Python
       :sync: Python
 
-      Python interfaces not yet available.
+      .. autoclass:: aoclda.interpolation.cubic_spline(spline_type='natural', check_data=False)
+         :members:
 
    .. tab-item:: C
       :sync: C

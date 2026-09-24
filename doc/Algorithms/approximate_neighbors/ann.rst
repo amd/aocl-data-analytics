@@ -37,9 +37,10 @@ Approximate nearest neighbors (ANN) is a technique for efficiently finding point
 Unlike exact nearest neighbor search, which guarantees finding the true nearest neighbors, ANN algorithms trade some accuracy for improvements in runtime.
 For each point :math:`x_i` in a test set :math:`X_{test}`, these algorithms compute the approximate :math:`k` nearest points to :math:`x_i` from a reference dataset :math:`X`.
 
-AOCL-DA implements the IVFFlat algorithm for approximate nearest neighbor search (:cite:t:`da_sizi03`).
-This algorithm organizes data into a search structure called an *inverted file index*.
+AOCL-DA implements two inverted-file algorithms for approximate nearest neighbor search: `ivfflat` and `ivfsq` (:cite:t:`da_sizi03`).
+Both algorithms organize data into a search structure called an *inverted file index*.
 The index partitions data into clusters, each defined by a centroid, to enable fast approximate queries.
+The algorithms differ in how indexed vectors are stored and searched: `ivfflat` retains them in the input precision, while `ivfsq` applies scalar quantization to store them in a selected reduced-precision format.
 
 During training, *k*-means clustering is applied to the training data to compute :math:`n_{list}` centroids.
 The `train fraction` option controls how much of the training data is used for *k*-means clustering; using a smaller value can speed up training for large datasets while still producing a reasonable partition.
@@ -50,7 +51,7 @@ To populate the index, data must be explicitly added using a separate add operat
 Each point is assigned to its nearest centroid, and a list of points is stored for each centroid.
 Additional data can be added at any time after training without recomputing the centroids.
 
-At search time, rather than comparing the query point against all indexed data, IVFFlat first identifies the :math:`n_{probe}` centroids closest to the query.
+At search time, rather than comparing the query point against all indexed data, both algorithms first identify the :math:`n_{probe}` centroids closest to the query.
 Only the points assigned to these centroids are then searched exhaustively.
 This provides a speedup over brute-force search.
 However, if one of the true nearest neighbors is assigned to a centroid not among the :math:`n_{probe}` closest, it will be missed.
@@ -76,6 +77,82 @@ For `cosine` and `inner product`, spherical *k*-means clustering is used instead
 For `euclidean`, `sqeuclidean`, and `cosine`, the points with the smallest distances to the query are returned.
 For `inner product`, maximum inner product search is performed, returning the points with the largest inner products with the query.
 
+Quantization
+------------
+
+The `ivfflat` algorithm stores indexed vectors in the input precision and ignores all quantization options.
+The `ivfsq` algorithm stores indexed vectors in the reduced-precision format selected by the `quantization` option.
+When `algorithm='auto'`, AOCL-DA selects `ivfflat`.
+Reduced-precision storage can reduce the memory required by the index and can improve search performance, depending on the data and workload.
+Because indexed vector components are stored with reduced precision, the values used to compute distances approximate the original values.
+Consequently, the computed distances and ordering of neighbors may differ from those obtained using full-precision storage.
+
+The supported quantization formats are `int4`, `int8`, and `bfloat16`.
+The `int4` format represents each component by a signed 4-bit code in the range :math:`[-8, 7]` and packs two codes into each byte.
+The `int8` format represents each component by a signed 8-bit code in the range :math:`[-128, 127]`.
+For both integer formats, scale and bias parameters are determined during training, and vectors are mapped to integer codes when they are added to the index.
+
+For an integer format, let :math:`v_d` be component :math:`d` of the value to be represented, :math:`s_d` its scale, :math:`b_d` its bias, and :math:`[q_{min}, q_{max}]` the code range.
+The stored code :math:`q_d` and its corresponding approximate value :math:`\widehat{v}_d` are
+
+.. math::
+
+   q_d = \operatorname{clip}\left(\operatorname{round}\left(\frac{v_d-b_d}{s_d}\right), q_{min}, q_{max}\right),
+   \qquad
+   \widehat{v}_d = b_d + s_d q_d.
+
+The `quantization_scheme` option controls how the scale and bias are obtained for `int4` and `int8`:
+
+- `per_dimension` learns a separate scale and bias for each feature. If :math:`v_{min,d}` and :math:`v_{max,d}` are the minimum and maximum training values for feature :math:`d`, then
+
+  .. math::
+
+     s_d = \frac{v_{max,d}-v_{min,d}}{q_{max}-q_{min}},
+     \qquad
+     b_d = v_{min,d} + \left(-q_{min}+\frac{1}{2}\right)s_d.
+
+- `uniform` uses the same formula with the minimum and maximum taken across all features, giving one scale and bias shared by every feature.
+- `direct_signed` uses :math:`s_d=1` and :math:`b_d=0`, then rounds and clips directly to :math:`[-8, 7]` for `int4` or :math:`[-128, 127]` for `int8`.
+- `direct_unsigned` uses :math:`s_d=1` and :math:`b_d=-q_{min}`. It therefore maps values in :math:`[0, 15]` to signed `int4` codes or values in :math:`[0, 255]` to signed `int8` codes, and clips values outside these ranges.
+
+In general, `per_dimension` is recommended as a starting point; `uniform` may be suitable when all features have similar ranges, while direct schemes should be used only when the data is known to lie within the fixed signed or unsigned range of the selected quantization format.
+
+If all training values in a learned range are the same value :math:`v`, the range has zero width and the scale formula above cannot be used.
+AOCL-DA instead sets the scale to 1 and the bias to :math:`v`, so that the value is stored as code 0 and reconstructed exactly as :math:`v + 1\mathbin{\cdot}0 = v`.
+
+For `bfloat16`, vector components are converted directly to `bfloat16` using round-to-nearest, ties-to-even when they are added to the index; no scale or bias parameters are learned during training.
+Each `bfloat16` value occupies 16 bits and retains the exponent range of single-precision floating-point data, with reduced significand precision.
+Query data is supplied in the input floating-point precision and is converted internally to the representation required by the selected search backend.
+Quantization is supported with all available distance metrics and with both the separate ``train`` and ``add`` operations and the combined ``train_and_add`` operation.
+
+The `int4` and `bfloat16` quantized searches use AOCL-DLP
+(https://www.amd.com/en/developer/aocl/dlp.html) routines. The `int4` routine requires
+the AVX512-BF16 instruction set and falls back to a portable kernel when that instruction set is
+unavailable. The `bfloat16` routine supports AVX2 and internally uses the AVX512-BF16 instruction
+set when available. Portable kernels preserve the same storage formats and API behavior but may be
+slower.
+
+For the `bfloat16` format, the value of `quantization_scheme` is ignored, as the `direct_signed` approach is always used.
+In this case, values are converted directly to `bfloat16`; they are not mapped to an integer code range or clipped to integer limits.
+
+The `quantization_residual` option controls which values are represented in reduced precision.
+When enabled, the value quantized or converted is the residual :math:`v=x-c`, where :math:`x` is an indexed vector and :math:`c` is the centroid of its list.
+For an integer format, the resulting approximation to the indexed vector is therefore
+
+.. math::
+
+   \widehat{x}_d = c_d + b_d + s_d q_d.
+
+When residual encoding is disabled, :math:`v=x`; for an integer format, :math:`\widehat{x}_d=b_d+s_dq_d`.
+Residual encoding is enabled by default and can improve the representation when vectors are close to their assigned centroids.
+
+For the `int4` and `int8` formats, using `direct_signed` or `direct_unsigned` with residual encoding is not recommended.
+Residual values are not guaranteed to remain within the fixed range of a direct scheme, and out-of-range values are clipped, which can reduce search accuracy.
+The `per_dimension` and `uniform` schemes are recommended when residual encoding is enabled.
+
+The quantization format, scheme, and residual setting are training-time options and cannot be changed after training.
+The `n_probe` option remains adjustable between searches.
+
 Outputs from approximate nearest neighbors
 ------------------------------------------
 After training and adding data to the index, the following results are stored:
@@ -91,6 +168,10 @@ After querying the index with :func:`kneighbors`, the following results are retu
 
 - **indices of nearest neighbors** - the indices of the approximate nearest neighbors for each query point, provided in order of distance (closest first).
 - **distances to the nearest neighbors** (optional) - the corresponding distances from each query point to its neighbors.
+
+The shapes and data types of these outputs are independent of the indexed-vector storage format.
+When quantization is enabled, distances and neighbor ordering may differ slightly from an equivalent unquantized index.
+The cluster centroids, list sizes, and index metadata remain available through the same outputs and Python properties.
 
 .. note::
 
@@ -162,18 +243,22 @@ Options
          :escape: ~
          :header: "Option name", "Type", "Default", "Description", "Constraints"
 
-         "number of neighbors", "integer", ":math:`i=5`", "Number of neighbors considered for k-nearest neighbors.", ":math:`1 \le i`"
-         "n_list", "integer", ":math:`i=1`", "Number of lists to construct for inverted file indices", ":math:`1 \le i`"
-         "n_probe", "integer", ":math:`i=1`", "Number of lists to probe at search time for inverted file indices", ":math:`1 \le i`"
-         "k-means_iter", "integer", ":math:`i=10`", "Maximum number of k-means iterations to perform at train time", ":math:`1 \le i`"
-         "seed", "integer", ":math:`i=0`", "Seed for random number generation; set to -1 for non-deterministic results.", ":math:`-1 \le i`"
+         "quantization_scheme", "string", ":math:`s=` `per_dimension`", "Scheme used by ivfsq to map values to integer codes. The direct schemes assume values already lie in the format's reconstructed range: int4 uses [-8, 7] signed or [0, 15] unsigned; int8 uses [-128, 127] signed or [0, 255] unsigned. Direct unsigned is unsuitable for residual encoding because IVF residuals may be negative. bfloat16 requires 'direct_signed', which performs direct round-to-nearest-even conversion without scaling.", ":math:`s=` `direct_signed`, `direct_unsigned`, `per_dimension`, or `uniform`."
+         "quantization_residual", "string", ":math:`s=` `yes`", "Whether ivfsq codes encode residuals (x - nearest centroid) rather than raw vectors.", ":math:`s=` `no`, or `yes`."
+         "quantization", "string", ":math:`s=` `bfloat16`", "Storage format used for the indexed database when algorithm is ivfsq.", ":math:`s=` `bfloat16`, `int4`, or `int8`."
+         "algorithm", "string", ":math:`s=` `auto`", "Algorithm used to compute the approximate nearest neighbors. Auto selects ivfflat.", ":math:`s=` `auto`, `ivfflat`, or `ivfsq`."
          "train fraction", "real", ":math:`r=1`", "Fraction of training data to use for k-means clustering.", ":math:`0 < r \le 1`"
-         "algorithm", "string", ":math:`s=` `ivfflat`", "Algorithm used to compute the approximate nearest neighbors.", ":math:`s=` `auto`, or `ivfflat`."
+         "k-means_iter", "integer", ":math:`i=10`", "Maximum number of k-means iterations to perform at train time", ":math:`1 \le i`"
          "metric", "string", ":math:`s=` `sqeuclidean`", "Metric used to compute distances.", ":math:`s=` `cosine`, `euclidean`, `inner product`, or `sqeuclidean`."
-         "storage order", "string", ":math:`s=` `column-major`", "Whether data is supplied and returned in row- or column-major order.", ":math:`s=` `c`, `column-major`, `f`, `fortran`, or `row-major`."
+         "seed", "integer", ":math:`i=0`", "Seed for random number generation; set to -1 for non-deterministic results.", ":math:`-1 \le i`"
+         "n_probe", "integer", ":math:`i=1`", "Number of lists to probe at search time for inverted file indices", ":math:`1 \le i`"
+         "n_list", "integer", ":math:`i=1`", "Number of lists to construct for inverted file indices", ":math:`1 \le i`"
+         "number of neighbors", "integer", ":math:`i=5`", "Number of neighbors considered for k-nearest neighbors.", ":math:`1 \le i`"
          "check data", "string", ":math:`s=` `no`", "Check input data for NaNs prior to performing computation.", ":math:`s=` `no`, or `yes`."
+         "storage order", "string", ":math:`s=` `column-major`", "Whether data is supplied and returned in row- or column-major order.", ":math:`s=` `c`, `column-major`, `f`, `fortran`, or `row-major`."
 
-      If `algorithm` is set to `auto`, it defaults to `ivfflat`, the only currently available algorithm.
+      If `algorithm` is set to `auto`, it selects `ivfflat`. The `quantization` option
+      is used only when `algorithm='ivfsq'`; its default is `bfloat16`.
 
 Examples
 --------
@@ -211,7 +296,7 @@ Approximate Nearest Neighbors
 
    .. tab-item:: Python
 
-      .. autoclass:: aoclda.neighbors.approximate_neighbors(n_neighbors=5, algorithm='ivfflat', metric='sqeuclidean', n_list=1, n_probe=1, kmeans_iter=10, train_fraction=1.0, seed=0)
+      .. autoclass:: aoclda.neighbors.approximate_neighbors(n_neighbors=5, algorithm='auto', metric='sqeuclidean', n_list=1, n_probe=1, kmeans_iter=10, train_fraction=1.0, seed=0, quantization='bfloat16', quantization_scheme='per_dimension', quantization_residual=True, check_data=False)
          :members:
 
    .. tab-item:: C

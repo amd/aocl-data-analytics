@@ -60,6 +60,22 @@ const char *get_namespace(void) {
     const char *arch = STR(ARCH);
     return arch;
 }
+
+bool fp16_codegen_available(void) {
+    // Reflects the compile flags of THIS architecture object: _Float16 kernels
+    // are only generated when the compiler enabled AVX512-FP16.
+#ifdef __AVX512FP16__
+    return true;
+#else
+    return false;
+#endif
+}
+
+bool fp16_available(void) {
+    // FP16 is usable at runtime only when the code was compiled for it AND
+    // the running CPU supports AVX512-FP16.
+    return fp16_codegen_available() && context::get_context()->has_avx512_fp16;
+}
 } // namespace da_arch
 #undef STR
 #undef STR_
@@ -1098,6 +1114,11 @@ template void copy_array_convert_precision<float, float>(da_order order, da_int 
                                                          da_int n_cols, const float *A,
                                                          da_int lda, float *B,
                                                          da_int ldb);
+
+template void copy_array_convert_precision<double, double>(da_order order, da_int n_rows,
+                                                           da_int n_cols, const double *A,
+                                                           da_int lda, double *B,
+                                                           da_int ldb);
 // _Float16 instantiations for kmeans<_Float16> and basic_handle<_Float16>
 #ifdef __AVX512FP16__
 template void copy_transpose_2D_array_row_to_column_major<_Float16>(

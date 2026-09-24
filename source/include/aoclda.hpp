@@ -154,6 +154,23 @@ da_status da_pca_inverse_transform(da_handle handle, da_int k_samples, da_int k_
                                    const T *X, da_int ldx, T *X_inv_transform,
                                    da_int ldx_inv_transform);
 
+/* NMF declarations */
+template <typename T>
+da_status da_nmf_init(da_handle handle, da_int n_samples, da_int n_features, const T *A,
+                      da_int lda);
+template <typename T> da_status da_nmf_compute(da_handle handle);
+template <typename T>
+da_status da_nmf_set_data(da_handle handle, da_int n_samples, da_int n_components,
+                          const T *W, da_int ldw, da_int n_features, const T *H,
+                          da_int ldh);
+template <typename T>
+da_status da_nmf_transform(da_handle handle, da_int m_samples, da_int m_features,
+                           const T *X, da_int ldx, T *Xt, da_int ldxt);
+template <typename T>
+da_status da_nmf_inverse_transform(da_handle handle, da_int k_samples,
+                                   da_int k_components, const T *Xt, da_int ldxt, T *X,
+                                   da_int ldx);
+
 /* k-means declarations */
 template <typename T>
 da_status da_kmeans_set_data(da_handle handle, da_int n_samples, da_int n_features,

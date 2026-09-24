@@ -146,6 +146,14 @@ inline da_status register_linmod_options(da_options::OptionRegistry &opts,
             0.0, da_options::lbound_t::greaterthan, 1.0, da_options::ubound_t::p_inf,
             1.e-4, "10^{-4}"));
         opts.register_opt(oT);
+        oT = std::make_shared<OptionNumeric<opt_T>>(OptionNumeric<opt_T>(
+            "optim coord skip tol",
+            "Coordinate skip tolerance, a given coordinate could be skipped if the "
+            "change between two consecutive iterates is less than tolerance. Any "
+            "negative value disables the skipping scheme.",
+            T(-1), da_options::lbound_t::m_inf, 0, da_options::ubound_t::p_inf, 1.0e-4,
+            "10^{-4}"));
+        opts.register_opt(oT);
 
         std::shared_ptr<OptionString> os;
         os = std::make_shared<OptionString>(

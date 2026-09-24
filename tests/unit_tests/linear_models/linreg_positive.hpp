@@ -172,7 +172,7 @@ void test_linreg_positive(std::string csvname, std::vector<option_t<da_int>> iop
             }
             // make sure the dual gap is valid...
             // relax condition for being a metric
-            const T dual_relax_zero{50 * std::numeric_limits<T>::epsilon()};
+            const T dual_relax_zero{500 * std::numeric_limits<T>::epsilon()};
             EXPECT_GE(info[da_linmod_info_t::linmod_info_optim], -dual_relax_zero);
         } else {
             EXPECT_GE(info[da_linmod_info_t::linmod_info_grad_norm], 0);

@@ -126,6 +126,28 @@ da_status da_get_arch_info(da_int *len = nullptr, char *arch = nullptr,
     return da_status_success;
 }
 
+da_status da_check_fp16_available(da_int *available) {
+    if (available == nullptr)
+        return da_status_invalid_pointer;
+
+    bool avail = false;
+    da_status status = [&]() -> da_status {
+        DISPATCHER(nosave_utils, {
+            avail = da_arch::fp16_available();
+            return da_status_success;
+        });
+    }();
+    if (status == da_status_arch_not_supported) {
+        // Treat an unavailable dispatched architecture as “FP16 not available”.
+        avail = false;
+        status = da_status_success;
+    }
+    if (status != da_status_success)
+        return status;
+    *available = avail ? 1 : 0;
+    return da_status_success;
+}
+
 template <typename T>
 da_status da_get_shuffled_indices(da_int m, da_int seed, da_int train_size,
                                   da_int test_size, da_int fp_precision, const T *classes,

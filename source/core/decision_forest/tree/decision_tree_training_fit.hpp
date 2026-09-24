@@ -57,11 +57,6 @@ template <typename T> da_status decision_tree<T>::read_options() {
                     da_status_success;
 
         // Raw data options
-        opt_pass &= this->opts.get("detect categorical data", opt_val, check_cat_data) ==
-                    da_status_success;
-        opt_pass &=
-            this->opts.get("maximum categories", opt_max_cat) == da_status_success;
-        opt_pass &= this->opts.get("category tolerance", cat_tol) == da_status_success;
         opt_pass &= this->opts.get("category split strategy", opt_val, cat_split_strat) ==
                     da_status_success;
 
@@ -74,6 +69,20 @@ template <typename T> da_status decision_tree<T>::read_options() {
                 this->err, da_status_internal_error, // LCOV_EXCL_LINE
                 "Unexpected error while reading the optional parameters.");
     }
+    return da_status_success;
+}
+
+template <typename T> da_status decision_tree<T>::read_storage_order() {
+    // In-forest trees receive their order from the forest via set_storage_order
+    if (!read_public_options)
+        return da_status_success;
+
+    std::string opt_order;
+    da_int iorder;
+    da_status status = this->opts.get("storage order", opt_order, iorder);
+    if (status != da_status_success)
+        return status;
+    this->order = da_order(iorder);
     return da_status_success;
 }
 
@@ -210,6 +219,7 @@ da_status decision_tree<T>::split_node_and_add_children(da_int node_idx,
 
         // Add children nodes and push them into the queue
         // if potential for further improvements is still high enough
+        add_node(node_idx, true, best_split.left_score, best_split.samp_idx);
         add_node(node_idx, false, best_split.right_score, best_split.samp_idx);
         if (best_split.right_score > min_split_score &&
             tree[n_nodes - 1].n_samples >= 2 * min_node_sample &&
@@ -217,13 +227,14 @@ da_status decision_tree<T>::split_node_and_add_children(da_int node_idx,
             nodes_to_treat.push_back(n_nodes - 1);
         else
             n_leaves += 1;
-        add_node(node_idx, true, best_split.left_score, best_split.samp_idx);
+
         if (best_split.left_score > min_split_score &&
-            tree[n_nodes - 1].n_samples >= 2 * min_node_sample &&
-            tree[n_nodes - 1].depth < max_depth)
-            nodes_to_treat.push_back(n_nodes - 1);
+            tree[n_nodes - 2].n_samples >= 2 * min_node_sample &&
+            tree[n_nodes - 2].depth < max_depth)
+            nodes_to_treat.push_back(n_nodes - 2);
         else
             n_leaves += 1;
+
     } else
         n_leaves += 1;
 
@@ -486,6 +497,12 @@ template <typename T> da_status decision_tree<T>::fit() {
         X_binned->compute_histograms(X, n_samples, n_features, ldx);
     }
 
+    has_onevall_features = false;
+    if ((split_property)cat_split_strat == categorical_onevall) {
+        if (usr_categorical_feat != nullptr)
+            has_onevall_features = true;
+    }
+
     // Allocate the tree and class_props arrays
     // accounting for a full binary tree of depth 10 (or maximum depth)
     size_t init_capacity = (da_int)1 << (std::min(max_depth, (da_int)10) + (da_int)1);
@@ -513,9 +530,16 @@ template <typename T> da_status decision_tree<T>::fit() {
         }
         status = compress_count_occurences(samples_idx, bootstrap_sample_frequency);
         // only memory error can be raised
-        if (status != da_status_success)
-            return da_error_bypass(this->err, da_status_memory_error, // LCOV_EXCL_LINE
-                                   "Memory allocation error");
+        if (status != da_status_success) {
+            if (status == da_status_memory_error) {
+                return da_error_bypass(this->err, da_status_memory_error,
+                                       "Memory allocation error");
+            } else {
+                return da_error_bypass(
+                    this->err, da_status_internal_error, // LCOV_EXCL_LINE
+                    "Unexpected error while compressing the sample indices");
+            }
+        }
         n_obs = samples_idx.size();
     }
 
@@ -554,9 +578,115 @@ template <typename T> da_status decision_tree<T>::fit() {
     } else {
         status = fit_serial();
     }
+    if (status != da_status_success)
+        return status;
+
+    // Build compact, inference-only representation eagerly so concurrent
+    // inference (e.g. from forest) does not race on lazy initialization.
+    status = build_compact_tree();
+    if (status != da_status_success)
+        return status;
     this->model_trained = true;
     return status;
 }
+
+template <typename T> da_status decision_tree<T>::build_compact_tree() {
+
+    // The training tree already stores children contiguously (see add_node),
+    // so we can copy node-by-node and reuse `left_child_idx` directly.
+    try {
+        compact_tree.resize(n_nodes);
+        f_idx_cont.resize(n_nodes);
+        next_idx_cont.resize(n_nodes);
+        threshold_cont.resize(n_nodes);
+        feat_is_onevall.resize(n_features, false);
+    } catch (const std::bad_alloc &) {
+        return da_status_memory_error;
+    }
+
+    if (has_onevall_features) {
+        for (da_int i = 0; i < n_features; i++)
+            feat_is_onevall[i] = feat_prop[i] != -1;
+    }
+
+    for (da_int i = 0; i < n_nodes; i++) {
+        const node<T> &nd = tree[i];
+        compact_node<T> &cn = compact_tree[i];
+        if (nd.is_leaf) {
+            cn.feature_idx = -1;
+            cn.next_idx = nd.y_pred;
+            f_idx_cont[i] = -1;
+            next_idx_cont[i] = nd.y_pred;
+            threshold_cont[i] = 0.0;
+        } else {
+            cn.feature_idx = nd.feature;
+            cn.next_idx = nd.left_child_idx;
+            f_idx_cont[i] = nd.feature;
+            next_idx_cont[i] = nd.left_child_idx;
+            if (!feat_is_onevall[nd.feature]) {
+                cn.threshold = nd.x_threshold;
+                threshold_cont[i] = nd.x_threshold;
+            } else {
+                cn.threshold = (T)nd.category;
+                threshold_cont[i] = (T)nd.category;
+            }
+        }
+    }
+    return da_status_success;
+}
+
+// LCOV_EXCL_START
+// Depth first build for the compact tree.
+// It is faster on some benchmarks problem but only marginally. Keeping it there for now if more refined benchmarking shows a clear advantage on some use cases
+template <typename T> da_status decision_tree<T>::build_compact_tree_depth_first() {
+
+    try {
+        compact_tree.resize(n_nodes);
+        feat_is_onevall.resize(n_features, false);
+    } catch (const std::bad_alloc &) {
+        return da_status_memory_error;
+    }
+
+    for (da_int i = 0; i < n_features; i++)
+        feat_is_onevall[i] = feat_prop[i] != -1;
+
+    struct node_mapping {
+        da_int training_idx;
+        da_int compact_parent_idx;
+        bool is_left;
+    };
+    std::vector<node_mapping> stack;
+    stack.reserve((size_t)2 * depth);
+
+    da_int compact_slot = 0;
+    stack.push_back({0, -1, true});
+
+    while (!stack.empty()) {
+        node_mapping to_treat = stack.back();
+        stack.pop_back();
+
+        if (!to_treat.is_left) {
+            compact_tree[to_treat.compact_parent_idx].next_idx = compact_slot;
+        }
+
+        const node<T> &nd = tree[to_treat.training_idx];
+        compact_node<T> &cn = compact_tree[compact_slot];
+
+        if (nd.is_leaf) {
+            cn.feature_idx = -1;
+            cn.next_idx = nd.y_pred;
+        } else {
+            cn.feature_idx = nd.feature;
+            cn.threshold = nd.x_threshold;
+            stack.push_back({nd.right_child_idx, compact_slot, false});
+            stack.push_back({nd.left_child_idx, compact_slot, true});
+        }
+        compact_slot++;
+    }
+
+    return da_status_success;
+}
+// LCOV_EXCL_STOP
 
 } // namespace da_decision_forest
 } // namespace ARCH

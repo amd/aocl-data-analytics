@@ -44,3 +44,4 @@ source/core/csv/char_to_num.hpp
 'LICENSE'
 'NOTICE'
 '\.github/.*'
+r_interface/DESCRIPTION

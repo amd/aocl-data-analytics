@@ -59,7 +59,19 @@ namespace da_arch {
 
 const char *get_namespace(void);
 
-}
+// True iff this compiled architecture namespace contains _Float16 (AVX-512-FP16)
+// codegen, i.e. it was built with __AVX512FP16__ defined. It is compiled once per
+// architecture object, so a dispatched call reports the capability of the code
+// path that will actually execute on the current CPU, independent of the Zen
+// generation label.
+bool fp16_codegen_available(void);
+
+// True iff _Float16 mixed precision can actually run on this build and CPU: the
+// dispatched namespace has FP16 codegen AND the CPU advertises AVX512-FP16 via
+// CPUID
+bool fp16_available(void);
+
+} // namespace da_arch
 
 namespace da_utils {
 

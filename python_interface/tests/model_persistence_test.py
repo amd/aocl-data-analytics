@@ -35,7 +35,7 @@ import pickle
 import numpy as np
 import pytest
 
-from aoclda.factorization import PCA, KernelPCA
+from aoclda.factorization import PCA, KernelPCA, NMF
 from aoclda.clustering import kmeans
 from aoclda.linear_model import linmod
 from aoclda.decision_tree import decision_tree
@@ -197,6 +197,72 @@ def test_kernel_pca_pickle(kernel, numpy_precision, numpy_order, tmp_path, capfd
     filepath2 = tmp_path / "model_kernel_pca2.pkl"
     with open(filepath2, 'wb') as f:
         pickle.dump(kpca_loaded, f)
+
+
+# ============================================================================
+# NMF Serialization Tests
+# ============================================================================
+
+@pytest.mark.parametrize("init", ["nndsvda", "nndsvd", "random", "nndsvdar"])
+@pytest.mark.parametrize("numpy_precision", [np.float32, np.float64])
+@pytest.mark.parametrize("numpy_order", ["C", "F"])
+def test_nmf_pickle(init, numpy_precision, numpy_order, tmp_path, capfd):
+    """Test NMF pickle serialization preserves model state."""
+    A_train = np.array([
+        [1., 2., 3., 4.],
+        [2., 4., 6., 8.],
+        [3., 6., 9., 12.],
+        [4., 1., 5., 2.],
+        [5., 3., 8., 4.],
+    ], dtype=numpy_precision, order=numpy_order)
+
+    A_new = np.array([
+        [2., 3., 5., 4.],
+        [1., 1., 2., 1.],
+    ], dtype=numpy_precision, order=numpy_order)
+
+    # Fit
+    nmf = NMF(n_components=2, init=init, max_iter=200, tol=1.0e-6,
+              random_state=42)
+    W_before = nmf.fit_transform(A_train)
+    H_before = nmf.h.copy()
+    recon_before = nmf.reconstruction_err
+    n_iter_before = nmf.n_iter
+    transform_before = nmf.transform(A_new)
+    inv_before = nmf.inverse_transform(transform_before)
+
+    # Save
+    filepath = tmp_path / "model_nmf.pkl"
+    with open(filepath, 'wb') as f:
+        pickle.dump(nmf, f)
+    del nmf
+
+    check_print_model_metadata(filepath, capfd)
+
+    # Load
+    with open(filepath, 'rb') as f:
+        nmf_loaded = pickle.load(f)
+
+    # Verify results are identical after loading
+    W_after = nmf_loaded.w
+    H_after = nmf_loaded.h
+    transform_after = nmf_loaded.transform(A_new)
+    inv_after = nmf_loaded.inverse_transform(transform_after)
+
+    assert np.array_equal(W_before, W_after)
+    assert np.array_equal(H_before, H_after)
+    assert recon_before == nmf_loaded.reconstruction_err
+    assert n_iter_before == nmf_loaded.n_iter
+    assert nmf_loaded._n_components == 2
+    assert np.array_equal(transform_before, transform_after)
+    assert np.array_equal(inv_before, inv_after)
+
+    check_print_model_versions(nmf_loaded, capfd)
+
+    # Save again (stability check)
+    filepath2 = tmp_path / "model_nmf2.pkl"
+    with open(filepath2, 'wb') as f:
+        pickle.dump(nmf_loaded, f)
 
 
 # ============================================================================
@@ -785,6 +851,57 @@ def test_approximate_neighbors_pickle(
         pickle.dump(ann_loaded, f)
 
 
+@pytest.mark.parametrize("numpy_precision", [np.float32, np.float64])
+@pytest.mark.parametrize("quantization", ["int8", "int4", "bfloat16"])
+def test_quantized_approximate_neighbors_pickle(numpy_precision, quantization, tmp_path):
+    """Test pickle serialization preserves a quantized approximate-neighbor index."""
+    X_train = np.array([
+        [-1.5, -1.2, 2.6],
+        [-2.5, -1.3, 3.8],
+        [-3.6, -2.8, -1.7],
+        [1.6, 3.4, 1.2],
+        [2.8, 5.3, 1.3],
+        [3.0, -1.2, 2.4],
+        [0.5, 0.3, 1.1],
+        [-0.5, 0.8, -0.9]
+    ], dtype=numpy_precision)
+
+    X_test = np.array([
+        [-2.5, 2.2, 3.6],
+        [-1.4, -2.7, -1.0],
+        [2.6, 1.2, -3.7]
+    ], dtype=numpy_precision)
+
+    ann = approximate_neighbors(
+        n_neighbors=3,
+        algorithm="ivfsq",
+        n_list=2,
+        n_probe=2,
+        seed=42,
+        quantization=quantization,
+        quantization_scheme=("direct_signed"
+                             if quantization == "bfloat16"
+                             else "per_dimension"),
+        quantization_residual=True
+    )
+
+    ann.train_and_add(X_train)
+
+    dist_before, ind_before = ann.kneighbors(X_test, return_distance=True)
+
+    filepath = tmp_path / "model_quantized_ann.pkl"
+    with open(filepath, 'wb') as f:
+        pickle.dump(ann, f)
+
+    with open(filepath, 'rb') as f:
+        ann_loaded = pickle.load(f)
+
+    dist_after, ind_after = ann_loaded.kneighbors(X_test, return_distance=True)
+
+    assert np.array_equal(ind_before, ind_after)
+    assert np.array_equal(dist_before, dist_after)
+
+
 # ============================================================================
 # SVM Serialization Tests
 # ============================================================================
@@ -995,6 +1112,41 @@ def test_kmeans_fit_after_load_succeeds(tmp_path):
     # Verify we can predict with the refitted model
     labels = km_loaded.predict(X_new)
     assert labels.shape == (2,)
+
+
+def test_nmf_fit_after_load_succeeds(tmp_path):
+    """Test that calling fit_transform on a loaded NMF model succeeds."""
+    A_train = np.array([
+        [1., 2., 3., 4.],
+        [2., 4., 6., 8.],
+        [3., 6., 9., 12.],
+        [4., 1., 5., 2.],
+    ], dtype=np.float64)
+
+    nmf = NMF(n_components=2, random_state=0)
+    nmf.fit(A_train)
+
+    filepath = tmp_path / "model_fit_nmf.pkl"
+    with open(filepath, 'wb') as f:
+        pickle.dump(nmf, f)
+    del nmf
+
+    with open(filepath, 'rb') as f:
+        nmf_loaded = pickle.load(f)
+
+    assert nmf_loaded._n_components == 2
+
+    # Refit on new data
+    A_new = np.array([
+        [1., 0., 2., 1.],
+        [0., 2., 1., 3.],
+        [2., 1., 0., 2.],
+        [1., 3., 2., 0.],
+    ], dtype=np.float64)
+    W_new = nmf_loaded.fit_transform(A_new)
+    assert W_new.shape == (4, 2)
+    result = nmf_loaded.transform(A_new)
+    assert result.shape == (4, 2)
 
 
 def test_linmod_fit_after_load_succeeds(tmp_path):

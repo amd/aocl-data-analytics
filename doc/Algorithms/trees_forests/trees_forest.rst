@@ -148,24 +148,21 @@ Decision trees options
       .. csv-table:: :strong:`Table of Options for Decision Trees.`
          :escape: ~
          :header: "Option name", "Type", "Default", "Description", "Constraints"
-
-         "maximum bins", "integer", ":math:`i=256`", "Maximum number of bins in histograms.", ":math:`2 \le i \le 65535`"
-         "histogram", "string", ":math:`s=` `no`", "Choose whether to use histograms constructed from the data matrix X.", ":math:`s=` `no`, or `yes`."
-         "category split strategy", "string", ":math:`s=` `ordered`", "Strategy to split categorical features. For a given categorical feature, 'one-vs-all' tries to split each categorical value from all the others while 'ordered' will try to split the smaller categories from the bigger ones.", ":math:`s=` `one-vs-all`, or `ordered`."
+         
          "storage order", "string", ":math:`s=` `column-major`", "Whether data is supplied and returned in row- or column-major order.", ":math:`s=` `c`, `column-major`, `f`, `fortran`, or `row-major`."
+         "category split strategy", "string", ":math:`s=` `ordered`", "Strategy to split categorical features. For a given categorical feature, 'one-vs-all' tries to split each categorical value from all the others while 'ordered' will try to split the smaller categories from the bigger ones.", ":math:`s=` `one-vs-all`, or `ordered`."
          "check data", "string", ":math:`s=` `no`", "Check input data for NaNs prior to performing computation.", ":math:`s=` `no`, or `yes`."
          "feature threshold", "real", ":math:`r=1e-05`", "Minimum difference in feature value required for splitting.", ":math:`0 \le r`"
          "node minimum samples", "integer", ":math:`i=2`", "The minimum number of samples required to split an internal node.", ":math:`1 \le i`"
          "predict probabilities", "string", ":math:`s=` `yes`", "evaluate class probabilities (in addition to class predictions). Needs to be set to 'yes' if calls to predict_proba or predict_log_proba are made after fit.", ":math:`s=` `no`, or `yes`."
-         "detect categorical data", "string", ":math:`s=` `no`", "Check if the data is categorical, encoded in [0, n_categories-1].", ":math:`s=` `no`, or `yes`."
          "scoring function", "string", ":math:`s=` `gini`", "Select scoring function to use.", ":math:`s=` `cross-entropy`, `entropy`, `gini`, `misclass`, `misclassification`, or `misclassification-error`."
          "maximum depth", "integer", ":math:`i=29`", "Set the maximum depth of trees.", ":math:`0 \le i \le 29`"
          "seed", "integer", ":math:`i=-1`", "Set the random seed for the random number generator. If the value is -1, a random seed is automatically generated. In this case the resulting classification will create non-reproducible results.", ":math:`-1 \le i`"
          "maximum features", "integer", ":math:`i=0`", "Set the number of features to consider when splitting a node. 0 means take all the features.", ":math:`0 \le i`"
          "minimum split score", "real", ":math:`r=0`", "Minimum score needed for a node to be considered for splitting.", ":math:`0 \le r \le 1`"
-         "category tolerance", "real", ":math:`r=1e-05`", "How far data can be from an integer to be considered not categorical.", ":math:`0 \le r < 1`"
-         "maximum categories", "integer", ":math:`i=50`", "Number of distinct values required for each feature for it to be considered categorical.", ":math:`2 \le i`"
          "minimum impurity decrease", "real", ":math:`r=0`", "Minimum score improvement needed to consider a split from the parent node.", ":math:`0 \le r`"
+         "maximum bins", "integer", ":math:`i=256`", "Maximum number of bins in histograms.", ":math:`2 \le i \le 65535`"
+         "histogram", "string", ":math:`s=` `no`", "Choose whether to use histograms constructed from the data matrix X.", ":math:`s=` `no`, or `yes`."
 
 
 Decision forests options
@@ -189,7 +186,7 @@ Decision forests options
       .. csv-table:: :strong:`Table of Options for Decision Forests.`
          :escape: ~
          :header: "Option name", "Type", "Default", "Description", "Constraints"
-
+         
          "maximum tree threads", "integer", ":math:`i=0`", "Maximum number of threads allocated to each tree for parallel feature evaluation. 0 means no cap.", ":math:`0 \le i`"
          "category split strategy", "string", ":math:`s=` `ordered`", "How to split categorical features: split one category from all other or consider them ordered.", ":math:`s=` `one-vs-all`, or `ordered`."
          "maximum bins", "integer", ":math:`i=256`", "Maximum number of bins in histograms.", ":math:`2 \le i \le 65535`"
@@ -210,7 +207,6 @@ Decision forests options
          "bootstrap", "string", ":math:`s=` `yes`", "Select whether to bootstrap the samples in the trees.", ":math:`s=` `no`, or `yes`."
          "bootstrap samples factor", "real", ":math:`r=1`", "Proportion of samples to draw from the data set to build each tree if 'bootstrap' was set to 'yes'.", ":math:`0 < r \le 1`"
          "proportion features", "real", ":math:`r=0.1`", "Set the proportion of features to consider when 'features selection' is set to 'proportion'.", ":math:`0 < r \le 1`"
-
 
 
 Choosing the decision forest options
@@ -297,7 +293,7 @@ Decision trees
    .. tab-item:: Python
       :sync: Python
 
-      .. autoclass:: aoclda.decision_tree.decision_tree(criterion='gini', seed=-1, max_depth=10, max_features=0, min_samples_split=2, build_order='breadth first', min_impurity_decrease=0.0, min_split_score=0.0, feat_thresh=1.0e-06, check_data=false)
+      .. autoclass:: aoclda.decision_tree.decision_tree(criterion='gini', seed=-1, max_depth=29, min_samples_split=2, max_features=0, min_impurity_decrease=0.0, min_split_score=0.0, feat_thresh=1.0e-05, category_split_strategy="ordered", histogram=False, maximum_bins=256, predict_proba=True, check_data=False)
          :members:
 
    .. tab-item:: C
@@ -362,7 +358,7 @@ Decision forests
    .. tab-item:: Python
       :sync: Python
 
-      .. autoclass:: aoclda.decision_forest.decision_forest(criterion='gini', bootstrap=True, n_trees=100, features_selection='sqrt', max_features=0, seed=-1, max_depth=10, min_samples_split=2, build_order='breadth first', samples_factor=0.8, min_impurity_decrease=0.0, min_split_score=0.0, feat_thresh=1.0e-06, check_data=false)
+      .. autoclass:: aoclda.decision_forest.decision_forest(n_trees=100, criterion='gini', seed=-1, max_depth=29, min_samples_split=2, bootstrap=True, features_selection='sqrt', max_features=0, proportion_features=0.1, samples_factor=1.0, min_impurity_decrease=0.0, min_split_score=0.0, feat_thresh=1.0e-06, histogram=False, maximum_bins=256, block_size=256, category_split_strategy="ordered", max_tree_threads=0, check_data=False)
          :members:
 
    .. tab-item:: C

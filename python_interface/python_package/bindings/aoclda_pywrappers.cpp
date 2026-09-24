@@ -33,6 +33,7 @@
 #include "decision_forest_py.hpp"
 #include "factorization_py.hpp"
 #include "internal_utilities_py.hpp"
+#include "interpolation_py.hpp"
 #include "kernel_functions_py.hpp"
 #include "kmeans_py.hpp"
 #include "linmod_py.hpp"
@@ -185,23 +186,29 @@ PYBIND11_MODULE(_aoclda, m) {
     /**********************************/
     auto m_linmod = m.def_submodule("linear_model", "Linear models.");
     py::class_<linmod, pyda_handle>(m_linmod, "pybind_linmod")
-        .def(
-            py::init<std::string, std::optional<da_int>, bool, std::string, std::string,
-                     std::string, bool, bool, std::optional<da_int>, std::string, bool>(),
-            py::arg("mod"), py::arg("max_iter") = py::none(),
-            py::arg("intercept") = false, py::arg("solver") = "auto",
-            py::arg("scaling") = "auto", py::arg("constraint") = "ssc",
-            py::arg("warm_start") = false, py::arg("mixed_precision") = false,
-            py::arg("low_precision_max_iter") = 200, py::arg("precision") = "double",
-            py::arg("check_data") = false)
+        .def(py::init<std::string, std::optional<da_int>, bool, std::string, std::string,
+                      std::string, bool, bool, std::optional<da_int>, std::string, bool,
+                      std::optional<da_int>, std::optional<da_int>,
+                      std::optional<da_int>>(),
+             py::arg("mod"), py::arg("max_iter") = py::none(),
+             py::arg("intercept") = false, py::arg("solver") = "auto",
+             py::arg("scaling") = "auto", py::arg("constraint") = "ssc",
+             py::arg("warm_start") = false, py::arg("mixed_precision") = false,
+             py::arg("low_precision_max_iter") = 200, py::arg("precision") = "double",
+             py::arg("check_data") = false, py::arg("optim_coord_skip_min") = 2,
+             py::arg("optim_coord_skip_max") = 100, py::arg("print_level") = 0)
         .def("pybind_fit", &linmod::fit<float>, "Computes the model", "X"_a, "y"_a,
              py::arg("x0") = py::none(), py::arg("progress_factor") = py::none(),
              py::arg("reg_lambda") = (float)0.0, py::arg("reg_alpha") = (float)0.0,
-             py::arg("tol") = (float)0.0001, py::arg("low_precision_tol") = (float)0.01)
+             py::arg("tol") = (float)0.0001, py::arg("low_precision_tol") = (float)0.01,
+             py::arg("dual_tol") = (float)0.0001,
+             py::arg("optim_coord_skip_tol") = (float)1.0e-4)
         .def("pybind_fit", &linmod::fit<double>, "Computes the model", "X"_a, "y"_a,
              py::arg("x0") = py::none(), py::arg("progress_factor") = py::none(),
              py::arg("reg_lambda") = (double)0.0, py::arg("reg_alpha") = (double)0.0,
-             py::arg("tol") = (double)0.0001, py::arg("low_precision_tol") = (double)0.01)
+             py::arg("tol") = (double)0.0001, py::arg("low_precision_tol") = (double)0.01,
+             py::arg("dual_tol") = (double)0.0001,
+             py::arg("optim_coord_skip_tol") = (double)1.0e-4)
         .def("pybind_predict", &linmod::predict<double>, "Evaluate the model on X", "X"_a,
              py::arg("observations") = py::none())
         .def("pybind_predict", &linmod::predict<float>, "Evaluate the model on X", "X"_a,
@@ -296,6 +303,44 @@ PYBIND11_MODULE(_aoclda, m) {
         .def(py::pickle(
             [](kernel_pca &p) { return p.save_model(); },
             [](py::dict t) { return pyda_handle::load_model<kernel_pca>(t); }));
+
+    /**********************************/
+    /*  Nonnegative Matrix Factor.    */
+    /**********************************/
+    py::class_<nmf, pyda_handle>(m_factorization, "pybind_NMF")
+        .def(py::init<da_int, std::string, std::string, da_int, double, std::string,
+                      da_int, da_int, std::string, bool>(),
+             py::arg("n_components") = 0, py::arg("solver") = "mu",
+             py::arg("beta_loss") = "frobenius", py::arg("max_iter") = 200,
+             py::arg("tol") = 1.0e-4, py::arg("init") = "nndsvda",
+             py::arg("random_state") = -1, py::arg("check_every") = 10,
+             py::arg("precision") = "double", py::arg("check_data") = false)
+        .def("pybind_fit", &nmf::fit<float>, "Fit the nonnegative matrix factorization",
+             "A"_a)
+        .def("pybind_fit", &nmf::fit<double>, "Fit the nonnegative matrix factorization",
+             "A"_a)
+        .def("pybind_fit_custom", &nmf::fit_custom<float>,
+             "Fit with user-supplied (W, H) for init='custom'", "A"_a, "W"_a, "H"_a)
+        .def("pybind_fit_custom", &nmf::fit_custom<double>,
+             "Fit with user-supplied (W, H) for init='custom'", "A"_a, "W"_a, "H"_a)
+        .def("pybind_transform", &nmf::transform<float>, "Transform using computed NMF",
+             "X"_a)
+        .def("pybind_transform", &nmf::transform<double>, "Transform using computed NMF",
+             "X"_a)
+        .def("pybind_inverse_transform", &nmf::inverse_transform<float>,
+             "Inverse transform using computed NMF", "Xt"_a)
+        .def("pybind_inverse_transform", &nmf::inverse_transform<double>,
+             "Inverse transform using computed NMF", "Xt"_a)
+        .def("get_components", &nmf::get_components)
+        .def("get_transform", &nmf::get_transform)
+        .def("get_reconstruction_error", &nmf::get_reconstruction_error)
+        .def("get_n_iter", &nmf::get_n_iter)
+        .def("get_n_samples", &nmf::get_n_samples)
+        .def("get_n_features", &nmf::get_n_features)
+        .def("get_n_components", &nmf::get_n_components)
+        .def("set_n_components", &nmf::set_n_components, py::arg("n_components"))
+        .def(py::pickle([](nmf &p) { return p.save_model(); },
+                        [](py::dict t) { return pyda_handle::load_model<nmf>(t); }));
 
     /**********************************/
     /*       t-SNE embedding          */
@@ -406,24 +451,23 @@ PYBIND11_MODULE(_aoclda, m) {
     /**********************************/
     auto m_decision_tree = m.def_submodule("decision_tree", "Decision trees.");
     py::class_<decision_tree, pyda_handle>(m_decision_tree, "pybind_decision_tree")
-        .def(py::init<da_int, da_int, da_int, std::string, da_int, std::string, bool,
-                      da_int, std::string, bool, da_int, bool, bool>(),
+        .def(py::init<da_int, da_int, da_int, std::string, da_int, std::string,
+                      std::string, bool, da_int, bool, bool>(),
              py::arg("seed") = -1, py::arg("max_depth") = 29, py::arg("max_features") = 0,
              py::arg("criterion") = "gini", py::arg("min_samples_split") = 2,
-             py::arg("precision") = "double", py::arg("detect_categorical_data") = false,
-             py::arg("max_category") = 50, py::arg("category_split_strategy") = "ordered",
-             py::arg("histogram") = false, py::arg("maximum_bins") = 256,
-             py::arg("predict_proba") = true, py::arg("check_data") = false)
+             py::arg("precision") = "double",
+             py::arg("category_split_strategy") = "ordered", py::arg("histogram") = false,
+             py::arg("maximum_bins") = 256, py::arg("predict_proba") = true,
+             py::arg("check_data") = false)
         .def("pybind_fit", &decision_tree::fit<float>, "Fit the decision tree", "X"_a,
              "y"_a, py::arg("min_impurity_decrease") = (float)0.03,
              py::arg("min_split_score") = (float)0.03,
-             py::arg("feat_thresh") = (float)1.0e-06, py::arg("cat_tol") = (float)1.0e-05,
+             py::arg("feat_thresh") = (float)1.0e-06,
              py::arg("categorical_features") = py::none())
         .def("pybind_fit", &decision_tree::fit<double>, "Fit the decision tree", "X"_a,
              "y"_a, py::arg("min_impurity_decrease") = (double)0.03,
              py::arg("min_split_score") = (double)0.03,
              py::arg("feat_thresh") = (double)1.0e-06,
-             py::arg("cat_tol") = (double)1.0e-05,
              py::arg("categorical_features") = py::none())
         .def("pybind_score", &decision_tree::score<float>, "Score the decision tree",
              "X_test"_a, "y_test"_a)
@@ -558,6 +602,35 @@ PYBIND11_MODULE(_aoclda, m) {
         .def("get_info_optim", &nlls::get_info_optim); // -> dict
 
     /**********************************/
+    /*          Interpolation         */
+    /**********************************/
+    auto m_interpolation = m.def_submodule("interpolation", "Interpolation models.");
+    py::class_<cubic_spline, pyda_handle>(m_interpolation, "pybind_cubic_spline")
+        .def(py::init<std::string, std::string, bool>(),
+             py::arg("spline_type") = "natural", py::arg("precision") = "double",
+             py::arg("check_data") = false)
+        .def("pybind_fit", &cubic_spline::fit<float>, "Fit the cubic spline", "x"_a,
+             "y"_a, py::arg("y_deriv") = py::none(), py::arg("left_order") = (da_int)2,
+             py::arg("left_values") = py::none(), py::arg("right_order") = (da_int)2,
+             py::arg("right_values") = py::none())
+        .def("pybind_fit", &cubic_spline::fit<double>, "Fit the cubic spline", "x"_a,
+             "y"_a, py::arg("y_deriv") = py::none(), py::arg("left_order") = (da_int)2,
+             py::arg("left_values") = py::none(), py::arg("right_order") = (da_int)2,
+             py::arg("right_values") = py::none())
+        .def("pybind_evaluate", &cubic_spline::evaluate<float>,
+             "Evaluate the cubic spline", "x_eval"_a, "orders"_a)
+        .def("pybind_evaluate", &cubic_spline::evaluate<double>,
+             "Evaluate the cubic spline", "x_eval"_a, "orders"_a)
+        .def("pybind_search_cells", &cubic_spline::search_cells<float>,
+             "Find the cells containing the query points", "x_eval"_a)
+        .def("pybind_search_cells", &cubic_spline::search_cells<double>,
+             "Find the cells containing the query points", "x_eval"_a)
+        .def("pybind_get_coefficients", &cubic_spline::get_coefficients,
+             "Get the piecewise polynomial coefficients of the fitted spline")
+        .def("get_n_sites", &cubic_spline::get_n_sites)
+        .def("get_dim", &cubic_spline::get_dim);
+
+    /**********************************/
     /*        Nearest Neighbors       */
     /**********************************/
     auto m_neighbors = m.def_submodule("neighbors", "Nearest Neighbors");
@@ -650,12 +723,14 @@ PYBIND11_MODULE(_aoclda, m) {
     py::class_<approximate_neighbors, pyda_handle>(m_neighbors,
                                                    "pybind_approximate_neighbors")
         .def(py::init<da_int, std::string, std::string, da_int, da_int, da_int, da_int,
-                      std::string, bool>(),
-             py::arg("n_neighbors") = (da_int)5, py::arg("algorithm") = "ivfflat",
+                      std::string, std::string, std::string, bool, bool>(),
+             py::arg("n_neighbors") = (da_int)5, py::arg("algorithm") = "auto",
              py::arg("metric") = "sqeuclidean", py::arg("n_list") = (da_int)1,
              py::arg("n_probe") = (da_int)1, py::arg("kmeans_iter") = (da_int)10,
              py::arg("seed") = (da_int)0, py::arg("precision") = "double",
-             py::arg("check_data") = false)
+             py::arg("quantization") = "bfloat16",
+             py::arg("quantization_scheme") = "per_dimension",
+             py::arg("quantization_residual") = true, py::arg("check_data") = false)
         .def("pybind_train", &approximate_neighbors::train<float>,
              "Train the approximate nearest neighbors", "X"_a,
              py::arg("train_fraction") = (float)1.0)

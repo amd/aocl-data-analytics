@@ -46,6 +46,10 @@ struct ann_serial_params {
     da_int seed;
     bool compare_centroids;
     da_int k;
+    std::string algorithm = "ivfflat";
+    std::string quantization = "bfloat16";
+    std::string quantization_scheme = "per_dimension";
+    std::string quantization_residual = "yes";
 };
 
 void PrintTo(const ann_serial_params &param, ::std::ostream *os) {
@@ -59,6 +63,29 @@ const std::vector<ann_serial_params> ann_serialization_params = {
     {"euclidean_colmajor", "euclidean", "column-major", 0, 456, true, 3},
     {"inner_product_colmajor", "inner product", "column-major", 0, 789, false, 2},
     {"cosine_colmajor", "cosine", "column-major", 1, 321, false, 3},
+    // Quantized configs: direct regression coverage for the scale/bias serialization
+    // bug — scale/bias must survive save/load or these fail with a crash (empty-vector
+    // .data() dereference) or wrong distances.
+    {"quantized_per_dimension_residual_colmajor", "sqeuclidean", "column-major", 3, 123,
+     true, 3, "ivfsq", "int8", "per_dimension", "yes"},
+    {"quantized_per_dimension_noresidual_rowmajor", "sqeuclidean", "row-major", 2, 123,
+     true, 2, "ivfsq", "int8", "per_dimension", "no"},
+    {"quantized_direct_signed_residual_colmajor", "sqeuclidean", "column-major", 0, 456,
+     true, 3, "ivfsq", "int8", "direct_signed", "yes"},
+    {"quantized_uniform_noresidual_rowmajor", "sqeuclidean", "row-major", 1, 321, true, 3,
+     "ivfsq", "int8", "uniform", "no"},
+    {"int4_uniform_sqeuclidean_residual_colmajor", "sqeuclidean", "column-major", 3, 123,
+     true, 3, "ivfsq", "int4", "uniform", "yes"},
+    {"int4_inner_product_raw_rowmajor", "inner product", "row-major", 2, 789, false, 2,
+     "ivfsq", "int4", "per_dimension", "no"},
+    {"bfloat16_sqeuclidean_residual_colmajor", "sqeuclidean", "column-major", 3, 123,
+     true, 3, "ivfsq", "bfloat16", "direct_signed", "yes"},
+    {"bfloat16_euclidean_raw_rowmajor", "euclidean", "row-major", 2, 456, true, 2,
+     "ivfsq", "bfloat16", "direct_signed", "no"},
+    {"bfloat16_inner_product_residual_colmajor", "inner product", "column-major", 0, 789,
+     false, 2, "ivfsq", "bfloat16", "direct_signed", "yes"},
+    {"bfloat16_cosine_raw_rowmajor", "cosine", "row-major", 1, 321, false, 3, "ivfsq",
+     "bfloat16", "direct_signed", "no"},
 };
 
 // Fixed algorithm parameters
@@ -149,11 +176,11 @@ class ANNSerializationTest : public testing::TestWithParam<ann_serial_params> {
 };
 
 template <typename T>
-void ann_serialization_test(const ann_serial_params &pr, da_int n_samples,
-                            da_int n_features, da_int n_queries,
-                            const std::vector<double> &X_train_src,
-                            const std::vector<double> &X_test_src, da_int ldx_train,
-                            da_int ldx_test, const std::string &model_file) {
+da_status ann_serialization_test(const ann_serial_params &pr, da_int n_samples,
+                                 da_int n_features, da_int n_queries,
+                                 const std::vector<double> &X_train_src,
+                                 const std::vector<double> &X_test_src, da_int ldx_train,
+                                 da_int ldx_test, const std::string &model_file) {
 
     // Convert source data to test precision
     std::vector<T> X_train(X_train_src.begin(), X_train_src.end());
@@ -174,7 +201,7 @@ void ann_serialization_test(const ann_serial_params &pr, da_int n_samples,
         EXPECT_EQ(da_handle_init<T>(&handle_orig, da_handle_approx_nn),
                   da_status_success);
 
-        EXPECT_EQ(da_options_set_string(handle_orig, "algorithm", "ivfflat"),
+        EXPECT_EQ(da_options_set_string(handle_orig, "algorithm", pr.algorithm.c_str()),
                   da_status_success);
         EXPECT_EQ(da_options_set_string(handle_orig, "metric", pr.metric.c_str()),
                   da_status_success);
@@ -191,11 +218,24 @@ void ann_serialization_test(const ann_serial_params &pr, da_int n_samples,
         EXPECT_EQ(da_options_set_int(handle_orig, "seed", pr.seed), da_status_success);
         EXPECT_EQ(da_options_set(handle_orig, "train fraction", (T)ANN_TRAIN_FRACTION),
                   da_status_success);
+        EXPECT_EQ(
+            da_options_set_string(handle_orig, "quantization", pr.quantization.c_str()),
+            da_status_success);
+        EXPECT_EQ(da_options_set_string(handle_orig, "quantization_scheme",
+                                        pr.quantization_scheme.c_str()),
+                  da_status_success);
+        EXPECT_EQ(da_options_set_string(handle_orig, "quantization_residual",
+                                        pr.quantization_residual.c_str()),
+                  da_status_success);
 
         EXPECT_EQ(da_approx_nn_set_training_data(handle_orig, n_samples, n_features,
                                                  X_train.data(), ldx_train),
                   da_status_success);
-        EXPECT_EQ(da_approx_nn_train_and_add<T>(handle_orig), da_status_success);
+        const da_status train_status = da_approx_nn_train_and_add<T>(handle_orig);
+        if (train_status != da_status_success) {
+            da_handle_destroy(&handle_orig);
+            return train_status;
+        }
 
         // Query k-nearest neighbors
         EXPECT_EQ(da_approx_nn_kneighbors(handle_orig, n_queries, n_features,
@@ -307,6 +347,13 @@ void ann_serialization_test(const ann_serial_params &pr, da_int n_samples,
 
         // ==================== VERIFY OPTIONS ====================
         // Verify that options are preserved after serialization
+        char algorithm_loaded[64];
+        da_int algorithm_len = 64;
+        EXPECT_EQ(da_options_get_string(handle_loaded, "algorithm", algorithm_loaded,
+                                        &algorithm_len),
+                  da_status_success);
+        EXPECT_STREQ(algorithm_loaded, pr.algorithm.c_str());
+
         char metric_loaded[64];
         da_int metric_len = 64;
         EXPECT_EQ(
@@ -320,6 +367,29 @@ void ann_serialization_test(const ann_serial_params &pr, da_int n_samples,
                                         &order_len),
                   da_status_success);
         EXPECT_STREQ(order_loaded, pr.order.c_str());
+
+        char quantization_loaded[64];
+        da_int quantization_len = 64;
+        EXPECT_EQ(da_options_get_string(handle_loaded, "quantization",
+                                        quantization_loaded, &quantization_len),
+                  da_status_success);
+        EXPECT_STREQ(quantization_loaded, pr.quantization.c_str());
+
+        char quantization_scheme_loaded[64];
+        da_int quantization_scheme_len = 64;
+        EXPECT_EQ(da_options_get_string(handle_loaded, "quantization_scheme",
+                                        quantization_scheme_loaded,
+                                        &quantization_scheme_len),
+                  da_status_success);
+        EXPECT_STREQ(quantization_scheme_loaded, pr.quantization_scheme.c_str());
+
+        char quantization_residual_loaded[64];
+        da_int quantization_residual_len = 64;
+        EXPECT_EQ(da_options_get_string(handle_loaded, "quantization_residual",
+                                        quantization_residual_loaded,
+                                        &quantization_residual_len),
+                  da_status_success);
+        EXPECT_STREQ(quantization_residual_loaded, pr.quantization_residual.c_str());
 
         da_int k_loaded = 0;
         EXPECT_EQ(da_options_get_int(handle_loaded, "number of neighbors", &k_loaded),
@@ -355,18 +425,23 @@ void ann_serialization_test(const ann_serial_params &pr, da_int n_samples,
 
         da_handle_destroy(&handle_loaded);
     }
+    return da_status_success;
 }
 
 TEST_P(ANNSerializationTest, double) {
     const ann_serial_params &pr = GetParam();
-    ann_serialization_test<double>(pr, n_samples, n_features, n_queries, X_train, X_test,
-                                   ldx_train, ldx_test, model_file);
+    const da_status status =
+        ann_serialization_test<double>(pr, n_samples, n_features, n_queries, X_train,
+                                       X_test, ldx_train, ldx_test, model_file);
+    EXPECT_EQ(status, da_status_success);
 }
 
 TEST_P(ANNSerializationTest, float) {
     const ann_serial_params &pr = GetParam();
-    ann_serialization_test<float>(pr, n_samples, n_features, n_queries, X_train, X_test,
-                                  ldx_train, ldx_test, model_file);
+    const da_status status =
+        ann_serialization_test<float>(pr, n_samples, n_features, n_queries, X_train,
+                                      X_test, ldx_train, ldx_test, model_file);
+    EXPECT_EQ(status, da_status_success);
 }
 
 INSTANTIATE_TEST_SUITE_P(ANNSerializationSuite, ANNSerializationTest,

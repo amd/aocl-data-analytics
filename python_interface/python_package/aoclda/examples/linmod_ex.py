@@ -1,4 +1,4 @@
-# Copyright (C) 2024-2025 Advanced Micro Devices, Inc. All rights reserved.
+# Copyright (C) 2024-2026 Advanced Micro Devices, Inc. All rights reserved.
 #
 # Redistribution and use in source and binary forms, with or without modification,
 # are permitted provided that the following conditions are met:
@@ -51,7 +51,7 @@ def linmod_example():
     X_test = np.array([[1, 1.1], [2.5, 3], [7, 9]])
     pred = lmod.predict(X_test)
     print(f"predictions: [{pred[0]:.3f}, {pred[1]:.3f}, {pred[2]:.3f}]")
-    print('expected   : [3.168  7.358 20.0333]')
+    print('expected   : [3.168, 7.358, 20.033]')
 
 
 if __name__ == "__main__":

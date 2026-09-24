@@ -34,42 +34,88 @@ namespace ARCH {
 
 namespace da_decision_forest {
 
-template <typename T>
-void decision_forest<T>::parallel_count_classes(
-    const T *X_test, da_int ldx_test, const da_int &n_blocks, const da_int &block_size,
-    const da_int &block_rem, [[maybe_unused]] const da_int &n_threads,
-    std::vector<da_int> &count_classes, std::vector<da_int> &y_pred_tree) {
+template <typename T> da_status decision_forest<T>::read_storage_order() {
+    std::string opt_order;
+    da_int iorder;
+    da_status status = this->opts.get("storage order", opt_order, iorder);
+    if (status != da_status_success)
+        return status;
+    this->order = da_order(iorder);
+    return da_status_success;
+}
 
-#pragma omp parallel for collapse(2)                                                     \
-    shared(n_blocks, forest, y_pred_tree, n_features, X_test, ldx_test, count_classes,   \
-               block_rem, block_size) default(none)
-    for (da_int i_block = 0; i_block < n_blocks; i_block++) {
-        for (auto &tree : forest) {
-            da_int start_idx = i_block * block_size;
-            da_int thread_id = (da_int)omp_get_thread_num();
-            da_int start_pred_idx = thread_id * block_size;
-            da_int n_elem = block_size;
-            if (i_block == n_blocks - 1 && block_rem > 0) {
-                n_elem = block_rem;
+template <typename T>
+void decision_forest<T>::parallel_count_classes(const T *X_test, da_int ldx_test,
+                                                da_int nsamp, const da_int &n_threads,
+                                                std::vector<da_int> &count_classes,
+                                                std::vector<da_int> &thread_counts,
+                                                std::vector<da_int> &y_pred_tree) {
+
+#pragma omp parallel num_threads(n_threads)                                              \
+    shared(X_test, ldx_test, nsamp, thread_counts, y_pred_tree) default(none)
+    {
+        da_int tid = (da_int)omp_get_thread_num();
+        da_int *local_counts = &thread_counts[(da_int)tid * nsamp * n_class];
+        da_int *local_pred = &y_pred_tree[(da_int)tid * nsamp];
+
+#pragma omp for schedule(dynamic)
+        for (da_int t = 0; t < n_tree; t++) {
+            forest[t]->set_storage_order(row_major);
+            forest[t]->compact_traverse(nsamp, n_features, X_test, ldx_test, local_pred,
+                                        false);
+            for (da_int i = 0; i < nsamp; i++) {
+                local_counts[i * n_class + local_pred[i]] += 1;
             }
-            tree->predict(n_elem, n_features, &X_test[start_idx], ldx_test,
-                          &(y_pred_tree.data()[start_pred_idx]), 2);
-            for (da_int i = 0; i < n_elem; i++) {
-                da_int c = y_pred_tree[start_pred_idx + i];
-#pragma omp atomic update
-                count_classes[(start_idx + i) * n_class + c] += 1;
+        }
+    }
+
+    // Reduce the per-thread partial counts. Each sample (and thus its slice of
+    // count_classes) is handled by exactly one thread, so the store is non-atomic.
+#pragma omp parallel for num_threads(n_threads)                                          \
+    shared(nsamp, n_threads, count_classes, thread_counts) default(none)
+    for (da_int i = 0; i < nsamp; i++) {
+        for (da_int c = 0; c < n_class; c++) {
+            da_int sum = 0;
+            for (da_int t = 0; t < n_threads; t++) {
+                sum += thread_counts[t * nsamp * n_class + i * n_class + c];
             }
+            count_classes[i * n_class + c] = sum;
         }
     }
 }
 
 template <typename T>
+da_status
+decision_forest<T>::transpose_input_if_needed(da_int nsamp, const T *X_test,
+                                              da_int ldx_test, std::vector<T> &X_row,
+                                              const T *&X_eval, da_int &ldx_eval) {
+
+    X_eval = X_test;
+    ldx_eval = ldx_test;
+
+    // The vectorized tree kernels operate on row-major data.
+    if (this->order != column_major || n_tree == 0)
+        return da_status_success;
+
+    try {
+        X_row.resize((size_t)nsamp * n_features);
+    } catch (const std::bad_alloc &) {
+        return da_error(this->err, da_status_memory_error, // LCOV_EXCL_LINE
+                        "Memory allocation failed.");
+    }
+    da_status status = da_utils::switch_order_copy(this->order, nsamp, n_features, X_test,
+                                                   ldx_test, X_row.data(), n_features);
+    if (status != da_status_success)
+        return da_error(this->err, status, // LCOV_EXCL_LINE
+                        "Failed to transpose the input data.");
+    X_eval = X_row.data();
+    ldx_eval = n_features;
+    return da_status_success;
+}
+
+template <typename T>
 da_status decision_forest<T>::predict(da_int nsamp, da_int nfeat, const T *X_test,
                                       da_int ldx_test, da_int *y_pred) {
-
-    const T *X_test_temp;
-    T *utility_ptr1 = nullptr;
-    da_int ldx_test_temp;
 
     if (y_pred == nullptr) {
         return da_error(this->err, da_status_invalid_input,
@@ -89,34 +135,37 @@ da_status decision_forest<T>::predict(da_int nsamp, da_int nfeat, const T *X_tes
                         "associated with is out of date.");
     }
 
-    da_status status = this->store_2D_array(nsamp, nfeat, X_test, ldx_test, &utility_ptr1,
-                                            &X_test_temp, ldx_test_temp, "n_samples",
-                                            "n_features", "X_test", "ldx_test");
+    // Inference handles both storage orders natively, no input transposition
+    da_status status = read_storage_order();
+    if (status != da_status_success)
+        return status;
+    status = this->check_2D_array(this->order, nsamp, nfeat, X_test, ldx_test,
+                                  "n_samples", "n_features", "X_test", "ldx_test");
     if (status != da_status_success)
         return status;
 
-    if (this->opts.get("block size", block_size) != da_status_success)
-        return da_error_trace( // LCOV_EXCL_LINE
-            this->err, da_status_internal_error,
-            "Unexpected error while reading the optional parameter 'block size' .");
+    // Transpose the input once (if needed) so that every tree can reuse it.
+    std::vector<T> X_row;
+    const T *X_eval;
+    da_int ldx_eval;
+    status = transpose_input_if_needed(nsamp, X_test, ldx_test, X_row, X_eval, ldx_eval);
+    if (status != da_status_success)
+        return status;
 
-    // Set up the parallel tasks and data. X is divided into blocks of small size
-    // evaluating 1 tree on one of X's blocks is considered an independent task that
-    // can be evaluated in parallel.
-    std::vector<da_int> count_classes, y_pred_tree;
-    da_int n_blocks, block_rem;
-    da_utils::blocking_scheme(nsamp, block_size, n_blocks, block_rem);
-    da_int n_threads = da_utils::get_n_threads_loop(n_blocks * n_tree);
-    // We need n_threads arrays of size block_size
+    // Set up the parallel tasks: each tree is evaluated on the full set of samples and
+    // accumulates its votes into a private buffer, reduced afterwards (no atomics).
+    std::vector<da_int> count_classes, thread_counts, y_pred_tree;
+    da_int n_threads = da_utils::get_n_threads_loop(n_tree);
     try {
-        y_pred_tree.resize(n_threads * block_size);
-        count_classes.resize(n_class * nsamp, 0);
+        count_classes.resize((size_t)n_class * nsamp, 0);
+        thread_counts.resize((size_t)n_threads * nsamp * n_class, 0);
+        y_pred_tree.resize((size_t)n_threads * nsamp);
     } catch (std::bad_alloc const &) {                     // LCOV_EXCL_LINE
         return da_error(this->err, da_status_memory_error, // LCOV_EXCL_LINE
                         "Memory allocation failed.");
     }
-    parallel_count_classes(X_test_temp, ldx_test_temp, n_blocks, block_size, block_rem,
-                           n_threads, count_classes, y_pred_tree);
+    parallel_count_classes(X_eval, ldx_eval, nsamp, n_threads, count_classes,
+                           thread_counts, y_pred_tree);
 
 #pragma omp parallel for shared(nsamp, n_class, y_pred, count_classes) default(none)
     for (da_int i = 0; i < nsamp; i++) {
@@ -130,9 +179,6 @@ da_status decision_forest<T>::predict(da_int nsamp, da_int nfeat, const T *X_tes
         y_pred[i] = class_i;
     }
 
-    if (utility_ptr1)
-        delete[] (utility_ptr1);
-
     return da_status_success;
 }
 
@@ -140,13 +186,6 @@ template <typename T>
 da_status decision_forest<T>::predict_proba(da_int nsamp, da_int nfeat, const T *X_test,
                                             da_int ldx_test, T *y_proba, da_int nclass,
                                             da_int ldy) {
-
-    const T *X_test_temp;
-    T *utility_ptr1;
-    T *utility_ptr2;
-    da_int ldx_test_temp;
-    T *y_proba_temp;
-    da_int ldy_proba_temp;
 
     if (nfeat != n_features) {
         return da_error(this->err, da_status_invalid_input,
@@ -168,76 +207,115 @@ da_status decision_forest<T>::predict_proba(da_int nsamp, da_int nfeat, const T 
                         "associated with is out of date.");
     }
 
-    da_status status = this->store_2D_array(nsamp, nfeat, X_test, ldx_test, &utility_ptr1,
-                                            &X_test_temp, ldx_test_temp, "n_samples",
-                                            "n_features", "X_test", "ldx_test");
+    da_status status = read_storage_order();
+    if (status != da_status_success)
+        return status;
+    status = this->check_2D_array(this->order, nsamp, nfeat, X_test, ldx_test,
+                                  "n_samples", "n_features", "X_test", "ldx_test");
     if (status != da_status_success)
         return status;
 
-    status = this->store_2D_array(nsamp, nclass, y_proba, ldy, &utility_ptr2,
-                                  const_cast<const T **>(&y_proba_temp), ldy_proba_temp,
-                                  "n_samples", "n_class", "y_proba", "ldy", 1);
+    // Validate the output array in the user's storage order (no NaN check, no copy):
+    // the probabilities are written straight into y_proba, so no temporary buffer is
+    // needed.
+    if (y_proba == nullptr)
+        return da_error(this->err, da_status_invalid_pointer, "y_proba is null.");
+    da_int ldy_min = (this->order == column_major) ? nsamp : nclass;
+    if (ldy < ldy_min)
+        return da_error(this->err, da_status_invalid_leading_dimension,
+                        "The function was called with ldy = " + std::to_string(ldy) +
+                            ". Constraint: ldy >= " + std::to_string(ldy_min) + ".");
+
+    // Transpose the input once (if needed) so that every tree can reuse it.
+    std::vector<T> X_row;
+    const T *X_eval;
+    da_int ldx_eval;
+    status = transpose_input_if_needed(nsamp, X_test, ldx_test, X_row, X_eval, ldx_eval);
     if (status != da_status_success)
         return status;
 
-    std::vector<T> sum_proba, y_proba_tree;
-    da_int n_blocks, block_rem;
-    da_utils::blocking_scheme(nsamp, block_size, n_blocks, block_rem);
-    da_int n_threads = da_utils::get_n_threads_loop(n_blocks * n_tree);
+    // Parallelize over trees only (this scales better than blocking over samples): each
+    // thread evaluates a subset of trees on all samples and accumulates the class
+    // probabilities into a private buffer, reduced afterwards (no atomics).
+    std::vector<T> sum_proba, thread_proba, y_proba_tree;
+    da_int n_threads = da_utils::get_n_threads_loop(n_tree);
     try {
-        sum_proba.resize(n_class * nsamp);
-        y_proba_tree.resize(n_threads * n_class * block_size);
+        sum_proba.resize((size_t)n_class * nsamp);
+        thread_proba.resize((size_t)n_threads * nsamp * n_class, 0);
+        y_proba_tree.resize((size_t)n_threads * nsamp * n_class);
     } catch (std::bad_alloc const &) {                     // LCOV_EXCL_LINE
         return da_error(this->err, da_status_memory_error, // LCOV_EXCL_LINE
                         "Memory allocation failed.");
     }
 
-#pragma omp parallel for collapse(2)                                                     \
-    shared(sum_proba, nsamp, nfeat, X_test_temp, ldx_test_temp, n_blocks, block_rem,     \
-               y_proba_tree, n_threads) default(none)
-    for (da_int i_block = 0; i_block < n_blocks; i_block++) {
-        for (auto &tree : forest) {
-            da_int start_idx = i_block * block_size;
-            da_int thread_id = (da_int)omp_get_thread_num();
-            da_int start_pred_idx = thread_id * block_size;
-            da_int n_elem = block_size;
-            if (i_block == n_blocks - 1 && block_rem > 0) {
-                n_elem = block_rem;
-            }
-            tree->predict_proba(n_elem, n_features, &X_test_temp[start_idx],
-                                ldx_test_temp, &y_proba_tree.data()[start_pred_idx],
-                                n_class, n_threads * block_size, 2);
-            for (da_int i = 0; i < n_elem; i++) {
+#pragma omp parallel num_threads(n_threads)                                              \
+    shared(X_eval, ldx_eval, nsamp, thread_proba, y_proba_tree) default(none)
+    {
+        da_int tid = (da_int)omp_get_thread_num();
+        // Per-thread accumulator and per-tree scratch, both row-major [sample, class]
+        T *local_proba = &thread_proba[(da_int)tid * nsamp * n_class];
+        T *local_tree = &y_proba_tree[(da_int)tid * nsamp * n_class];
+
+#pragma omp for schedule(dynamic)
+        for (da_int t = 0; t < n_tree; t++) {
+            forest[t]->set_storage_order(row_major);
+            forest[t]->compact_traverse(nsamp, n_features, X_eval, ldx_eval, local_tree,
+                                        n_class, n_class, false);
+            for (da_int i = 0; i < nsamp; i++) {
                 for (da_int j = 0; j < n_class; j++) {
-#pragma omp atomic update
-                    sum_proba[j * nsamp + start_idx + i] +=
-                        y_proba_tree[start_pred_idx + j * n_threads * block_size + i];
+                    local_proba[i * n_class + j] += local_tree[i * n_class + j];
                 }
             }
         }
     }
 
-#pragma omp parallel for shared(nsamp, n_class, ldy_proba_temp, y_proba_temp, sum_proba, \
-                                    n_tree) default(none)
+    // Reduce the per-thread partial sums. Each sample is handled by exactly one thread,
+    // so the store is non-atomic.
+    da_int cl_samp = nsamp * n_class;
+#pragma omp parallel for num_threads(n_threads)                                          \
+    shared(nsamp, n_threads, sum_proba, thread_proba, cl_samp) default(none)
     for (da_int i = 0; i < nsamp; i++) {
-        T sum_ave_prob = 0.0;
         for (da_int j = 0; j < n_class; j++) {
-            T ave_proba = sum_proba[j * nsamp + i] / n_tree;
-            y_proba_temp[j * ldy_proba_temp + i] = ave_proba;
-            sum_ave_prob += ave_proba;
-        }
-        for (da_int j = 0; j < n_class; j++) {
-            y_proba_temp[j * ldy_proba_temp + i] /= sum_ave_prob;
+            T sum = 0;
+            da_int idx_cl = i * n_class + j;
+            for (da_int t = 0; t < n_threads; t++) {
+                sum += thread_proba[t * cl_samp + idx_cl];
+            }
+            sum_proba[j * nsamp + i] = sum;
         }
     }
 
-    if (this->order == row_major) {
-
-        da_utils::copy_transpose_2D_array_column_to_row_major(
-            nsamp, n_class, y_proba_temp, ldy_proba_temp, y_proba, ldy);
-
-        delete[] (utility_ptr1);
-        delete[] (utility_ptr2);
+    // Write the averaged, normalized probabilities straight into the user's buffer in
+    // the requested storage order
+    if (this->order == column_major) {
+#pragma omp parallel for shared(nsamp, n_class, ldy, y_proba, sum_proba,                 \
+                                    n_tree) default(none)
+        for (da_int i = 0; i < nsamp; i++) {
+            T sum_ave_prob = 0.0;
+            for (da_int j = 0; j < n_class; j++) {
+                T ave_proba = sum_proba[j * nsamp + i] / n_tree;
+                y_proba[j * ldy + i] = ave_proba;
+                // cannot be 0: no guard
+                sum_ave_prob += ave_proba;
+            }
+            for (da_int j = 0; j < n_class; j++) {
+                y_proba[j * ldy + i] /= sum_ave_prob;
+            }
+        }
+    } else { // row_major: probabilities laid out as [sample, class]
+#pragma omp parallel for shared(nsamp, n_class, ldy, y_proba, sum_proba,                 \
+                                    n_tree) default(none)
+        for (da_int i = 0; i < nsamp; i++) {
+            T sum_ave_prob = 0.0;
+            for (da_int j = 0; j < n_class; j++) {
+                T ave_proba = sum_proba[j * nsamp + i] / n_tree;
+                y_proba[i * ldy + j] = ave_proba;
+                sum_ave_prob += ave_proba;
+            }
+            for (da_int j = 0; j < n_class; j++) {
+                y_proba[i * ldy + j] /= sum_ave_prob;
+            }
+        }
     }
 
     return da_status_success;
@@ -249,7 +327,10 @@ da_status decision_forest<T>::predict_log_proba(da_int nsamp, da_int nfeat,
                                                 T *y_log_proba, da_int nclass,
                                                 da_int ldy) {
 
-    predict_proba(nsamp, nfeat, X_test, ldx_test, y_log_proba, n_class, ldy);
+    da_status status =
+        predict_proba(nsamp, nfeat, X_test, ldx_test, y_log_proba, nclass, ldy);
+    if (status != da_status_success)
+        return status;
 
     if (this->order == column_major) {
         for (da_int j = 0; j < nclass; j++) {
@@ -272,10 +353,6 @@ template <typename T>
 da_status decision_forest<T>::score(da_int nsamp, da_int nfeat, const T *X_test,
                                     da_int ldx_test, const da_int *y_test, T *score) {
 
-    const T *X_test_temp;
-    T *utility_ptr1 = nullptr;
-    da_int ldx_test_temp;
-
     if (score == nullptr) {
         return da_error_bypass(this->err, da_status_invalid_input,
                                "mean_accuracy is not valid pointers.");
@@ -294,9 +371,12 @@ da_status decision_forest<T>::score(da_int nsamp, da_int nfeat, const T *X_test,
                                "associated with is out of date.");
     }
 
-    da_status status = this->store_2D_array(nsamp, nfeat, X_test, ldx_test, &utility_ptr1,
-                                            &X_test_temp, ldx_test_temp, "n_samples",
-                                            "n_features", "X_test", "ldx_test");
+    // Inference handles both storage orders natively, no input transposition
+    da_status status = read_storage_order();
+    if (status != da_status_success)
+        return status;
+    status = this->check_2D_array(this->order, nsamp, nfeat, X_test, ldx_test,
+                                  "n_samples", "n_features", "X_test", "ldx_test");
     if (status != da_status_success)
         return status;
 
@@ -304,25 +384,26 @@ da_status decision_forest<T>::score(da_int nsamp, da_int nfeat, const T *X_test,
     if (status != da_status_success)
         return status;
 
-    if (this->opts.get("block size", block_size) != da_status_success)
-        return da_error_trace( // LCOV_EXCL_LINE
-            this->err, da_status_internal_error,
-            "Unexpected error while reading the optional parameter 'block size' .");
+    // Transpose the input once (if needed) so that every tree can reuse it.
+    std::vector<T> X_row;
+    const T *X_eval;
+    da_int ldx_eval;
+    status = transpose_input_if_needed(nsamp, X_test, ldx_test, X_row, X_eval, ldx_eval);
+    if (status != da_status_success)
+        return status;
 
-    std::vector<da_int> count_classes, y_pred_tree;
-    da_int n_blocks, block_rem;
-    da_utils::blocking_scheme(nsamp, block_size, n_blocks, block_rem);
-    da_int n_threads = da_utils::get_n_threads_loop(n_blocks * n_tree);
-    // We need n_threads arrays of size block_size
+    std::vector<da_int> count_classes, thread_counts, y_pred_tree;
+    da_int n_threads = da_utils::get_n_threads_loop(n_tree);
     try {
-        y_pred_tree.resize(n_threads * block_size);
-        count_classes.resize(n_class * nsamp, 0);
+        count_classes.resize((size_t)n_class * nsamp, 0);
+        thread_counts.resize((size_t)n_threads * nsamp * n_class, 0);
+        y_pred_tree.resize((size_t)n_threads * nsamp);
     } catch (std::bad_alloc const &) {                     // LCOV_EXCL_LINE
         return da_error(this->err, da_status_memory_error, // LCOV_EXCL_LINE
                         "Memory allocation failed.");
     }
-    parallel_count_classes(X_test_temp, ldx_test_temp, n_blocks, block_size, block_rem,
-                           n_threads, count_classes, y_pred_tree);
+    parallel_count_classes(X_eval, ldx_eval, nsamp, n_threads, count_classes,
+                           thread_counts, y_pred_tree);
 
     *score = 0;
 #pragma omp parallel for shared(nsamp, n_class, y_test, count_classes,                   \
@@ -342,8 +423,6 @@ da_status decision_forest<T>::score(da_int nsamp, da_int nfeat, const T *X_test,
     }
     *score /= (T)nsamp;
 
-    if (utility_ptr1)
-        delete[] (utility_ptr1);
     return da_status_success;
 }
 

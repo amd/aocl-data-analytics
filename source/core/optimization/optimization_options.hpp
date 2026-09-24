@@ -1,5 +1,5 @@
 /* ************************************************************************
- * Copyright (c) 2023-2025 Advanced Micro Devices, Inc.
+ * Copyright (c) 2023-2026 Advanced Micro Devices, Inc.
  *
  * Permission is hereby granted, free of charge, to any person obtaining a copy
  * of this software and associated documentation files (the "Software"), to deal
@@ -172,8 +172,8 @@ inline da_status register_optimization_options(da_errors::da_error_t &err,
             "Coordinate skip tolerance, a given coordinate could be skipped if the "
             "change between two consecutive iterates is less than tolerance. Any "
             "negative value disables the skipping scheme.",
-            -1.0, da_options::lbound_t::greaterequal, 0, da_options::ubound_t::p_inf,
-            tol.safe_eps((opt_T)50, (opt_T)1), tol.safe_eps_latex((opt_T)50, (opt_T)1)));
+            T(-1), da_options::lbound_t::m_inf, 0, da_options::ubound_t::p_inf, 1.0e-4,
+            "10^{-4}"));
         opts.register_opt(oT);
         oT = std::make_shared<OptionNumeric<opt_T>>(OptionNumeric<opt_T>(
             "coord optimality tol",
@@ -181,7 +181,6 @@ inline da_status register_optimization_options(da_errors::da_error_t &err,
             da_options::lbound_t::greaterequal, 0, da_options::ubound_t::p_inf,
             tol.safe_eps((opt_T)50, (opt_T)1), tol.safe_eps_latex((opt_T)50, (opt_T)1)));
         opts.register_opt(oT);
-
         oT = std::make_shared<OptionNumeric<opt_T>>(OptionNumeric<opt_T>(
             "ralfit convergence abs tol fun",
             "Absolute tolerance to declare convergence for the "

@@ -584,8 +584,8 @@ class approximate_neighbors():
             :meth:`kneighbors` queries. Default = 5.
 
         algorithm (str, optional): The algorithm used to compute
-            the approximate nearest neighbors. Available options are 'auto' and 'ivfflat'.
-            Default = 'ivfflat'.
+            the approximate nearest neighbors. Available options are 'auto', 'ivfflat',
+            and 'ivfsq'. 'auto' selects 'ivfflat'. Default = 'auto'.
 
         metric (str, optional): The metric used for the distance computation.
             Available metrics are 'euclidean', 'sqeuclidean' (squared Euclidean distances),
@@ -606,18 +606,48 @@ class approximate_neighbors():
         seed (int, optional): Seed for random number generation. Set to -1 for
             non-deterministic results. Default = 0.
 
+        quantization (str, optional): Storage format for indexed vectors. Available
+            options are 'int8', which applies scalar quantization, 'int4', which stores
+            two signed codes per byte, and 'bfloat16', which stores rounded bfloat16
+            values.
+            Quantization can reduce index storage and improve search
+            performance, depending on the workload, but may change computed distances
+            and neighbor ordering. Quantization is used only when algorithm is
+            'ivfsq'. Default = 'bfloat16'.
+
+        quantization_scheme (str, optional): Scheme used to map values to quantized
+            codes. For the 'int4' and 'int8' formats, 'per_dimension' learns a separate
+            range for each feature and 'uniform' learns one range across all features.
+            The 'direct_signed' and 'direct_unsigned' schemes use the format's fixed
+            signed and unsigned ranges, respectively. bfloat16 storage requires
+            'direct_signed', which performs direct round-to-nearest-even conversion
+            without scaling. Default = 'per_dimension'.
+
+        quantization_residual (bool, optional): Whether to encode each indexed vector as
+            its residual from the centroid of its list instead of encoding the raw
+            vector. Residual encoding is enabled by default. Combining residual encoding
+            with 'direct_signed' or 'direct_unsigned' is not recommended because
+            residuals are not guaranteed to fit the fixed direct ranges and are clipped
+            when out of range. Use 'per_dimension' or 'uniform' with residual encoding.
+            Default = True.
+
         check_data (bool, optional): Whether to check the data for NaNs. Default = False.
     """
 
-    def __init__(self, n_neighbors=5, algorithm='ivfflat', metric='sqeuclidean',
+    def __init__(self, n_neighbors=5, algorithm='auto', metric='sqeuclidean',
                  n_list=1, n_probe=1, kmeans_iter=10, train_fraction=1.0, seed=0,
-                 check_data=False):
+                 quantization='bfloat16', quantization_scheme='per_dimension',
+                 quantization_residual=True, check_data=False):
         self._approx_nn_double = pybind_approximate_neighbors(
-            n_neighbors, algorithm, metric, n_list, n_probe, kmeans_iter, seed, "double",
-            check_data)
+            n_neighbors=n_neighbors, algorithm=algorithm, metric=metric, n_list=n_list,
+            n_probe=n_probe, kmeans_iter=kmeans_iter, seed=seed, precision="double",
+            quantization=quantization, quantization_scheme=quantization_scheme,
+            quantization_residual=quantization_residual, check_data=check_data)
         self._approx_nn_single = pybind_approximate_neighbors(
-            n_neighbors, algorithm, metric, n_list, n_probe, kmeans_iter, seed, "single",
-            check_data)
+            n_neighbors=n_neighbors, algorithm=algorithm, metric=metric, n_list=n_list,
+            n_probe=n_probe, kmeans_iter=kmeans_iter, seed=seed, precision="single",
+            quantization=quantization, quantization_scheme=quantization_scheme,
+            quantization_residual=quantization_residual, check_data=check_data)
         self._approx_nn = self._approx_nn_double
         self._order = 'A'
         self._dtype = 'float'
