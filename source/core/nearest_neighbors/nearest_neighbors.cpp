@@ -483,11 +483,32 @@ da_status neighbors<T>::set_data(da_int n_samples, da_int n_features, const T *X
         X_train_temp = nullptr;
     }
 
-    da_status status = this->store_2D_array(
-        n_samples, n_features, X_train, ldx_train, &X_train_temp, &this->X_train,
-        this->ldx_train, "n_samples", "n_features", "X_train", "ldx_train");
+    std::string opt_order;
+    da_int iorder;
+    da_status status = this->opts.get("storage order", opt_order, iorder);
+    this->order = da_order(iorder);
+
+    status = this->check_2D_array(this->order, n_samples, n_features, X_train, ldx_train,
+                                  "n_samples", "n_features", "X_train", "ldx_train");
     if (status != da_status_success)
         return status;
+
+    if (this->order == row_major) {
+        try {
+            X_train_temp =
+                new T[static_cast<size_t>(n_samples) * static_cast<size_t>(n_features)];
+        } catch (std::bad_alloc const &) {
+            return da_error(this->err, da_status_memory_error, // LCOV_EXCL_LINE
+                            "Memory allocation failed.");
+        }
+        da_utils::copy_transpose_2D_array_row_to_column_major(
+            n_samples, n_features, X_train, ldx_train, X_train_temp, n_samples);
+        this->X_train = X_train_temp;
+        this->ldx_train = n_samples;
+    } else {
+        this->X_train = X_train;
+        this->ldx_train = ldx_train;
+    }
 
     // Set internal parameters
     this->n_samples = n_samples;
@@ -1482,7 +1503,7 @@ da_status neighbors<T>::predict_proba_compute_rnn(da_int n_queries, da_int n_fea
 /*
  * Predict the class labels for the provided test data using either k-nearest neighbors
  * or radius neighbors.
- * Computes the probability estimates for each class based on neighbors 
+ * Computes the probability estimates for each class based on neighbors
  * and returns the class with the highest probability.
  */
 template <typename T>

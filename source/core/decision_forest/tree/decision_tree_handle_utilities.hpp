@@ -53,13 +53,39 @@ decision_tree<T>::set_training_data(da_int n_samples, da_int n_features, const T
         X_temp = nullptr;
     }
 
-    // mode 2 skips checks/transposition: forest trees already get validated column major data
-    da_int mode = internal_tree ? 2 : 0;
-    da_status status =
-        this->store_2D_array(n_samples, n_features, X, ldx, &X_temp, &this->X, this->ldx,
-                             "n_samples", "n_features", "X", "ldx", mode);
-    if (status != da_status_success)
-        return status;
+    da_status status = da_status_success;
+    if (internal_tree) {
+        // Forest trees receive data already validated and stored in column-major order.
+        this->X = X;
+        this->ldx = ldx;
+    } else {
+        std::string opt_order;
+        da_int iorder;
+        status = this->opts.get("storage order", opt_order, iorder);
+        this->order = da_order(iorder);
+
+        status = this->check_2D_array(this->order, n_samples, n_features, X, ldx,
+                                      "n_samples", "n_features", "X", "ldx");
+        if (status != da_status_success)
+            return status;
+
+        if (this->order == row_major) {
+            try {
+                X_temp = new T[static_cast<size_t>(n_samples) *
+                               static_cast<size_t>(n_features)];
+            } catch (std::bad_alloc const &) {
+                return da_error(this->err, da_status_memory_error, // LCOV_EXCL_LINE
+                                "Memory allocation failed.");
+            }
+            da_utils::copy_transpose_2D_array_row_to_column_major(
+                n_samples, n_features, X, ldx, X_temp, n_samples);
+            this->X = X_temp;
+            this->ldx = n_samples;
+        } else {
+            this->X = X;
+            this->ldx = ldx;
+        }
+    }
 
     if (!internal_tree) {
         status = this->check_1D_array(n_samples, y, "n_samples", "y", 1);

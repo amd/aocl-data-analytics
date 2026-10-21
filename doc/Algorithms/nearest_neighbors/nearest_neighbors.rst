@@ -248,20 +248,20 @@ Options
 
       .. csv-table:: :strong:`Table of Options for Nearest Neighbors.`
          :escape: ~
-         :header: "Option name", "Type", "Default", "Description", "Constraints"
+         :header: "Option name", "Type", "Default", "Description", "Constraints", "Notes"
 
-         "weights", "string", ":math:`s=` `uniform`", "Weight function used to compute the k-nearest neighbors.", ":math:`s=` `distance`, or `uniform`."
-         "metric", "string", ":math:`s=` `euclidean`", "Metric used to compute the pairwise distance matrix.", ":math:`s=` `cityblock`, `cosine`, `euclidean`, `euclidean_gemm`, `inner product`, `l1`, `l2`, `manhattan`, `minkowski`, `sqeuclidean`, or `sqeuclidean_gemm`."
-         "algorithm", "string", ":math:`s=` `auto`", "Algorithm used to compute the k-nearest neighbors.", ":math:`s=` `auto`, `ball tree`, `brute`, or `kd tree`."
-         "radius", "real", ":math:`r=1`", "Maximum distance for the radius neighbors computation.", ":math:`0 \le r`"
-         "outlier target", "real", ":math:`r=0`", "Regression target for queries with no neighbors within the specified radius.", "There are no constraints on :math:`r`."
-         "minkowski parameter", "real", ":math:`r=2`", "Minkowski parameter for metric used for the computation of nearest neighbors.", ":math:`0 < r`"
-         "outlier handling", "string", ":math:`s=` `none`", "How to handle samples with no neighbors within the specified radius.", ":math:`s=` `manual`, `most frequent`, or `none`."
-         "outlier label", "integer", ":math:`i=0`", "Classification label for queries with no neighbors within the specified radius.", "There are no constraints on :math:`i`."
-         "leaf size", "integer", ":math:`i=30`", "Leaf size for k-d tree.", ":math:`1 \le i`"
-         "number of neighbors", "integer", ":math:`i=5`", "Number of neighbors considered for k-nearest neighbors.", ":math:`1 \le i`"
-         "check data", "string", ":math:`s=` `no`", "Check input data for NaNs prior to performing computation.", ":math:`s=` `no`, or `yes`."
-         "storage order", "string", ":math:`s=` `column-major`", "Whether data is supplied and returned in row- or column-major order.", ":math:`s=` `c`, `column-major`, `f`, `fortran`, or `row-major`."
+         "weights", "string", ":math:`s=` `uniform`", "Weight function used to compute the k-nearest neighbors.", ":math:`s=` `distance`, or `uniform`.", Foundational.
+         "metric", "string", ":math:`s=` `euclidean`", "Metric used to compute the pairwise distance matrix.", ":math:`s=` `cityblock`, `cosine`, `euclidean`, `euclidean_gemm`, `inner product`, `l1`, `l2`, `manhattan`, `minkowski`, `sqeuclidean`, or `sqeuclidean_gemm`.", Foundational.
+         "algorithm", "string", ":math:`s=` `auto`", "Algorithm used to compute the k-nearest neighbors.", ":math:`s=` `auto`, `ball tree`, `brute`, or `kd tree`.", Foundational.
+         "radius", "real", ":math:`r=1`", "Maximum distance for the radius neighbors computation.", ":math:`0 \le r`", Foundational.
+         "outlier target", "real", ":math:`r=0`", "Regression target for queries with no neighbors within the specified radius.", "There are no constraints on :math:`r`.", Foundational.
+         "minkowski parameter", "real", ":math:`r=2`", "Minkowski parameter for metric used for the computation of nearest neighbors.", ":math:`0 < r`", Foundational.
+         "outlier handling", "string", ":math:`s=` `none`", "How to handle samples with no neighbors within the specified radius.", ":math:`s=` `manual`, `most frequent`, or `none`.", Foundational.
+         "outlier label", "integer", ":math:`i=0`", "Classification label for queries with no neighbors within the specified radius.", "There are no constraints on :math:`i`.", Foundational.
+         "leaf size", "integer", ":math:`i=30`", "Leaf size for k-d tree.", ":math:`1 \le i`", Foundational.
+         "number of neighbors", "integer", ":math:`i=5`", "Number of neighbors considered for k-nearest neighbors.", ":math:`1 \le i`", Foundational.
+         "check data", "string", ":math:`s=` `no`", "Check input data for NaNs prior to performing computation.", ":math:`s=` `no`, or `yes`.", Foundational.
+         "storage order", "string", ":math:`s=` `column-major`", "Whether data is supplied and returned in row- or column-major order.", ":math:`s=` `c`, `column-major`, `f`, `fortran`, or `row-major`.", Foundational.
 
 Examples
 ========

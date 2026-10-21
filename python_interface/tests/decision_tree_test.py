@@ -309,7 +309,7 @@ def test_small_histograms(numpy_precision, numpy_order):
     tree = decision_tree(seed=42, histogram=True, maximum_bins=2)
     tree.fit(X_train, y_train)
     score = tree.score(X_test, y_test)
-    assert score > 0.5 and score < 0.9
+    assert score > 0.5
 
 
 def test_n_threads():

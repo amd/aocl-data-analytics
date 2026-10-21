@@ -159,8 +159,12 @@ The following FAISS classes are currently available in the AOCL-DA extension.
    * - ``faiss.IndexFlatL2``
      - * ``add``, ``search``, ``assign``, ``reconstruct``, ``reconstruct_n``, ``reconstruct_batch``, ``search_and_reconstruct`` and ``reset`` methods and ``d``, ``ntotal`` and ``is_trained`` attributes are supported.
        * ``train`` is a no-op, retained for API compatibility.
+   * - ``faiss.IndexFlatIP``
+     - * ``add``, ``search``, ``assign``, ``reconstruct``, ``reconstruct_n``, ``reconstruct_batch``, ``search_and_reconstruct`` and ``reset`` methods and ``d``, ``ntotal`` and ``is_trained`` attributes are supported.
+       * ``train`` is a no-op, retained for API compatibility.
    * - ``faiss.index_factory``
      - * the ``"IVF{n},Flat"``, ``"IVF{n},SQ4"``, ``"IVF{n},SQ8"``, ``"IVF{n},SQ8_direct"``, ``"IVF{n},SQ8_direct_signed"``, ``"IVF{n},SQbf16"``, ``"SQ4"``, ``"SQ8"``, ``"SQ8_direct"``, ``"SQ8_direct_signed"``, ``"SQbf16"`` and ``"Flat"`` pattern strings are supported.
+       * ``"Flat"`` constructs ``IndexFlatL2`` for ``METRIC_L2`` and ``IndexFlatIP`` for ``METRIC_INNER_PRODUCT``.
        * ``QT_4bit_uniform`` is available through the ``IndexIVFScalarQuantizer`` constructor, but native FAISS defines no corresponding ``"SQ4_uniform"`` factory string.
        * other pattern strings are delegated to native FAISS. Valid native-only strings construct native indexes; invalid strings raise the native FAISS parser error.
    * - ``faiss.Kmeans``

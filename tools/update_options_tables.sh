@@ -30,6 +30,60 @@
 TOOLS=$(dirname "$0")
 FINDTBL="${TOOLS}/findtbl.sh"
 
+PROG="$(basename "$0")"
+
+usage() {
+  cat <<EOF
+Usage: $PROG [--db=path/to/all_table.rst] file1.rst [file2.rst ...]
+       $PROG -h | --help
+
+Find and update the sprinkled options tables in the documentation .rst files,
+refreshing each option's "type", "default", "description" and "constraints"
+columns from the central options database (all_table.rst).
+
+For every input .rst file the script scans for blocks introduced by a
+  .. update options using table <_tabletag_>
+comment followed by a CSV table whose header contains:
+  :header: "option name", "type", "default", "description", "constraints"
+Each option row is then looked up in the database (via findtbl.sh) using the
+option name and the table tag, and rewritten in place. Options that cannot be
+found in the database are flagged with a "NOT FOUND~" marker and reported on
+stderr.
+
+Arguments:
+  file1.rst [file2.rst ...]  One or more .rst files to update in place. Files
+                             that are the database itself, are not regular
+                             files, or do not end in .rst are skipped.
+
+Options:
+  --db=PATH   Path to the options database file all_table.rst.
+              If given, it MUST be the first argument.
+              Defaults to: C/options/all_table.rst
+  -h, --help  Print this help message and exit.
+
+Notes:
+  * Files are edited in place (awk -i inplace); commit or back up first.
+  * Requires the auxiliary script findtbl.sh next to this script.
+  * The parser is not very robust and relies on tidy ReST formatting.
+
+Examples:
+  $PROG C/lin_reg/lin_reg.rst
+  $PROG --db=doc/C/options/all_table.rst C/lin_reg/*.rst
+
+  To update all the ReST files
+  find . -name '*.rst' -exec $PROG --db=doc/C/options/all_table.rst {} \;
+EOF
+}
+
+for arg in "$@" ; do
+  case "$arg" in
+    -h|--help)
+      usage
+      exit 0
+      ;;
+  esac
+done
+
 if [ ! -x "$FINDTBL" ] ; then
   echo "Error: auxiliary script findtbl.sh not found in ${TOOLS}..."
   exit 1
@@ -51,7 +105,9 @@ fi
 DBBASE="`basename $DB`"
 
 if [ $# -lt 1 ] ; then
-  echo Error: no files to process?
+  usage
+  echo
+  echo Input error: no files to process?
   exit 2
 fi
 

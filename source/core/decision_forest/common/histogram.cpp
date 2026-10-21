@@ -44,7 +44,7 @@ namespace da_decision_forest {
  * - Number of categories if data is categorical
  */
 template <typename T>
-void bins<T>::compute_thresholds(std::vector<T> &values, da_int vals_idx, da_int feat_idx,
+void bins<T>::compute_thresholds(std::vector<T> &values, size_t vals_idx, da_int feat_idx,
                                  T tol) {
     boost::sort::spreadsort::float_sort(values.begin() + vals_idx,
                                         values.begin() + vals_idx + n_samples);
@@ -53,7 +53,7 @@ void bins<T>::compute_thresholds(std::vector<T> &values, da_int vals_idx, da_int
     T last_q = 0.;
     da_int bin_idx = 0;
     T q = q_step;
-    da_int thresh_start_idx = feat_idx * (max_bin - 1);
+    size_t thresh_start_idx = (size_t)feat_idx * (max_bin - 1);
     while (q <= (T)1.0 - (T)0.001 * q_step) {
         da_int threshold_idx = (da_int)std::round(q * n_elem) - 1;
         da_int r_idx = threshold_idx;
@@ -80,11 +80,11 @@ void bins<T>::compute_thresholds(std::vector<T> &values, da_int vals_idx, da_int
 }
 
 template <typename T>
-void bins<T>::compute_thresholds_continuous(std::vector<T> &values, da_int vals_idx,
+void bins<T>::compute_thresholds_continuous(std::vector<T> &values, size_t vals_idx,
                                             da_int feat_idx, T tol) {
 
     da_int idx_step = (da_int)n_samples / max_bin;
-    da_int thresh_idx = feat_idx * (max_bin - 1);
+    size_t thresh_idx = (size_t)feat_idx * (max_bin - 1);
     auto start_it = values.begin() + vals_idx;
     auto end_it = start_it + n_samples;
     for (da_int bin_idx = 0; bin_idx < max_bin - 1; bin_idx++) {
@@ -126,10 +126,10 @@ da_status bins<T>::compute_histograms(const T *X, da_int n_samples, da_int n_fea
     std::vector<T> values;
     da_int n_threads = da_utils::get_n_threads_loop(n_features);
     try {
-        thresholds.resize(n_features * (max_bin - 1));
+        thresholds.resize((size_t)n_features * (max_bin - 1));
         nbins.resize(n_features);
-        values.resize(n_samples * n_threads);
-        binned_data.resize(n_features * n_samples);
+        values.resize((size_t)n_samples * n_threads);
+        binned_data.resize((size_t)n_features * n_samples);
     } catch (std::bad_alloc &) {
         return da_status_memory_error; // LCOV_EXCL_LINE
     }
@@ -138,26 +138,28 @@ da_status bins<T>::compute_histograms(const T *X, da_int n_samples, da_int n_fea
                                     n_features) default(none)
     // Compute the thresholds for each feature
     for (da_int j = 0; j < n_features; j++) {
-        da_int vals_idx = (da_int)omp_get_thread_num() * n_samples;
-        memcpy(values.data() + vals_idx, X + j * ldx, n_samples * sizeof(T));
+        size_t vals_idx = (size_t)omp_get_thread_num() * n_samples;
+        memcpy(values.data() + vals_idx, X + (size_t)j * ldx, n_samples * sizeof(T));
         compute_thresholds(values, vals_idx, j);
     }
 
     // Assign the values in X to their corresponding bins by binary search
 #pragma omp parallel for shared(X, max_bin, ldx, n_features, n_samples) default(none)
     for (da_int j = 0; j < n_features; j++) {
-        da_int X_col_idx = j * ldx;
+        size_t X_col_idx = (size_t)j * ldx;
+        size_t thr_base = (size_t)j * (max_bin - 1);
+        size_t bin_base = (size_t)j * n_samples;
         for (da_int i = 0; i < n_samples; i++) {
             da_int start = 0, end = nbins[j] - 1;
             while (start < end) {
                 da_int mid = (start + end) / 2;
-                if (X[X_col_idx + i] < thresholds[j * (max_bin - 1) + mid]) {
+                if (X[X_col_idx + i] < thresholds[thr_base + mid]) {
                     end = mid;
                 } else {
                     start = mid + 1;
                 }
             }
-            binned_data[j * n_samples + i] = start;
+            binned_data[bin_base + i] = start;
         }
     }
 

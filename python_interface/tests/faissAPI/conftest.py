@@ -47,6 +47,7 @@ with warnings.catch_warnings():
 # Grab the genuine faiss classes now, before any test patches them, so tests
 # can compare AOCL-DA results against native faiss.
 _native_IndexFlatL2 = faiss.IndexFlatL2
+_native_IndexFlatIP = faiss.IndexFlatIP
 _native_IndexIVFFlat = faiss.IndexIVFFlat
 _native_IndexIVFScalarQuantizer = faiss.IndexIVFScalarQuantizer
 _native_IndexScalarQuantizer = faiss.IndexScalarQuantizer

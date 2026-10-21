@@ -51,7 +51,7 @@ template <typename T> da_status decision_tree<T>::init_working_memory_raw() {
         for (da_int t = 0; t < n_threads_split; t++) {
             split_workspace<T> &ws = thread_workspaces[t];
             ws.feature_values.resize(n_obs);
-            ws.cat_feat_table.resize(max_cat * n_class);
+            ws.cat_feat_table.resize((size_t)max_cat * n_class);
             ws.samples_idx_local.resize(n_obs);
         }
     } catch (std::bad_alloc &) {                                  // LCOV_EXCL_LINE
@@ -82,7 +82,7 @@ template <typename T> da_status decision_tree<T>::init_working_memory_hist() {
     try {
         for (da_int t = 0; t < n_threads_split; t++) {
             split_workspace<T> &ws = thread_workspaces[t];
-            ws.node_hist.resize(n_class * X_binned->max_bin);
+            ws.node_hist.resize((size_t)n_class * X_binned->max_bin);
             ws.hist_count_samples.resize(X_binned->max_bin);
         }
     } catch (std::bad_alloc &) {                                  // LCOV_EXCL_LINE

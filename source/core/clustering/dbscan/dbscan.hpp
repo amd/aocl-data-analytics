@@ -77,7 +77,6 @@ template <typename T> class dbscan : public basic_handle<T> {
     std::vector<da_vector::da_vector<da_int>>
         neighbors; // Use da_vector since we will be dynamically expanding this array
     std::vector<bool> is_core_sample;
-    std::vector<da_int> duplicate_labels;
 
     // Miscellaneous variables
     da_int min_samples_m1 = 0;

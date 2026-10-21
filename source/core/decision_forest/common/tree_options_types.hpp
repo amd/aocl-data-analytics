@@ -30,6 +30,11 @@
 
 #define DF_BLOCK_SIZE da_int(256)
 
+// Working set n_threads * block_nsamp * n_class is kept at or below this value.
+// Deliberately large so typical workloads run as a single block (4G)
+// overridable at runtime via the hidden setting "decision_forest.inference_block_elems".
+#define DF_INFERENCE_BUDGET (da_int(1) << 29)
+
 namespace da_tree_options_types {
 enum score_method {
     gini = 0,

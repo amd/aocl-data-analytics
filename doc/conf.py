@@ -30,6 +30,7 @@
 import sys
 import os
 from docutils import nodes
+
 project = 'AOCL-DA'
 copyright = '2026, Advanced Micro Devices, Inc'
 author = 'Advanced Micro Devices, Inc'
@@ -37,8 +38,9 @@ version = ''
 release = '5.3.2'
 
 # -- Get doc working for Python ----------------------------------------------
-# Add to PYTHONPATH
-sys.path.insert(0, os.path.relpath('../python_interface/'))
+# Add to PYTHONPATH (anchored to this file, independent of the build CWD)
+_conf_dir = os.path.dirname(os.path.abspath(__file__))
+sys.path.insert(0, os.path.join(_conf_dir, '..', 'python_interface', 'python_package'))
 autodoc_mock_imports = ['aoclda._aoclda', 'numpy']
 
 # Add a custom 'nref' role that renders plain text with no cross-reference ---

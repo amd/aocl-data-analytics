@@ -78,6 +78,7 @@ template <typename T> void test_functionality(const DBSCANParamType<T> &param) {
 
     std::vector<std::string> cluster_list{"serial", "parallel"};
 
+    EXPECT_EQ(da_debug_set("dbscan.parallel_chunk_size", "1"), da_status_success);
     // Loop over the parallel and serial versions of the actual DBSCAN cluster phase
     for (const auto &cluster_method : cluster_list) {
         EXPECT_EQ(da_debug_set("dbscan.cluster_methods", cluster_method.c_str()),
@@ -186,6 +187,7 @@ template <typename T> void test_functionality(const DBSCANParamType<T> &param) {
         }
         da_handle_destroy(&handle);
     }
+    EXPECT_EQ(da_debug_set("dbscan.parallel_chunk_size", ""), da_status_success);
 }
 
 class DoubleFunctionalityTest : public testing::TestWithParam<DBSCANParamType<double>> {};

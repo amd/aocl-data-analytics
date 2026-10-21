@@ -66,7 +66,7 @@ class IndexFlatL2:
 
     @property
     def metric_arg(self):
-        return 0
+        return 0.0
 
     def add(self, X):
         # Check dims quickly here, since we haven't constructed the DA class yet
@@ -75,6 +75,7 @@ class IndexFlatL2:
             raise ValueError(
                 f"IndexFlatL2.add: expected array with {self._d} columns, "
                 f"got shape {X.shape}")
+        X = np.array(X, copy=True, order='F')
         if self._all_data is None:
             self._all_data = X
         else:
@@ -89,7 +90,15 @@ class IndexFlatL2:
     def search(self, X, k):
         if self._nn is None:
             raise RuntimeError("IndexFlatL2.search: index is empty, call add() first")
-        distances, indices = self._nn.kneighbors(X, n_neighbors=k)
+        n_neighbors = min(k, self._ntotal)
+        distances, indices = self._nn.kneighbors(X, n_neighbors=n_neighbors)
+        if n_neighbors < k:
+            n_missing = k - n_neighbors
+            distances = np.pad(
+                distances, ((0, 0), (0, n_missing)), constant_values=np.finfo(
+                    distances.dtype).max)
+            indices = np.pad(
+                indices, ((0, 0), (0, n_missing)), constant_values=-1)
         return distances, indices.astype(np.int64)
 
     def reset(self):

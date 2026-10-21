@@ -1,4 +1,4 @@
-# Copyright (C) 2024-2025 Advanced Micro Devices, Inc. All rights reserved.
+# Copyright (C) 2024-2026 Advanced Micro Devices, Inc. All rights reserved.
 #
 # Redistribution and use in source and binary forms, with or without modification,
 # are permitted provided that the following conditions are met:
@@ -29,7 +29,6 @@ PCA tests, check output of skpatch versus sklearn
 
 # pylint: disable = import-outside-toplevel, reimported, no-member
 
-import numpy as np
 import pytest
 from aoclda.sklearn import skpatch, undo_skpatch
 
@@ -59,7 +58,7 @@ def test_patching():
     lasso = Lasso(alpha=0.1)
     assert not hasattr(lasso, 'aocl')
 
-    skpatch(["LinearRegression", "Ridge", "Wibble"])
+    skpatch(["LinearRegression", "Ridge"])
     from sklearn.linear_model import LinearRegression, Ridge
     from sklearn.decomposition import PCA
     pca_da2 = PCA(n_components=3)
@@ -69,12 +68,18 @@ def test_patching():
     linreg_da = LinearRegression()
     assert linreg_da.aocl is True
 
-    undo_skpatch(["LinearRegression", "Wobble", "Ridge"])
+    undo_skpatch(["LinearRegression", "Ridge"])
     from sklearn.linear_model import LinearRegression, Ridge
     ridge = Ridge()
     linreg = LinearRegression()
     assert not hasattr(ridge, 'aocl')
     assert not hasattr(linreg, 'aocl')
+
+    with pytest.raises(ValueError, match="Wibble"):
+        skpatch(["LinearRegression", "Wibble"])
+
+    with pytest.raises(ValueError, match="Wobble"):
+        undo_skpatch(["LinearRegression", "Wobble"])
 
     with pytest.raises(TypeError):
         skpatch(1)

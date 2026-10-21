@@ -73,14 +73,14 @@ template <typename T> class bins {
                 "least 2 bins with 2 samples each.");
         if (max_bin > std::numeric_limits<uint16_t>::max())
             throw std::invalid_argument("Histograms: number of bins is too big.");
-        thresholds.resize((this->max_bin - 1) * n_features);
+        thresholds.resize((size_t)(this->max_bin - 1) * n_features);
         nbins.resize(n_features);
-        binned_data.resize(n_samples * n_features);
+        binned_data.resize((size_t)(n_samples * n_features));
     }
 
-    void compute_thresholds(std::vector<T> &values, da_int vals_idx, da_int feat_idx,
+    void compute_thresholds(std::vector<T> &values, size_t vals_idx, da_int feat_idx,
                             T tol = (T)1.0e-05);
-    void compute_thresholds_continuous(std::vector<T> &values, da_int vals_idx,
+    void compute_thresholds_continuous(std::vector<T> &values, size_t vals_idx,
                                        da_int feat_idx, T tol = (T)1.0e-05);
     da_status compute_histograms(const T *X, da_int n_samples, da_int n_features,
                                  da_int ldx);

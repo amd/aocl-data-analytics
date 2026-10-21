@@ -147,22 +147,22 @@ Decision trees options
 
       .. csv-table:: :strong:`Table of Options for Decision Trees.`
          :escape: ~
-         :header: "Option name", "Type", "Default", "Description", "Constraints"
+         :header: "Option name", "Type", "Default", "Description", "Constraints", "Notes"
          
-         "storage order", "string", ":math:`s=` `column-major`", "Whether data is supplied and returned in row- or column-major order.", ":math:`s=` `c`, `column-major`, `f`, `fortran`, or `row-major`."
-         "category split strategy", "string", ":math:`s=` `ordered`", "Strategy to split categorical features. For a given categorical feature, 'one-vs-all' tries to split each categorical value from all the others while 'ordered' will try to split the smaller categories from the bigger ones.", ":math:`s=` `one-vs-all`, or `ordered`."
-         "check data", "string", ":math:`s=` `no`", "Check input data for NaNs prior to performing computation.", ":math:`s=` `no`, or `yes`."
-         "feature threshold", "real", ":math:`r=1e-05`", "Minimum difference in feature value required for splitting.", ":math:`0 \le r`"
-         "node minimum samples", "integer", ":math:`i=2`", "The minimum number of samples required to split an internal node.", ":math:`1 \le i`"
-         "predict probabilities", "string", ":math:`s=` `yes`", "evaluate class probabilities (in addition to class predictions). Needs to be set to 'yes' if calls to predict_proba or predict_log_proba are made after fit.", ":math:`s=` `no`, or `yes`."
-         "scoring function", "string", ":math:`s=` `gini`", "Select scoring function to use.", ":math:`s=` `cross-entropy`, `entropy`, `gini`, `misclass`, `misclassification`, or `misclassification-error`."
-         "maximum depth", "integer", ":math:`i=29`", "Set the maximum depth of trees.", ":math:`0 \le i \le 29`"
-         "seed", "integer", ":math:`i=-1`", "Set the random seed for the random number generator. If the value is -1, a random seed is automatically generated. In this case the resulting classification will create non-reproducible results.", ":math:`-1 \le i`"
-         "maximum features", "integer", ":math:`i=0`", "Set the number of features to consider when splitting a node. 0 means take all the features.", ":math:`0 \le i`"
-         "minimum split score", "real", ":math:`r=0`", "Minimum score needed for a node to be considered for splitting.", ":math:`0 \le r \le 1`"
-         "minimum impurity decrease", "real", ":math:`r=0`", "Minimum score improvement needed to consider a split from the parent node.", ":math:`0 \le r`"
-         "maximum bins", "integer", ":math:`i=256`", "Maximum number of bins in histograms.", ":math:`2 \le i \le 65535`"
-         "histogram", "string", ":math:`s=` `no`", "Choose whether to use histograms constructed from the data matrix X.", ":math:`s=` `no`, or `yes`."
+         "storage order", "string", ":math:`s=` `column-major`", "Whether data is supplied and returned in row- or column-major order.", ":math:`s=` `c`, `column-major`, `f`, `fortran`, or `row-major`.", 
+         "category split strategy", "string", ":math:`s=` `ordered`", "Strategy to split categorical features. For a given categorical feature, 'one-vs-all' tries to split each categorical value from all the others while 'ordered' will try to split the smaller categories from the bigger ones.", ":math:`s=` `one-vs-all`, or `ordered`.", Foundational.
+         "check data", "string", ":math:`s=` `no`", "Check input data for NaNs prior to performing computation.", ":math:`s=` `no`, or `yes`.", Foundational.
+         "feature threshold", "real", ":math:`r=1e-05`", "Minimum difference in feature value required for splitting.", ":math:`0 \le r`", Foundational.
+         "node minimum samples", "integer", ":math:`i=2`", "The minimum number of samples required to split an internal node.", ":math:`1 \le i`", Foundational.
+         "predict probabilities", "string", ":math:`s=` `yes`", "evaluate class probabilities (in addition to class predictions). Needs to be set to 'yes' if calls to predict_proba or predict_log_proba are made after fit.", ":math:`s=` `no`, or `yes`.", Foundational.
+         "scoring function", "string", ":math:`s=` `gini`", "Select scoring function to use.", ":math:`s=` `cross-entropy`, `entropy`, `gini`, `misclass`, `misclassification`, or `misclassification-error`.", Foundational.
+         "maximum depth", "integer", ":math:`i=29`", "Set the maximum depth of trees.", ":math:`0 \le i \le 29`", Foundational.
+         "seed", "integer", ":math:`i=-1`", "Set the random seed for the random number generator. If the value is -1, a random seed is automatically generated. In this case the resulting classification will create non-reproducible results.", ":math:`-1 \le i`", Foundational.
+         "maximum features", "integer", ":math:`i=0`", "Set the number of features to consider when splitting a node. 0 means take all the features.", ":math:`0 \le i`", Foundational.
+         "minimum split score", "real", ":math:`r=0`", "Minimum score needed for a node to be considered for splitting.", ":math:`0 \le r \le 1`", Foundational.
+         "minimum impurity decrease", "real", ":math:`r=0`", "Minimum score improvement needed to consider a split from the parent node.", ":math:`0 \le r`", Foundational.
+         "maximum bins", "integer", ":math:`i=256`", "Maximum number of bins in histograms.", ":math:`2 \le i \le 65535`", Foundational.
+         "histogram", "string", ":math:`s=` `no`", "Choose whether to use histograms constructed from the data matrix X.", ":math:`s=` `no`, or `yes`.", Foundational.
 
 
 Decision forests options
@@ -185,28 +185,28 @@ Decision forests options
 
       .. csv-table:: :strong:`Table of Options for Decision Forests.`
          :escape: ~
-         :header: "Option name", "Type", "Default", "Description", "Constraints"
+         :header: "Option name", "Type", "Default", "Description", "Constraints", "Notes"
          
-         "maximum tree threads", "integer", ":math:`i=0`", "Maximum number of threads allocated to each tree for parallel feature evaluation. 0 means no cap.", ":math:`0 \le i`"
-         "category split strategy", "string", ":math:`s=` `ordered`", "How to split categorical features: split one category from all other or consider them ordered.", ":math:`s=` `one-vs-all`, or `ordered`."
-         "maximum bins", "integer", ":math:`i=256`", "Maximum number of bins in histograms.", ":math:`2 \le i \le 65535`"
-         "histogram", "string", ":math:`s=` `no`", "Choose whether to use histograms constructed from the data matrix X.", ":math:`s=` `no`, or `yes`."
-         "feature threshold", "real", ":math:`r=1e-05`", "Minimum difference in feature value required for splitting.", ":math:`0 \le r`"
-         "storage order", "string", ":math:`s=` `column-major`", "Whether data is supplied and returned in row- or column-major order.", ":math:`s=` `c`, `column-major`, `f`, `fortran`, or `row-major`."
-         "check data", "string", ":math:`s=` `no`", "Check input data for NaNs prior to performing computation.", ":math:`s=` `no`, or `yes`."
-         "minimum split score", "real", ":math:`r=1e-05`", "Minimum score needed for a node to be considered for splitting.", ":math:`0 \le r \le 1`"
-         "maximum features", "integer", ":math:`i=0`", "Set the number of features to consider when 'features selection' is set to 'custom'. 0 means take all the features.", ":math:`0 \le i`"
-         "number of trees", "integer", ":math:`i=100`", "Set the number of trees to compute. ", ":math:`1 \le i`"
-         "seed", "integer", ":math:`i=-1`", "Set random seed for the random number generator. If the value is -1, a random seed is automatically generated. In this case the resulting classification will create non-reproducible results.", ":math:`-1 \le i`"
-         "node minimum samples", "integer", ":math:`i=2`", "Minimum number of samples to consider a node for splitting.", ":math:`1 \le i`"
-         "maximum depth", "integer", ":math:`i=29`", "Set the maximum depth of trees.", ":math:`0 \le i \le 29`"
-         "scoring function", "string", ":math:`s=` `gini`", "Select scoring function to use.", ":math:`s=` `cross-entropy`, `entropy`, `gini`, `misclass`, `misclassification`, or `misclassification-error`."
-         "minimum impurity decrease", "real", ":math:`r=0`", "Minimum score improvement needed to consider a split from the parent node.", ":math:`0 \le r`"
-         "block size", "integer", ":math:`i=256`", "Set the size of the blocks for parallel computations.", ":math:`1 \le i`"
-         "features selection", "string", ":math:`s=` `sqrt`", "Select how many features to use for each split. 'custom' reads the 'maximum features' option, proportion reads the 'proportion features' option. 'all', 'sqrt' and 'log2' select respectively all, the square root or the base-2 logarithm of the total number of features.", ":math:`s=` `all`, `custom`, `log2`, `proportion`, or `sqrt`."
-         "bootstrap", "string", ":math:`s=` `yes`", "Select whether to bootstrap the samples in the trees.", ":math:`s=` `no`, or `yes`."
-         "bootstrap samples factor", "real", ":math:`r=1`", "Proportion of samples to draw from the data set to build each tree if 'bootstrap' was set to 'yes'.", ":math:`0 < r \le 1`"
-         "proportion features", "real", ":math:`r=0.1`", "Set the proportion of features to consider when 'features selection' is set to 'proportion'.", ":math:`0 < r \le 1`"
+         "maximum tree threads", "integer", ":math:`i=0`", "Maximum number of threads allocated to each tree for parallel feature evaluation. 0 means no cap.", ":math:`0 \le i`", Foundational.
+         "category split strategy", "string", ":math:`s=` `ordered`", "How to split categorical features: split one category from all other or consider them ordered.", ":math:`s=` `one-vs-all`, or `ordered`.", Foundational.
+         "maximum bins", "integer", ":math:`i=256`", "Maximum number of bins in histograms.", ":math:`2 \le i \le 65535`", Foundational.
+         "histogram", "string", ":math:`s=` `no`", "Choose whether to use histograms constructed from the data matrix X.", ":math:`s=` `no`, or `yes`.", Foundational.
+         "feature threshold", "real", ":math:`r=1e-05`", "Minimum difference in feature value required for splitting.", ":math:`0 \le r`", Foundational.
+         "storage order", "string", ":math:`s=` `column-major`", "Whether data is supplied and returned in row- or column-major order.", ":math:`s=` `c`, `column-major`, `f`, `fortran`, or `row-major`.", Foundational.
+         "check data", "string", ":math:`s=` `no`", "Check input data for NaNs prior to performing computation.", ":math:`s=` `no`, or `yes`.", Foundational.
+         "minimum split score", "real", ":math:`r=1e-05`", "Minimum score needed for a node to be considered for splitting.", ":math:`0 \le r \le 1`", Foundational.
+         "maximum features", "integer", ":math:`i=0`", "Set the number of features to consider when 'features selection' is set to 'custom'. 0 means take all the features.", ":math:`0 \le i`", Foundational.
+         "number of trees", "integer", ":math:`i=100`", "Set the number of trees to compute. ", ":math:`1 \le i`", Foundational.
+         "seed", "integer", ":math:`i=-1`", "Set random seed for the random number generator. If the value is -1, a random seed is automatically generated. In this case the resulting classification will create non-reproducible results.", ":math:`-1 \le i`", Foundational.
+         "node minimum samples", "integer", ":math:`i=2`", "Minimum number of samples to consider a node for splitting.", ":math:`1 \le i`", Foundational.
+         "maximum depth", "integer", ":math:`i=29`", "Set the maximum depth of trees.", ":math:`0 \le i \le 29`", Foundational.
+         "scoring function", "string", ":math:`s=` `gini`", "Select scoring function to use.", ":math:`s=` `cross-entropy`, `entropy`, `gini`, `misclass`, `misclassification`, or `misclassification-error`.", Foundational.
+         "minimum impurity decrease", "real", ":math:`r=0`", "Minimum score improvement needed to consider a split from the parent node.", ":math:`0 \le r`", Foundational.
+         "block size", "integer", ":math:`i=256`", "Set the size of the blocks for parallel computations.", ":math:`1 \le i`", Foundational.
+         "features selection", "string", ":math:`s=` `sqrt`", "Select how many features to use for each split. 'custom' reads the 'maximum features' option, proportion reads the 'proportion features' option. 'all', 'sqrt' and 'log2' select respectively all, the square root or the base-2 logarithm of the total number of features.", ":math:`s=` `all`, `custom`, `log2`, `proportion`, or `sqrt`.", Foundational.
+         "bootstrap", "string", ":math:`s=` `yes`", "Select whether to bootstrap the samples in the trees.", ":math:`s=` `no`, or `yes`.", Foundational.
+         "bootstrap samples factor", "real", ":math:`r=1`", "Proportion of samples to draw from the data set to build each tree if 'bootstrap' was set to 'yes'.", ":math:`0 < r \le 1`", Foundational.
+         "proportion features", "real", ":math:`r=0.1`", "Set the proportion of features to consider when 'features selection' is set to 'proportion'.", ":math:`0 < r \le 1`", Foundational.
 
 
 Choosing the decision forest options

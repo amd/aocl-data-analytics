@@ -37,15 +37,16 @@ using namespace da_options;
 
 OptionNumeric<da_int> opt_int("integer option", "Preloaded Integer Option", 0,
                               da_options::lbound_t::greaterequal, 10,
-                              da_options::ubound_t::lessequal, 10);
+                              da_options::ubound_t::lessequal, 10, "Ten", false, false);
 std::shared_ptr<OptionNumeric<da_int>> oI;
 OptionNumeric<float> opt_float("float option", "Preloaded Float Option", 0.0f,
                                da_options::lbound_t::greaterthan, 10.0f,
-                               da_options::ubound_t::lessthan, 8.0f);
+                               da_options::ubound_t::lessthan, 8.7f);
 std::shared_ptr<OptionNumeric<float>> oF;
 OptionNumeric<double> opt_double("double option", "Preloaded Double Option", 1.0f,
                                  da_options::lbound_t::greaterthan, 20.0f,
-                                 da_options::ubound_t::lessthan, 16.0f);
+                                 da_options::ubound_t::lessthan, 16.15f, "16.15f", false,
+                                 false);
 std::shared_ptr<OptionNumeric<double>> oD;
 OptionNumeric<bool> opt_bool("bool option", "Preloaded bool Option", true);
 std::shared_ptr<OptionNumeric<bool>> oB;
@@ -151,7 +152,7 @@ template <typename T> void OpClsNumeric(void) {
     EXPECT_STRCASEEQ(std::string(m[0]).c_str(), s_solver.c_str());
 
     std::string prn = opt.print_option();
-    EXPECT_EQ(prn, " placeholder option = 2\n"s);
+    EXPECT_EQ(prn, " placeholder option = 2                 (f**)\n"s);
 
     // lower > upper
     EXPECT_THROW(OptionNumeric<T> opt("Opt", descr, 10,
@@ -250,7 +251,7 @@ template <> void OpClsNumeric<bool>(void) {
     EXPECT_STRCASEEQ(std::string(m[0]).c_str(), s_solver.c_str());
 
     std::string prn = opt.print_option();
-    EXPECT_EQ(prn, " placeholder option = true\n"s);
+    EXPECT_EQ(prn, " placeholder option = true              (f**)\n"s);
 
     {
         OptionNumeric<bool> pretty_print("opt", descr, true);
@@ -310,7 +311,7 @@ TEST(OpOptionInternal, OpClsStringAll) {
     EXPECT_STRCASEEQ(std::string(m[0]).c_str(), s_solver.c_str());
     [[maybe_unused]] std::string prn;
     prn = opt_string.print_option();
-    EXPECT_EQ(prn, " string option = no\n"s);
+    EXPECT_EQ(prn, " string option = no                     (f**)\n"s);
     prn = opt_string.print_details(false);
     prn = opt_string.print_details(false, false);
 
@@ -451,6 +452,27 @@ TEST(OpRegistryInternal, OpRegQueryMap) {
     id = -1;
     EXPECT_EQ(reg.query_map("free-form string option", value, id, true),
               da_status_option_not_found);
+}
+
+TEST(OpRegistryInternal, ExportRegistry) {
+    EXPECT_EQ(::opt_string.set("yes", da_options::setby_t::user), da_status_success);
+    da_options::OptionRegistry reg;
+    EXPECT_EQ(preload(reg), da_status_success);
+    reg.print_options();
+    std::unordered_map<std::string, option_variant_t> exported_options;
+    reg.export_registry(
+        [&exported_options](const std::string &key, option_variant_t value) {
+            exported_options[key] = value;
+        });
+    EXPECT_GT(exported_options.size(), 1);
+    // Print the map
+    std::ios_base::fmtflags orig_flags = std::cout.flags();
+    for (const auto &entry : exported_options) {
+        std::cout << entry.first << " : ";
+        std::visit([](auto &&arg) { std::cout << std::boolalpha << arg; }, entry.second);
+        std::cout << std::endl;
+    }
+    std::cout.flags(orig_flags);
 }
 
 // Public API Unit-tests

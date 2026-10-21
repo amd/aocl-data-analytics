@@ -241,21 +241,21 @@ Options
 
       .. csv-table:: :strong:`Table of options for Approximate Nearest Neighbors.`
          :escape: ~
-         :header: "Option name", "Type", "Default", "Description", "Constraints"
+         :header: "Option name", "Type", "Default", "Description", "Constraints", "Notes"
 
-         "quantization_scheme", "string", ":math:`s=` `per_dimension`", "Scheme used by ivfsq to map values to integer codes. The direct schemes assume values already lie in the format's reconstructed range: int4 uses [-8, 7] signed or [0, 15] unsigned; int8 uses [-128, 127] signed or [0, 255] unsigned. Direct unsigned is unsuitable for residual encoding because IVF residuals may be negative. bfloat16 requires 'direct_signed', which performs direct round-to-nearest-even conversion without scaling.", ":math:`s=` `direct_signed`, `direct_unsigned`, `per_dimension`, or `uniform`."
-         "quantization_residual", "string", ":math:`s=` `yes`", "Whether ivfsq codes encode residuals (x - nearest centroid) rather than raw vectors.", ":math:`s=` `no`, or `yes`."
-         "quantization", "string", ":math:`s=` `bfloat16`", "Storage format used for the indexed database when algorithm is ivfsq.", ":math:`s=` `bfloat16`, `int4`, or `int8`."
-         "algorithm", "string", ":math:`s=` `auto`", "Algorithm used to compute the approximate nearest neighbors. Auto selects ivfflat.", ":math:`s=` `auto`, `ivfflat`, or `ivfsq`."
-         "train fraction", "real", ":math:`r=1`", "Fraction of training data to use for k-means clustering.", ":math:`0 < r \le 1`"
-         "k-means_iter", "integer", ":math:`i=10`", "Maximum number of k-means iterations to perform at train time", ":math:`1 \le i`"
-         "metric", "string", ":math:`s=` `sqeuclidean`", "Metric used to compute distances.", ":math:`s=` `cosine`, `euclidean`, `inner product`, or `sqeuclidean`."
-         "seed", "integer", ":math:`i=0`", "Seed for random number generation; set to -1 for non-deterministic results.", ":math:`-1 \le i`"
-         "n_probe", "integer", ":math:`i=1`", "Number of lists to probe at search time for inverted file indices", ":math:`1 \le i`"
-         "n_list", "integer", ":math:`i=1`", "Number of lists to construct for inverted file indices", ":math:`1 \le i`"
-         "number of neighbors", "integer", ":math:`i=5`", "Number of neighbors considered for k-nearest neighbors.", ":math:`1 \le i`"
-         "check data", "string", ":math:`s=` `no`", "Check input data for NaNs prior to performing computation.", ":math:`s=` `no`, or `yes`."
-         "storage order", "string", ":math:`s=` `column-major`", "Whether data is supplied and returned in row- or column-major order.", ":math:`s=` `c`, `column-major`, `f`, `fortran`, or `row-major`."
+         "quantization_scheme", "string", ":math:`s=` `per_dimension`", "Scheme used by ivfsq to map values to integer codes. The direct schemes assume values already lie in the format's reconstructed range: int4 uses [-8, 7] signed or [0, 15] unsigned; int8 uses [-128, 127] signed or [0, 255] unsigned. Direct unsigned is unsuitable for residual encoding because IVF residuals may be negative. bfloat16 requires 'direct_signed', which performs direct round-to-nearest-even conversion without scaling.", ":math:`s=` `direct_signed`, `direct_unsigned`, `per_dimension`, or `uniform`.", Foundational.
+         "quantization_residual", "string", ":math:`s=` `yes`", "Whether ivfsq codes encode residuals (x - nearest centroid) rather than raw vectors.", ":math:`s=` `no`, or `yes`.", Foundational.
+         "quantization", "string", ":math:`s=` `bfloat16`", "Storage format used for the indexed database when algorithm is ivfsq.", ":math:`s=` `bfloat16`, `int4`, or `int8`.", Foundational.
+         "algorithm", "string", ":math:`s=` `auto`", "Algorithm used to compute the approximate nearest neighbors. Auto selects ivfflat.", ":math:`s=` `auto`, `ivfflat`, or `ivfsq`.", Foundational.
+         "train fraction", "real", ":math:`r=1`", "Fraction of training data to use for k-means clustering.", ":math:`0 < r \le 1`", Foundational.
+         "k-means_iter", "integer", ":math:`i=10`", "Maximum number of k-means iterations to perform at train time", ":math:`1 \le i`", Foundational.
+         "metric", "string", ":math:`s=` `sqeuclidean`", "Metric used to compute distances.", ":math:`s=` `cosine`, `euclidean`, `inner product`, or `sqeuclidean`.", Foundational.
+         "seed", "integer", ":math:`i=0`", "Seed for random number generation; set to -1 for non-deterministic results.", ":math:`-1 \le i`", Foundational.
+         "n_probe", "integer", ":math:`i=1`", "Number of lists to probe at search time for inverted file indices", ":math:`1 \le i`", Foundational.
+         "n_list", "integer", ":math:`i=1`", "Number of lists to construct for inverted file indices", ":math:`1 \le i`", Foundational.
+         "number of neighbors", "integer", ":math:`i=5`", "Number of neighbors considered for k-nearest neighbors.", ":math:`1 \le i`", Foundational.
+         "check data", "string", ":math:`s=` `no`", "Check input data for NaNs prior to performing computation.", ":math:`s=` `no`, or `yes`.", Foundational.
+         "storage order", "string", ":math:`s=` `column-major`", "Whether data is supplied and returned in row- or column-major order.", ":math:`s=` `c`, `column-major`, `f`, `fortran`, or `row-major`.", Foundational.
 
       If `algorithm` is set to `auto`, it selects `ivfflat`. The `quantization` option
       is used only when `algorithm='ivfsq'`; its default is `bfloat16`.

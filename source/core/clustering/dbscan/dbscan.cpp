@@ -28,6 +28,7 @@
 #include "da_error.hpp"
 #include "da_omp.hpp"
 #include "da_std.hpp"
+#include "da_utils.hpp"
 #include "da_vector.hpp"
 #include "dbscan_options.hpp"
 #include "lapack_templates.hpp"
@@ -36,7 +37,9 @@
 #include "pairwise_distances.hpp"
 #include "radius_neighbors.hpp"
 #include <algorithm>
+#include <atomic>
 #include <iostream>
+#include <memory>
 #include <random>
 #include <set>
 #include <string>
@@ -52,6 +55,15 @@ namespace da_dbscan {
 
 using namespace da_neighbors_types;
 using namespace std::literals::string_literals;
+
+inline da_int find_component_root(const std::atomic<da_int> *parents, da_int index) {
+    da_int parent = parents[index].load(std::memory_order_relaxed);
+    while (parent != index) {
+        index = parent;
+        parent = parents[index].load(std::memory_order_relaxed);
+    }
+    return index;
+}
 
 template <typename T> dbscan<T>::~dbscan() {
     // Destructor needs to handle arrays that were allocated due to row major storage of input data
@@ -183,11 +195,32 @@ da_status dbscan<T>::set_data(da_int n_samples, da_int n_features, const T *A_in
     // Guard against errors due to multiple calls using the same class instantiation
     refresh();
 
-    da_status status =
-        this->store_2D_array(n_samples, n_features, A_in, lda_in, &A_temp, &A, lda,
-                             "n_samples", "n_features", "A", "lda");
+    std::string opt_order;
+    da_int iorder;
+    da_status status = this->opts.get("storage order", opt_order, iorder);
+    this->order = da_order(iorder);
+
+    status = this->check_2D_array(this->order, n_samples, n_features, A_in, lda_in,
+                                  "n_samples", "n_features", "A", "lda");
     if (status != da_status_success)
         return status; // LCOV_EXCL_LINE
+
+    if (this->order == row_major) {
+        try {
+            A_temp =
+                new T[static_cast<size_t>(n_samples) * static_cast<size_t>(n_features)];
+        } catch (std::bad_alloc const &) {
+            return da_error(this->err, da_status_memory_error, // LCOV_EXCL_LINE
+                            "Memory allocation failed.");
+        }
+        da_utils::copy_transpose_2D_array_row_to_column_major(n_samples, n_features, A_in,
+                                                              lda_in, A_temp, n_samples);
+        A = A_temp;
+        lda = n_samples;
+    } else {
+        A = A_in;
+        lda = lda_in;
+    }
 
     // Store dimensions of A
     this->n_samples = n_samples;
@@ -296,100 +329,98 @@ template <typename T> da_status dbscan<T>::dbscan_clusters_parallel() {
 
     da_status status = da_status_success;
     std::vector<da_int> remap;
+    std::unique_ptr<std::atomic<da_int>[]> parents;
+    [[maybe_unused]] da_int parallel_chunk_size = std::max(
+        da_utils::hidden_settings_query("dbscan.parallel_chunk_size", da_int{64}),
+        da_int{1});
     da_int next_id = 0;
     // Add telemetry to the context class
     context_set_hidden_settings("dbscan.setup"s, "clustering=parallel"s);
 
     try {
-        duplicate_labels.resize(n_samples);
+        parents = std::make_unique<std::atomic<da_int>[]>(n_samples);
         remap.resize(n_samples, NOISE);
     } catch (std::bad_alloc const &) {
         return da_error(this->err, da_status_memory_error, // LCOV_EXCL_LINE
                         "Memory allocation failed.");
     }
 
-    da_std::fill(labels.begin(), labels.end(), NOISE);
-    da_std::fill(duplicate_labels.begin(), duplicate_labels.end(), NOISE);
+    for (da_int i = 0; i < n_samples; i++) {
+        parents[i].store(is_core_sample[i] ? i : NOISE, std::memory_order_relaxed);
+    }
 
-#pragma omp parallel default(none)                                                       \
-    shared(labels, neighbors, n_clusters, n_core_samples, min_samples_m1, n_samples,     \
-               status, duplicate_labels, is_core_sample, next_id, remap)
-    {
+// Form connected components using only core-to-core edges. Border points must not
+// connect otherwise independent DBSCAN clusters.
+#pragma omp parallel for default(none) schedule(guided, parallel_chunk_size)             \
+    shared(is_core_sample, n_samples, neighbors, parallel_chunk_size, parents)
+    for (da_int i = 0; i < n_samples; i++) {
+        if (!is_core_sample[i])
+            continue;
 
-// Parallel loop to compute DBSCAN clusters
-#pragma omp for schedule(guided, 64)
-        for (da_int i = 0; i < n_samples; i++) {
-            if (is_core_sample[i]) {
-                // This is a core point
-                da_int tmp_label_i;
-#pragma omp atomic read
-                tmp_label_i = labels[i];
-                if (i < tmp_label_i || tmp_label_i == NOISE) {
-#pragma omp atomic write
-                    // Assign it its own index as the cluster label - we will combine clusters later
-                    labels[i] = i;
-                }
-
-                // Loop through each point in the epsilon neighborhood of point i
-                auto &this_neighbor = neighbors[i];
-                for (da_int j = 0; j < (da_int)this_neighbor.size(); j++) {
-                    da_int sample_point_j = this_neighbor[j];
-                    da_int tmp_label_j;
-#pragma omp atomic read
-                    tmp_label_j = labels[sample_point_j];
-                    // Record that i and j are in the same cluster
-                    if (i < sample_point_j)
-                        duplicate_labels[sample_point_j] = i;
-                    else
-                        duplicate_labels[i] = sample_point_j;
-
-                    if (i < tmp_label_j || tmp_label_j == NOISE) {
-#pragma omp atomic write
-                        labels[sample_point_j] = i;
-                    }
-                }
-            }
-        }
-
-#pragma omp for schedule(guided, 64)
-        for (da_int i = 0; i < n_samples; i++) {
-            da_int current_label = labels[i];
-            if (current_label == NOISE) {
+        auto &this_neighbor = neighbors[i];
+        for (da_int j = 0; j < (da_int)this_neighbor.size(); j++) {
+            da_int sample_point_j = this_neighbor[j];
+            if (sample_point_j <= i || !is_core_sample[sample_point_j])
                 continue;
-            }
 
-            // Follow the chain of labels to find the lowest one
-            while (duplicate_labels[current_label] != NOISE) {
-                current_label = duplicate_labels[current_label];
-            }
+            da_int root_i = find_component_root(parents.get(), i);
+            da_int root_j = find_component_root(parents.get(), sample_point_j);
+            while (root_i != root_j) {
+                da_int high_root = std::max(root_i, root_j);
+                da_int low_root = std::min(root_i, root_j);
+                da_int expected = high_root;
+                if (parents[high_root].compare_exchange_weak(expected, low_root,
+                                                             std::memory_order_relaxed,
+                                                             std::memory_order_relaxed))
+                    break;
 
-            labels[i] = current_label;
+                root_i = find_component_root(parents.get(), i);
+                root_j = find_component_root(parents.get(), sample_point_j);
+            }
         }
+    }
 
-        // Relabel clusters to have consecutive numbering starting from 0
-#pragma omp single
-        {
-            for (da_int i = 0; i < n_samples; i++) {
-                da_int lab = labels[i];
-                if (lab == NOISE)
-                    continue;
-                if (remap[lab] == NOISE) {
-                    remap[lab] = next_id;
-                    next_id++;
+// Label core points by component, then assign each border point deterministically
+// to its lowest-index neighboring component.
+#pragma omp parallel for default(none) schedule(guided, parallel_chunk_size)             \
+    shared(is_core_sample, labels, n_samples, neighbors, parallel_chunk_size, parents)
+    for (da_int i = 0; i < n_samples; i++) {
+        if (is_core_sample[i]) {
+            labels[i] = find_component_root(parents.get(), i);
+        } else {
+            da_int label = NOISE;
+            auto &this_neighbor = neighbors[i];
+            for (da_int j = 0; j < (da_int)this_neighbor.size(); j++) {
+                da_int sample_point_j = this_neighbor[j];
+                if (is_core_sample[sample_point_j]) {
+                    da_int root = find_component_root(parents.get(), sample_point_j);
+                    if (label == NOISE || root < label)
+                        label = root;
                 }
             }
-            n_clusters = next_id;
+            labels[i] = label;
         }
+    }
 
-#pragma omp barrier
-#pragma omp for schedule(static)
-        for (da_int i = 0; i < n_samples; ++i) {
-            da_int lab = labels[i];
-            if (lab == NOISE)
-                continue;
-            labels[i] = remap[lab];
+    // Relabel clusters to have consecutive numbering starting from 0
+    for (da_int i = 0; i < n_samples; i++) {
+        da_int lab = labels[i];
+        if (lab == NOISE)
+            continue;
+        if (remap[lab] == NOISE) {
+            remap[lab] = next_id;
+            next_id++;
         }
-    } // End of parallel region
+    }
+    n_clusters = next_id;
+
+#pragma omp parallel for default(none) schedule(static) shared(labels, n_samples, remap)
+    for (da_int i = 0; i < n_samples; ++i) {
+        da_int lab = labels[i];
+        if (lab == NOISE)
+            continue;
+        labels[i] = remap[lab];
+    }
 
     return status;
 }

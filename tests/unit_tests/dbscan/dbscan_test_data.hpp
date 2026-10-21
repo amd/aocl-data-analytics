@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2025 Advanced Micro Devices, Inc. All rights reserved.
+ * Copyright (C) 2025-2026 Advanced Micro Devices, Inc. All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without modification,
  * are permitted provided that the following conditions are met:
@@ -222,6 +222,25 @@ template <typename T> void Get25by2BaseData(DBSCANParamType<T> &param) {
     param.expected_n_clusters = 3;
 }
 
+template <typename T> void GetSharedBorderBaseData(DBSCANParamType<T> &param) {
+    param.test_name = "Two clusters sharing a non-core border point";
+
+    param.n_samples = 9;
+    param.n_features = 1;
+    std::vector<double> A{0.0, -0.9, -1.65, -1.75, -1.85, 0.9, 1.65, 1.75, 1.85};
+    param.A = convert_vector<double, T>(A);
+    param.lda = param.n_samples;
+    param.min_samples = 4;
+    param.eps = 1.0;
+
+    std::vector<double> expected_rinfo_double{9, 1, 9, 1.0, 4, 30, 2, 8, 2};
+    param.expected_rinfo = convert_vector<double, T>(expected_rinfo_double);
+    param.expected_labels = std::vector<da_int>{0, 0, 0, 0, 0, 1, 1, 1, 1};
+    param.expected_core_sample_indices = std::vector<da_int>{1, 2, 3, 4, 5, 6, 7, 8};
+    param.expected_n_core_samples = 8;
+    param.expected_n_clusters = 2;
+}
+
 // The tests below will be expanded when further options are added to the DBSCAN API
 
 template <typename T> void GetRowMajorData(std::vector<DBSCANParamType<T>> &params) {
@@ -354,6 +373,12 @@ template <typename T> void Get25by2Data(std::vector<DBSCANParamType<T>> &params)
     params.push_back(param);
 }
 
+template <typename T> void GetSharedBorderData(std::vector<DBSCANParamType<T>> &params) {
+    DBSCANParamType<T> param;
+    GetSharedBorderBaseData(param);
+    params.push_back(param);
+}
+
 template <typename T> void GetDBSCANData(std::vector<DBSCANParamType<T>> &params) {
     Get1by1Data(params);
     Get30by3Data(params);
@@ -362,4 +387,5 @@ template <typename T> void GetDBSCANData(std::vector<DBSCANParamType<T>> &params
     GetZeroData(params);
     GetRowMajorData(params);
     GetWideData(params);
+    GetSharedBorderData(params);
 }

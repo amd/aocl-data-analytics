@@ -246,6 +246,12 @@ add_library(
 set(GENERIC_FLAGS "-march=x86-64;-mavx2;-mfma")
 set(GENERIC_AVX512_FLAGS "-mavx512f;-mavx512dq;-mavx512vl")
 
+# basic_handle is outside namespace ARCH, so each precision must have one
+# explicit-instantiation owner. Dynamic builds use generic for float and double,
+# and the highest supported Zen target for FP16.
+list(GET ARCHITECTURES 0 DA_BASIC_HANDLE_COMMON_ARCHITECTURE)
+list(GET ARCHITECTURES -1 DA_BASIC_HANDLE_FP16_ARCHITECTURE)
+
 # Add compile definitions
 if(ARCH STREQUAL "dynamic")
   # Dynamic dispatch: get a list of compilation architectures and associated
@@ -296,6 +302,13 @@ foreach(ARCHITECTURE IN LISTS ARCHITECTURES)
 
   set(ARCH_OBJECTS ${ARCHITECTURE}_OBJECTS)
   add_library(${ARCH_OBJECTS} OBJECT ${DA_CORE_DYNAMIC_DISPATCH})
+
+  if(ARCHITECTURE STREQUAL DA_BASIC_HANDLE_COMMON_ARCHITECTURE)
+    target_compile_definitions(${ARCH_OBJECTS} PRIVATE DA_BASIC_HANDLE_COMMON)
+  endif()
+  if(ARCHITECTURE STREQUAL DA_BASIC_HANDLE_FP16_ARCHITECTURE)
+    target_compile_definitions(${ARCH_OBJECTS} PRIVATE DA_BASIC_HANDLE_FP16)
+  endif()
 
   # Set the compile definitions for the architecture
   if(ARCHITECTURE STREQUAL "generic"

@@ -204,14 +204,14 @@ database file. The csv-table tag need to be exactly specifying the shown columns
     .. update options using table _opts_linearmodels
     .. csv-table:: :strong:`Example table of options for linear models`.
         :escape: ~
-        :header: "Option name", "Type", "Default", "Description", "Constraints"
+        :header: "Option name", "Type", "Default", "Description", "Constraints", "Notes"
 
-        "print options", "string", ":math:`s=` `no`", "Print options.", ":math:`s=` `no`, or `yes`."
+        "print options", "string", ":math:`s=` `no`", "Print options.", ":math:`s=` `no`, or `yes`.", Foundational.
 
 .. update options using table _opts_linearmodels
 
 .. csv-table:: :strong:`Example table of options for linear models`.
     :escape: ~
-    :header: "Option name", "Type", "Default", "Description", "Constraints"
+    :header: "Option name", "Type", "Default", "Description", "Constraints", "Notes"
 
-    "print options", "string", ":math:`s=` `no`", "Print options.", ":math:`s=` `no`, or `yes`."
+    "print options", "string", ":math:`s=` `no`", "Print options.", ":math:`s=` `no`, or `yes`.", Foundational.

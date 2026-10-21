@@ -213,7 +213,7 @@ def _quantile_grid(x, probs, method, da_axis):
 
 
 def quantile(x, p, *, method='linear', axis=0, nan_policy='propagate',
-             keepdims=None):
+             keepdims=None, weights=None):
     """
     Overwrite scipy.stats.quantile to call AOCL-DA library.
 
@@ -224,6 +224,7 @@ def quantile(x, p, *, method='linear', axis=0, nan_policy='propagate',
     the grid is indexed here to reproduce scipy's broadcast result.
     """
     _warn_if(nan_policy != 'propagate', "nan_policy")
+    _warn_if(weights is not None, 'weights')
 
     x_arr = np.asarray(x)
     p_arr = np.asarray(p)

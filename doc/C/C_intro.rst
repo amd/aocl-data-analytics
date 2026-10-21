@@ -89,7 +89,7 @@ To compile and link to static AOCL libraries using ``g++``:
         /<path to amd-sparse>/lib_<INT_LIB>/libaoclsparse.a
         /<path to amd-libflame>/lib_<INT_LIB>/libflame.a
         /<path to amd-blis>/lib_<INT_LIB>/libblis-mt.a
-        /<path to libaoclutils>/lib_<INT_LIB>/libaoclutils.a -lgfortran -lgomp
+        /<path to libaoclutils>/lib_<INT_LIB>/libaoclutils.a -lgfortran -lgomp -pthread
 
 To compile and link to static AOCL libraries using ``clang++``:
 
@@ -101,7 +101,8 @@ To compile and link to static AOCL libraries using ``clang++``:
             /<path to amd-sparse>/lib_<INT_LIB>/libaoclsparse.a
             /<path to amd-libflame>/lib_<INT_LIB>/libflame.a
             /<path to amd-blis>/lib_<INT_LIB>/libblis-mt.a
-            /<path to libaoclutils>/lib_<INT_LIB>/libaoclutils.a -lflang -lomp -lpgmath
+            /<path to libaoclutils>/lib_<INT_LIB>/libaoclutils.a
+            -lamdlibm -lflang -lomp -lpgmath -lpthread
 
 .. note::
    When linking the static ``libaocl-dlp.a``, wrap it in ``-Wl,--whole-archive`` /

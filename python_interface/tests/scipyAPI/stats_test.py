@@ -232,6 +232,34 @@ def test_quantile_p_grid(precision, axis, keepdims):
     assert da_quant == pytest.approx(sk_quant, rel=tol, abs=tol)
 
 
+@requires_scipy_quantile
+def test_quantile_unsupported_parameters():
+    """
+    Check that quantiles run successfully even when
+    weights and nan_policy are different from defaults.
+    """
+
+    X = [0, 1, 2, 3, 4, 5, 6, 7, 8, 9]
+    p = [0.5]
+    nan_policy = 'omit'
+    weights = [100]
+
+    sppatch()
+    from scipy.stats import quantile
+
+    with pytest.warns(RuntimeWarning):
+        da_quants_nan = quantile(X, p, nan_policy=nan_policy)
+    with pytest.warns(RuntimeWarning):
+        da_quants_wei = quantile(X, p, weights=weights)
+    with pytest.warns(RuntimeWarning):
+        da_quants_both = quantile(X, p, nan_policy=nan_policy, weights=weights)
+
+    undo_sppatch()
+
+    # Verify they work for scipy
+    sp_quants_both = quantile(X, p, nan_policy=nan_policy, weights=weights)
+
+
 @pytest.mark.parametrize("precision", [np.float64, np.float32])
 @pytest.mark.parametrize("axis", [0, 1, None])
 def test_describe(precision, axis):
@@ -275,15 +303,21 @@ def test_patching():
     from scipy import stats
     assert not stats.gmean.__module__.startswith("aoclda")
 
-    sppatch(["skew", "kurtosis", "Wibble"])
+    sppatch(["skew", "kurtosis"])
     from scipy import stats
     assert stats.skew.__module__.startswith("aoclda")
     assert stats.kurtosis.__module__.startswith("aoclda")
 
-    undo_sppatch(["skew", "kurtosis", "Wobble"])
+    undo_sppatch(["skew", "kurtosis"])
     from scipy import stats
     assert not stats.skew.__module__.startswith("aoclda")
     assert not stats.kurtosis.__module__.startswith("aoclda")
+
+    with pytest.raises(ValueError, match="Wibble"):
+        sppatch(["skew", "Wibble"])
+
+    with pytest.raises(ValueError, match="Wobble"):
+        undo_sppatch(["skew", "Wobble"])
 
     with pytest.raises(TypeError):
         sppatch(1)

@@ -185,11 +185,14 @@ class context {
                      this->cpuflags[static_cast<int>(context_isa_t::AVX512DQ)] &&
                      this->cpuflags[static_cast<int>(context_isa_t::AVX512VL)];
 
-        has_avx512_bf16 = this->cpuflags[static_cast<int>(context_isa_t::AVX512_BF16)];
+        has_avx512_bf16 =
+            has_avx512 && this->cpuflags[static_cast<int>(context_isa_t::AVX512_BF16)];
 
-        has_avx512_fp16 = this->cpuflags[static_cast<int>(context_isa_t::AVX512_FP16)];
+        has_avx512_fp16 =
+            has_avx512 && this->cpuflags[static_cast<int>(context_isa_t::AVX512_FP16)];
 
-        has_avx512_vnni = this->cpuflags[static_cast<int>(context_isa_t::AVX512_VNNI)];
+        has_avx512_vnni =
+            has_avx512 && this->cpuflags[static_cast<int>(context_isa_t::AVX512_VNNI)];
 
         //LCOV_EXCL_START
         switch (uarch) {

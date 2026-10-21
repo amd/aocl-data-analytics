@@ -490,6 +490,7 @@ da_status coord(da_options::OptionRegistry &opts, da_int n, std::vector<T> &x,
     // are saved into the workspace of the solver
     auto clock = std::chrono::system_clock::now();
     const size_t coutprec = std::cout.precision();
+    const auto coutflags = std::cout.flags();
 
     if (prnlvl >= 5) {
         std::cout << "Initial coefficients:" << std::endl;
@@ -602,6 +603,7 @@ da_status coord(da_options::OptionRegistry &opts, da_int n, std::vector<T> &x,
                     std::cout << "/" << std::setw(9) << skipmax;
                 std::cout << " " << flagss << std::endl << std::noshowpos;
                 std::cout.precision(coutprec);
+                std::cout.flags(coutflags);
             }
             break;
         case OPTIMCHK:
@@ -699,8 +701,9 @@ da_status coord(da_options::OptionRegistry &opts, da_int n, std::vector<T> &x,
                     std::cout << std::setw(1) << "" << std::setw(9) << optim;
                     std::cout << std::setw(1) << "" << std::setw(9) << w.optim;
                 }
-                std::cout << std::endl;
                 std::cout.precision(coutprec);
+                std::cout.flags(coutflags);
+                std::cout << std::endl;
                 if (prnlvl >= 5) {
                     std::cout << "Current coefficients:" << std::endl;
                     for (da_int i = 0; i < n; i++) {

@@ -163,11 +163,11 @@ Options
 .. update options using table _opts_interpolation
 
 .. csv-table:: Interpolation options
-   :header: "Option name", "Type", "Default", "Description", "Constraints"
+   :header: "Option name", "Type", "Default", "Description", "Constraints", "Notes"
 
-   "check data", "string", ":math:`s=` `no`", "Check input data for NaNs prior to performing computation.", ":math:`s=` `no`, or `yes`."
-   "cubic spline type", "string", ":math:`s=` `natural`", "Type of cubic spline to construct. Options: 'natural' (zero second derivatives at endpoints), 'clamped zero' (zero first derivatives at endpoints), 'custom' (user-specified first or second derivatives at endpoints), 'Hermite' (piecewise cubic Hermite interpolation).", ":math:`s=` `clamped zero`, `custom`, `hermite`, or `natural`."
-   "storage order", "string", ":math:`s=` `column-major`", "Whether data is supplied and returned in row- or column-major order.", ":math:`s=` `c`, `column-major`, `f`, `fortran`, or `row-major`."
+   "check data", "string", ":math:`s=` `no`", "Check input data for NaNs prior to performing computation.", ":math:`s=` `no`, or `yes`.", Foundational.
+   "cubic spline type", "string", ":math:`s=` `natural`", "Type of cubic spline to construct. Options: 'natural' (zero second derivatives at endpoints), 'clamped zero' (zero first derivatives at endpoints), 'custom' (user-specified first or second derivatives at endpoints), 'Hermite' (piecewise cubic Hermite interpolation).", ":math:`s=` `clamped zero`, `custom`, `hermite`, or `natural`.", Foundational.
+   "storage order", "string", ":math:`s=` `column-major`", "Whether data is supplied and returned in row- or column-major order.", ":math:`s=` `c`, `column-major`, `f`, `fortran`, or `row-major`.", Foundational.
 
 
 

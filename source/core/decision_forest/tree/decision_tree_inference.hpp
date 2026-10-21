@@ -271,13 +271,14 @@ da_status decision_tree<T>::compact_traverse_sequential(da_int nsamp, const T *X
         da_int current_idx = 0;
         const T *row = nullptr;
         if constexpr (ORDER == row_major)
-            row = X_test + ldx_test * i;
+            row = X_test + (size_t)ldx_test * i;
         while (compact_tree[current_idx].feature_idx >= 0) {
             T feat_val;
             if constexpr (ORDER == row_major)
                 feat_val = row[compact_tree[current_idx].feature_idx];
             else
-                feat_val = X_test[i + ldx_test * compact_tree[current_idx].feature_idx];
+                feat_val =
+                    X_test[i + (size_t)ldx_test * compact_tree[current_idx].feature_idx];
             if constexpr (HAS_CAT_FEAT) {
                 switch (feat_is_onevall[compact_tree[current_idx].feature_idx]) {
                 case false:
@@ -315,13 +316,14 @@ da_status decision_tree<T>::compact_traverse_sequential(da_int nsamp, const T *X
         da_int current_idx = 0;
         const T *row = nullptr;
         if constexpr (ORDER == row_major)
-            row = X_test + ldx_test * i;
+            row = X_test + (size_t)ldx_test * i;
         while (compact_tree[current_idx].feature_idx >= 0) {
             T feat_val;
             if constexpr (ORDER == row_major)
                 feat_val = row[compact_tree[current_idx].feature_idx];
             else
-                feat_val = X_test[i + ldx_test * compact_tree[current_idx].feature_idx];
+                feat_val =
+                    X_test[i + (size_t)ldx_test * compact_tree[current_idx].feature_idx];
             if constexpr (HAS_CAT_FEAT) {
                 switch (feat_is_onevall[compact_tree[current_idx].feature_idx]) {
                 case false:
@@ -344,9 +346,11 @@ da_status decision_tree<T>::compact_traverse_sequential(da_int nsamp, const T *X
         }
         for (da_int j = 0; j < n_class; j++) {
             if constexpr (ORDER == row_major)
-                y_proba[i * ldy + j] = class_props[current_idx * n_class + j];
+                y_proba[(size_t)i * ldy + j] =
+                    class_props[(size_t)current_idx * n_class + j];
             else
-                y_proba[j * ldy + i] = class_props[current_idx * n_class + j];
+                y_proba[(size_t)j * ldy + i] =
+                    class_props[(size_t)current_idx * n_class + j];
         }
     }
 
@@ -379,12 +383,12 @@ da_status decision_tree<T>::compact_traverse_sequential_vectorized(
         case vectorization_type::avx512:
 #ifdef __AVX512F__
             status = compact_traverse_sequential_avx512<false>(
-                X_test + b * block_size * ldx, ldx, y_pred + b * block_size);
+                X_test + (size_t)b * block_size * ldx, ldx, y_pred + b * block_size);
             break;
 #endif
         default:
             status = compact_traverse_sequential_avx2<false>(
-                X_test + b * block_size * ldx, ldx, y_pred + b * block_size);
+                X_test + (size_t)b * block_size * ldx, ldx, y_pred + b * block_size);
             break;
         }
         if (status != da_status_success)
@@ -393,7 +397,7 @@ da_status decision_tree<T>::compact_traverse_sequential_vectorized(
 
     if (remainder > 0) {
         status = compact_traverse_sequential<row_major, false>(
-            remainder, X_test + n_blocks * block_size * ldx, ldx,
+            remainder, X_test + (size_t)n_blocks * block_size * ldx, ldx,
             y_pred + n_blocks * block_size);
         if (status != da_status_success)
             return status;
@@ -436,28 +440,28 @@ da_status decision_tree<T>::compact_traverse_sequential_vectorized(
         case vectorization_type::avx512:
 #ifdef __AVX512F__
             status = compact_traverse_sequential_avx512<true>(
-                X_test + b * block_size * ldx, ldx, y_pred_block.data());
+                X_test + (size_t)b * block_size * ldx, ldx, y_pred_block.data());
             break;
 #endif
         default:
-            status = compact_traverse_sequential_avx2<true>(X_test + b * block_size * ldx,
-                                                            ldx, y_pred_block.data());
+            status = compact_traverse_sequential_avx2<true>(
+                X_test + (size_t)b * block_size * ldx, ldx, y_pred_block.data());
             break;
         }
         if (status != da_status_success)
             return status;
         for (da_int i = 0; i < block_size; i++) {
             for (da_int j = 0; j < n_class; j++) {
-                y_proba[(b * block_size + i) * ldy + j] =
-                    class_props[y_pred_block[i] * n_class + j];
+                y_proba[(size_t)(b * block_size + i) * ldy + j] =
+                    class_props[(size_t)y_pred_block[i] * n_class + j];
             }
         }
     }
 
     if (remainder > 0) {
         da_status status = compact_traverse_sequential<row_major, false>(
-            remainder, X_test + n_blocks * block_size * ldx, ldx,
-            y_proba + n_blocks * block_size * ldy, n_class, ldy);
+            remainder, X_test + (size_t)n_blocks * block_size * ldx, ldx,
+            y_proba + (size_t)n_blocks * block_size * ldy, n_class, ldy);
         if (status != da_status_success)
             return status;
     }
@@ -466,9 +470,9 @@ da_status decision_tree<T>::compact_traverse_sequential_vectorized(
 }
 
 #ifdef __AVX512F__
-/* compute y_pred for 16 samples at a time using AVX-512 
+/* compute y_pred for 16 samples at a time using AVX-512
  * - row major
- * - no categorical features 
+ * - no categorical features
  * - float
  */
 template <typename T>
@@ -681,9 +685,9 @@ da_status decision_tree<T>::compact_traverse_BFS(da_int nsamp, const T *X_test,
             da_int idx = idx_src[i];
             T feat_val;
             if constexpr (ORDER == row_major) {
-                feat_val = X_test[idx * ldx_test + feat];
+                feat_val = X_test[(size_t)idx * ldx_test + feat];
             } else {
-                feat_val = X_test[feat * ldx_test + idx];
+                feat_val = X_test[(size_t)feat * ldx_test + idx];
             }
 
             if constexpr (HAS_CAT_FEAT) {
@@ -760,9 +764,11 @@ da_status decision_tree<T>::compact_traverse_BFS(da_int nsamp, const T *X_test,
                 da_int idx = idx_src[i];
                 for (da_int j = 0; j < n_class; j++) {
                     if constexpr (ORDER == row_major)
-                        y_proba[idx * ldy + j] = class_props[node_idx * n_class + j];
+                        y_proba[(size_t)idx * ldy + j] =
+                            class_props[(size_t)node_idx * n_class + j];
                     else
-                        y_proba[j * ldy + idx] = class_props[node_idx * n_class + j];
+                        y_proba[(size_t)j * ldy + idx] =
+                            class_props[(size_t)node_idx * n_class + j];
                 }
             }
             continue;
@@ -778,9 +784,9 @@ da_status decision_tree<T>::compact_traverse_BFS(da_int nsamp, const T *X_test,
             da_int idx = idx_src[i];
             T feat_val;
             if constexpr (ORDER == row_major)
-                feat_val = X_test[idx * ldx_test + feat];
+                feat_val = X_test[(size_t)idx * ldx_test + feat];
             else
-                feat_val = X_test[feat * ldx_test + idx];
+                feat_val = X_test[(size_t)feat * ldx_test + idx];
             if constexpr (HAS_CAT_FEAT) {
                 switch (feat_is_onevall[feat]) {
                 case false:
@@ -1058,12 +1064,28 @@ da_status decision_tree<T>::predict_training_tree(da_int nsamp, da_int nfeat,
                                "associated with is out of date.");
     }
 
-    da_int mode = 0;
-    da_status status = this->store_2D_array(nsamp, nfeat, X_test, ldx_test, &utility_ptr1,
-                                            &X_test_temp, ldx_test_temp, "n_samples",
-                                            "n_features", "X_test", "ldx_test", mode);
+    da_status status = read_storage_order();
     if (status != da_status_success)
         return status;
+    status = this->check_2D_array(this->order, nsamp, nfeat, X_test, ldx_test,
+                                  "n_samples", "n_features", "X_test", "ldx_test");
+    if (status != da_status_success)
+        return status;
+    if (this->order == row_major) {
+        try {
+            utility_ptr1 = new T[static_cast<size_t>(nsamp) * static_cast<size_t>(nfeat)];
+        } catch (std::bad_alloc const &) {
+            return da_error(this->err, da_status_memory_error, // LCOV_EXCL_LINE
+                            "Memory allocation failed.");
+        }
+        da_utils::copy_transpose_2D_array_row_to_column_major(
+            nsamp, nfeat, X_test, ldx_test, utility_ptr1, nsamp);
+        X_test_temp = utility_ptr1;
+        ldx_test_temp = nsamp;
+    } else {
+        X_test_temp = X_test;
+        ldx_test_temp = ldx_test;
+    }
 
     // Fill y_pred with the values of all the requested samples
     node<T> *current_node;
@@ -1100,8 +1122,8 @@ da_status decision_tree<T>::predict_proba_training_tree(da_int nsamp, da_int nfe
                                                         da_int ldy) {
 
     const T *X_test_temp;
-    T *utility_ptr1;
-    T *utility_ptr2;
+    T *utility_ptr1 = nullptr;
+    T *utility_ptr2 = nullptr;
     da_int ldx_test_temp;
     T *y_proba_pred_temp;
     da_int ldy_proba_pred_temp;
@@ -1131,19 +1153,48 @@ da_status decision_tree<T>::predict_proba_training_tree(da_int nsamp, da_int nfe
                                "associated with is out of date.");
     }
 
-    da_int mode = 0;
-    da_status status = this->store_2D_array(nsamp, nfeat, X_test, ldx_test, &utility_ptr1,
-                                            &X_test_temp, ldx_test_temp, "n_samples",
-                                            "n_features", "X_test", "ldx_test", mode);
+    da_status status =
+        this->check_2D_array(this->order, nsamp, nfeat, X_test, ldx_test, "n_samples",
+                             "n_features", "X_test", "ldx_test");
     if (status != da_status_success)
         return status;
+    if (this->order == row_major) {
+        try {
+            utility_ptr1 = new T[static_cast<size_t>(nsamp) * static_cast<size_t>(nfeat)];
+        } catch (std::bad_alloc const &) {
+            return da_error(this->err, da_status_memory_error, // LCOV_EXCL_LINE
+                            "Memory allocation failed.");
+        }
+        da_utils::copy_transpose_2D_array_row_to_column_major(
+            nsamp, nfeat, X_test, ldx_test, utility_ptr1, nsamp);
+        X_test_temp = utility_ptr1;
+        ldx_test_temp = nsamp;
+    } else {
+        X_test_temp = X_test;
+        ldx_test_temp = ldx_test;
+    }
 
-    status = this->store_2D_array(nsamp, nclass, y_proba_pred, ldy, &utility_ptr2,
-                                  const_cast<const T **>(&y_proba_pred_temp),
-                                  ldy_proba_pred_temp, "n_samples", "n_class", "y_proba",
-                                  "ldy", mode);
-    if (status != da_status_success)
+    status = da_utils::check_2D_array(false, this->order, this->err, nsamp, nclass,
+                                      y_proba_pred, ldy, "n_samples", "n_class",
+                                      "y_proba", "ldy", 1, 1);
+    if (status != da_status_success) {
+        delete[] (utility_ptr1);
         return status;
+    }
+    if (this->order == row_major) {
+        try {
+            utility_ptr2 = new T[nsamp * nclass];
+        } catch (std::bad_alloc const &) {
+            delete[] (utility_ptr1);
+            return da_error(this->err, da_status_memory_error, // LCOV_EXCL_LINE
+                            "Memory allocation failed.");
+        }
+        y_proba_pred_temp = utility_ptr2;
+        ldy_proba_pred_temp = nsamp;
+    } else {
+        y_proba_pred_temp = y_proba_pred;
+        ldy_proba_pred_temp = ldy;
+    }
 
     // Fill y_proba_pred with the values of all the requested samples
     node<T> *current_node;
@@ -1204,15 +1255,34 @@ da_status decision_tree<T>::score_training_tree(da_int nsamp, da_int nfeat,
                                "associated with is out of date.");
     }
 
-    da_status status = this->store_2D_array(nsamp, nfeat, X_test, ldx_test, &utility_ptr1,
-                                            &X_test_temp, ldx_test_temp, "n_samples",
-                                            "n_features", "X_test", "ldx_test");
+    da_status status = read_storage_order();
     if (status != da_status_success)
         return status;
+    status = this->check_2D_array(this->order, nsamp, nfeat, X_test, ldx_test,
+                                  "n_samples", "n_features", "X_test", "ldx_test");
+    if (status != da_status_success)
+        return status;
+    if (this->order == row_major) {
+        try {
+            utility_ptr1 = new T[static_cast<size_t>(nsamp) * static_cast<size_t>(nfeat)];
+        } catch (std::bad_alloc const &) {
+            return da_error(this->err, da_status_memory_error, // LCOV_EXCL_LINE
+                            "Memory allocation failed.");
+        }
+        da_utils::copy_transpose_2D_array_row_to_column_major(
+            nsamp, nfeat, X_test, ldx_test, utility_ptr1, nsamp);
+        X_test_temp = utility_ptr1;
+        ldx_test_temp = nsamp;
+    } else {
+        X_test_temp = X_test;
+        ldx_test_temp = ldx_test;
+    }
 
     status = this->check_1D_array(nsamp, y_test, "n_samples", "y_test", 1);
-    if (status != da_status_success)
+    if (status != da_status_success) {
+        delete[] (utility_ptr1);
         return status;
+    }
 
     node<T> *current_node;
     *accuracy = 0.;

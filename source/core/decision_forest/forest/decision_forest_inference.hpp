@@ -45,41 +45,63 @@ template <typename T> da_status decision_forest<T>::read_storage_order() {
 }
 
 template <typename T>
-void decision_forest<T>::parallel_count_classes(const T *X_test, da_int ldx_test,
-                                                da_int nsamp, const da_int &n_threads,
-                                                std::vector<da_int> &count_classes,
-                                                std::vector<da_int> &thread_counts,
-                                                std::vector<da_int> &y_pred_tree) {
+da_int decision_forest<T>::inference_block_nsamp(da_int nsamp, da_int n_threads) const {
+    da_int budget = da_utils::hidden_settings_query(
+        "decision_forest.inference_block_elems", DF_INFERENCE_BUDGET);
+    // n_threads * block_nsamp * n_class <= budget, with at least one sample per block.
+    size_t denom = (size_t)std::max(n_threads, (da_int)1) * std::max(n_class, (da_int)1);
+    size_t block = (size_t)budget / denom;
+    if (block < 1)
+        block = 1;
+    size_t cap = (size_t)std::max(nsamp, (da_int)1);
+    if (block > cap)
+        block = cap;
+    return (da_int)block;
+}
+
+template <typename T>
+void decision_forest<T>::parallel_sum_proba(const T *X_test, da_int ldx_test,
+                                            da_int nsamp, const da_int &n_threads,
+                                            std::vector<T> &sum_proba,
+                                            std::vector<T> &thread_proba,
+                                            std::vector<T> &y_proba_tree) {
 
 #pragma omp parallel num_threads(n_threads)                                              \
-    shared(X_test, ldx_test, nsamp, thread_counts, y_pred_tree) default(none)
+    shared(X_test, ldx_test, nsamp, thread_proba, y_proba_tree) default(none)
     {
         da_int tid = (da_int)omp_get_thread_num();
-        da_int *local_counts = &thread_counts[(da_int)tid * nsamp * n_class];
-        da_int *local_pred = &y_pred_tree[(da_int)tid * nsamp];
+        // Per-thread accumulator and per-tree scratch, both row-major [sample, class]
+        size_t thread_off = (size_t)tid * nsamp * n_class;
+        T *local_proba = &thread_proba[thread_off];
+        T *local_tree = &y_proba_tree[thread_off];
 
 #pragma omp for schedule(dynamic)
         for (da_int t = 0; t < n_tree; t++) {
             forest[t]->set_storage_order(row_major);
-            forest[t]->compact_traverse(nsamp, n_features, X_test, ldx_test, local_pred,
-                                        false);
+            forest[t]->compact_traverse(nsamp, n_features, X_test, ldx_test, local_tree,
+                                        n_class, n_class, false);
             for (da_int i = 0; i < nsamp; i++) {
-                local_counts[i * n_class + local_pred[i]] += 1;
+                for (da_int j = 0; j < n_class; j++) {
+                    size_t idx = (size_t)i * n_class + j;
+                    local_proba[idx] += local_tree[idx];
+                }
             }
         }
     }
 
-    // Reduce the per-thread partial counts. Each sample (and thus its slice of
-    // count_classes) is handled by exactly one thread, so the store is non-atomic.
+    // Reduce the per-thread partial sums into class-major [class, sample] layout. Each
+    // sample is handled by exactly one thread, so the store is non-atomic.
+    size_t cl_samp = (size_t)nsamp * n_class;
 #pragma omp parallel for num_threads(n_threads)                                          \
-    shared(nsamp, n_threads, count_classes, thread_counts) default(none)
+    shared(nsamp, n_threads, sum_proba, thread_proba, cl_samp) default(none)
     for (da_int i = 0; i < nsamp; i++) {
-        for (da_int c = 0; c < n_class; c++) {
-            da_int sum = 0;
+        for (da_int j = 0; j < n_class; j++) {
+            T sum = 0;
+            size_t idx_cl = (size_t)i * n_class + j;
             for (da_int t = 0; t < n_threads; t++) {
-                sum += thread_counts[t * nsamp * n_class + i * n_class + c];
+                sum += thread_proba[(size_t)t * cl_samp + idx_cl];
             }
-            count_classes[i * n_class + c] = sum;
+            sum_proba[(size_t)j * nsamp + i] = sum;
         }
     }
 }
@@ -153,30 +175,45 @@ da_status decision_forest<T>::predict(da_int nsamp, da_int nfeat, const T *X_tes
         return status;
 
     // Set up the parallel tasks: each tree is evaluated on the full set of samples and
-    // accumulates its votes into a private buffer, reduced afterwards (no atomics).
-    std::vector<da_int> count_classes, thread_counts, y_pred_tree;
+    // accumulates its class probabilities into a private buffer, reduced afterwards (no
+    // atomics). Soft voting (mean probability). Samples are processed in blocks so that
+    // the working set n_threads * block_nsamp * n_class stays within the element budget.
+    std::vector<T> sum_proba, thread_proba, y_proba_tree;
     da_int n_threads = da_utils::get_n_threads_loop(n_tree);
+    da_int block_nsamp = inference_block_nsamp(nsamp, n_threads);
+    da_int n_blocks, block_rem;
+    da_utils::blocking_scheme(nsamp, block_nsamp, n_blocks, block_rem);
     try {
-        count_classes.resize((size_t)n_class * nsamp, 0);
-        thread_counts.resize((size_t)n_threads * nsamp * n_class, 0);
-        y_pred_tree.resize((size_t)n_threads * nsamp);
+        sum_proba.resize((size_t)n_class * block_nsamp, 0);
+        thread_proba.resize((size_t)n_threads * block_nsamp * n_class);
+        y_proba_tree.resize((size_t)n_threads * block_nsamp * n_class);
     } catch (std::bad_alloc const &) {                     // LCOV_EXCL_LINE
         return da_error(this->err, da_status_memory_error, // LCOV_EXCL_LINE
                         "Memory allocation failed.");
     }
-    parallel_count_classes(X_eval, ldx_eval, nsamp, n_threads, count_classes,
-                           thread_counts, y_pred_tree);
 
-#pragma omp parallel for shared(nsamp, n_class, y_pred, count_classes) default(none)
-    for (da_int i = 0; i < nsamp; i++) {
-        da_int max_count = -1, class_i = -1;
-        for (da_int c = 0; c < n_class; c++) {
-            if (count_classes[i * n_class + c] > max_count) {
-                max_count = count_classes[i * n_class + c];
-                class_i = c;
+    for (da_int blk = 0; blk < n_blocks; blk++) {
+        da_int block_start = blk * block_nsamp;
+        da_int cur_nsamp =
+            (blk == n_blocks - 1 && block_rem > 0) ? block_rem : block_nsamp;
+        const T *X_blk = X_eval + (size_t)block_start * ldx_eval;
+        da_int *y_pred_blk = y_pred + (size_t)block_start;
+        std::fill(thread_proba.begin(), thread_proba.end(), (T)0);
+        parallel_sum_proba(X_blk, ldx_eval, cur_nsamp, n_threads, sum_proba, thread_proba,
+                           y_proba_tree);
+
+#pragma omp parallel for shared(cur_nsamp, n_class, y_pred_blk, sum_proba) default(none)
+        for (da_int i = 0; i < cur_nsamp; i++) {
+            T max_proba = -1;
+            da_int class_i = -1;
+            for (da_int c = 0; c < n_class; c++) {
+                if (sum_proba[(size_t)c * cur_nsamp + i] > max_proba) {
+                    max_proba = sum_proba[(size_t)c * cur_nsamp + i];
+                    class_i = c;
+                }
             }
+            y_pred_blk[i] = class_i;
         }
-        y_pred[i] = class_i;
     }
 
     return da_status_success;
@@ -236,84 +273,65 @@ da_status decision_forest<T>::predict_proba(da_int nsamp, da_int nfeat, const T 
 
     // Parallelize over trees only (this scales better than blocking over samples): each
     // thread evaluates a subset of trees on all samples and accumulates the class
-    // probabilities into a private buffer, reduced afterwards (no atomics).
+    // probabilities into a private buffer, reduced afterwards (no atomics). Samples are
+    // processed in blocks so that the working set n_threads * block_nsamp * n_class
+    // stays within the element budget.
     std::vector<T> sum_proba, thread_proba, y_proba_tree;
     da_int n_threads = da_utils::get_n_threads_loop(n_tree);
+    da_int block_nsamp = inference_block_nsamp(nsamp, n_threads);
+    da_int n_blocks, block_rem;
+    da_utils::blocking_scheme(nsamp, block_nsamp, n_blocks, block_rem);
     try {
-        sum_proba.resize((size_t)n_class * nsamp);
-        thread_proba.resize((size_t)n_threads * nsamp * n_class, 0);
-        y_proba_tree.resize((size_t)n_threads * nsamp * n_class);
+        sum_proba.resize((size_t)n_class * block_nsamp);
+        thread_proba.resize((size_t)n_threads * block_nsamp * n_class);
+        y_proba_tree.resize((size_t)n_threads * block_nsamp * n_class);
     } catch (std::bad_alloc const &) {                     // LCOV_EXCL_LINE
         return da_error(this->err, da_status_memory_error, // LCOV_EXCL_LINE
                         "Memory allocation failed.");
     }
 
-#pragma omp parallel num_threads(n_threads)                                              \
-    shared(X_eval, ldx_eval, nsamp, thread_proba, y_proba_tree) default(none)
-    {
-        da_int tid = (da_int)omp_get_thread_num();
-        // Per-thread accumulator and per-tree scratch, both row-major [sample, class]
-        T *local_proba = &thread_proba[(da_int)tid * nsamp * n_class];
-        T *local_tree = &y_proba_tree[(da_int)tid * nsamp * n_class];
+    for (da_int blk = 0; blk < n_blocks; blk++) {
+        da_int block_start = blk * block_nsamp;
+        da_int cur_nsamp =
+            (blk == n_blocks - 1 && block_rem > 0) ? block_rem : block_nsamp;
+        const T *X_blk = X_eval + (size_t)block_start * ldx_eval;
+        T *y_proba_blk = (this->order == column_major)
+                             ? y_proba + (size_t)block_start
+                             : y_proba + (size_t)block_start * ldy;
+        std::fill(thread_proba.begin(), thread_proba.end(), (T)0);
+        parallel_sum_proba(X_blk, ldx_eval, cur_nsamp, n_threads, sum_proba, thread_proba,
+                           y_proba_tree);
 
-#pragma omp for schedule(dynamic)
-        for (da_int t = 0; t < n_tree; t++) {
-            forest[t]->set_storage_order(row_major);
-            forest[t]->compact_traverse(nsamp, n_features, X_eval, ldx_eval, local_tree,
-                                        n_class, n_class, false);
-            for (da_int i = 0; i < nsamp; i++) {
+        // Write the averaged, normalized probabilities straight into the user's buffer
+        // in the requested storage order
+        if (this->order == column_major) {
+#pragma omp parallel for shared(cur_nsamp, n_class, ldy, y_proba_blk, sum_proba,         \
+                                    n_tree) default(none)
+            for (da_int i = 0; i < cur_nsamp; i++) {
+                T sum_ave_prob = 0.0;
                 for (da_int j = 0; j < n_class; j++) {
-                    local_proba[i * n_class + j] += local_tree[i * n_class + j];
+                    T ave_proba = sum_proba[(size_t)j * cur_nsamp + i] / n_tree;
+                    y_proba_blk[(size_t)j * ldy + i] = ave_proba;
+                    // cannot be 0: no guard
+                    sum_ave_prob += ave_proba;
+                }
+                for (da_int j = 0; j < n_class; j++) {
+                    y_proba_blk[(size_t)j * ldy + i] /= sum_ave_prob;
                 }
             }
-        }
-    }
-
-    // Reduce the per-thread partial sums. Each sample is handled by exactly one thread,
-    // so the store is non-atomic.
-    da_int cl_samp = nsamp * n_class;
-#pragma omp parallel for num_threads(n_threads)                                          \
-    shared(nsamp, n_threads, sum_proba, thread_proba, cl_samp) default(none)
-    for (da_int i = 0; i < nsamp; i++) {
-        for (da_int j = 0; j < n_class; j++) {
-            T sum = 0;
-            da_int idx_cl = i * n_class + j;
-            for (da_int t = 0; t < n_threads; t++) {
-                sum += thread_proba[t * cl_samp + idx_cl];
-            }
-            sum_proba[j * nsamp + i] = sum;
-        }
-    }
-
-    // Write the averaged, normalized probabilities straight into the user's buffer in
-    // the requested storage order
-    if (this->order == column_major) {
-#pragma omp parallel for shared(nsamp, n_class, ldy, y_proba, sum_proba,                 \
+        } else { // row_major: probabilities laid out as [sample, class]
+#pragma omp parallel for shared(cur_nsamp, n_class, ldy, y_proba_blk, sum_proba,         \
                                     n_tree) default(none)
-        for (da_int i = 0; i < nsamp; i++) {
-            T sum_ave_prob = 0.0;
-            for (da_int j = 0; j < n_class; j++) {
-                T ave_proba = sum_proba[j * nsamp + i] / n_tree;
-                y_proba[j * ldy + i] = ave_proba;
-                // cannot be 0: no guard
-                sum_ave_prob += ave_proba;
-            }
-            for (da_int j = 0; j < n_class; j++) {
-                y_proba[j * ldy + i] /= sum_ave_prob;
-            }
-        }
-    } else { // row_major: probabilities laid out as [sample, class]
-#pragma omp parallel for shared(nsamp, n_class, ldy, y_proba, sum_proba,                 \
-                                    n_tree) default(none)
-        for (da_int i = 0; i < nsamp; i++) {
-            T sum_ave_prob = 0.0;
-            for (da_int j = 0; j < n_class; j++) {
-                T ave_proba = sum_proba[j * nsamp + i] / n_tree;
-                y_proba[i * ldy + j] = ave_proba;
-                sum_ave_prob += ave_proba;
-            }
-            for (da_int j = 0; j < n_class; j++) {
-                y_proba[i * ldy + j] /= sum_ave_prob;
+            for (da_int i = 0; i < cur_nsamp; i++) {
+                T sum_ave_prob = 0.0;
+                for (da_int j = 0; j < n_class; j++) {
+                    T ave_proba = sum_proba[(size_t)j * cur_nsamp + i] / n_tree;
+                    y_proba_blk[(size_t)i * ldy + j] = ave_proba;
+                    sum_ave_prob += ave_proba;
+                }
+                for (da_int j = 0; j < n_class; j++) {
+                    y_proba_blk[(size_t)i * ldy + j] /= sum_ave_prob;
+                }
             }
         }
     }
@@ -335,13 +353,13 @@ da_status decision_forest<T>::predict_log_proba(da_int nsamp, da_int nfeat,
     if (this->order == column_major) {
         for (da_int j = 0; j < nclass; j++) {
             for (da_int i = 0; i < nsamp; i++) {
-                y_log_proba[ldy * j + i] = log(y_log_proba[ldy * j + i]);
+                y_log_proba[(size_t)ldy * j + i] = log(y_log_proba[(size_t)ldy * j + i]);
             }
         }
     } else {
         for (da_int j = 0; j < nsamp; j++) {
             for (da_int i = 0; i < nclass; i++) {
-                y_log_proba[j * ldy + i] = log(y_log_proba[j * ldy + i]);
+                y_log_proba[(size_t)j * ldy + i] = log(y_log_proba[(size_t)j * ldy + i]);
             }
         }
     }
@@ -392,33 +410,46 @@ da_status decision_forest<T>::score(da_int nsamp, da_int nfeat, const T *X_test,
     if (status != da_status_success)
         return status;
 
-    std::vector<da_int> count_classes, thread_counts, y_pred_tree;
+    std::vector<T> sum_proba, thread_proba, y_proba_tree;
     da_int n_threads = da_utils::get_n_threads_loop(n_tree);
+    da_int block_nsamp = inference_block_nsamp(nsamp, n_threads);
+    da_int n_blocks, block_rem;
+    da_utils::blocking_scheme(nsamp, block_nsamp, n_blocks, block_rem);
     try {
-        count_classes.resize((size_t)n_class * nsamp, 0);
-        thread_counts.resize((size_t)n_threads * nsamp * n_class, 0);
-        y_pred_tree.resize((size_t)n_threads * nsamp);
+        sum_proba.resize((size_t)n_class * block_nsamp, 0);
+        thread_proba.resize((size_t)n_threads * block_nsamp * n_class);
+        y_proba_tree.resize((size_t)n_threads * block_nsamp * n_class);
     } catch (std::bad_alloc const &) {                     // LCOV_EXCL_LINE
         return da_error(this->err, da_status_memory_error, // LCOV_EXCL_LINE
                         "Memory allocation failed.");
     }
-    parallel_count_classes(X_eval, ldx_eval, nsamp, n_threads, count_classes,
-                           thread_counts, y_pred_tree);
 
     *score = 0;
-#pragma omp parallel for shared(nsamp, n_class, y_test, count_classes,                   \
+    for (da_int blk = 0; blk < n_blocks; blk++) {
+        da_int block_start = blk * block_nsamp;
+        da_int cur_nsamp =
+            (blk == n_blocks - 1 && block_rem > 0) ? block_rem : block_nsamp;
+        const T *X_blk = X_eval + (size_t)block_start * ldx_eval;
+        const da_int *y_test_blk = y_test + (size_t)block_start;
+        std::fill(thread_proba.begin(), thread_proba.end(), (T)0);
+        parallel_sum_proba(X_blk, ldx_eval, cur_nsamp, n_threads, sum_proba, thread_proba,
+                           y_proba_tree);
+
+#pragma omp parallel for shared(cur_nsamp, n_class, y_test_blk, sum_proba,               \
                                     score) default(none)
-    for (da_int i = 0; i < nsamp; i++) {
-        da_int max_count = -1, class_i = -1;
-        for (da_int c = 0; c < n_class; c++) {
-            if (count_classes[i * n_class + c] > max_count) {
-                max_count = count_classes[i * n_class + c];
-                class_i = c;
+        for (da_int i = 0; i < cur_nsamp; i++) {
+            T max_proba = -1;
+            da_int class_i = -1;
+            for (da_int c = 0; c < n_class; c++) {
+                if (sum_proba[(size_t)c * cur_nsamp + i] > max_proba) {
+                    max_proba = sum_proba[(size_t)c * cur_nsamp + i];
+                    class_i = c;
+                }
             }
-        }
-        if (class_i == y_test[i]) {
+            if (class_i == y_test_blk[i]) {
 #pragma omp atomic update
-            (*score)++;
+                (*score)++;
+            }
         }
     }
     *score /= (T)nsamp;

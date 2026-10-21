@@ -155,7 +155,7 @@ bool decision_tree<T>::update_node_histogram(const node<T> &nd, da_int feat_idx,
      * On output, ws.node_hist[bin, c] will contain the number of samples from the node nd
      * that have both feature value equal to bin and class label equal to c.
      */
-    da_int start_idx = feat_idx * n_samples;
+    size_t start_idx = (size_t)feat_idx * n_samples;
     memset(ws.node_hist.data(), 0, ws.node_hist.size() * sizeof(da_int));
     memset(ws.hist_count_samples.data(), 0,
            ws.hist_count_samples.size() * sizeof(da_int));
@@ -165,7 +165,7 @@ bool decision_tree<T>::update_node_histogram(const node<T> &nd, da_int feat_idx,
         da_int idx = samples_idx[i];
         da_int c = y[idx];
         uint16_t cat = X_binned->binned_data[start_idx + idx];
-        ws.node_hist[cat * n_class + c]++;
+        ws.node_hist[(size_t)cat * n_class + c]++;
         ws.hist_count_samples[cat] += 1;
         if (const_feat) {
             if (const_cat_val == -1)
@@ -182,7 +182,7 @@ bool decision_tree<T>::update_node_histogram(const node<T> &nd, da_int feat_idx,
                                              std::vector<da_int> &weights,
                                              split_workspace<T> &ws) {
     /* Same as above, with weights for each sample index */
-    da_int start_idx = feat_idx * n_samples;
+    size_t start_idx = (size_t)feat_idx * n_samples;
     memset(ws.node_hist.data(), 0, ws.node_hist.size() * sizeof(da_int));
     memset(ws.hist_count_samples.data(), 0,
            ws.hist_count_samples.size() * sizeof(da_int));
@@ -193,7 +193,7 @@ bool decision_tree<T>::update_node_histogram(const node<T> &nd, da_int feat_idx,
         da_int w = weights[idx];
         da_int c = y[idx];
         uint16_t cat = X_binned->binned_data[start_idx + idx];
-        ws.node_hist[cat * n_class + c] += w;
+        ws.node_hist[(size_t)cat * n_class + c] += w;
         ws.hist_count_samples[cat] += 1;
         if (const_feat) {
             if (const_cat_val == -1)
@@ -265,7 +265,7 @@ bool decision_tree<T>::compute_best_split_hist(const node<T> &nd, da_int feat_id
         prop = (split_property)cat_split_strat;
 
     da_int old_ns_left = 0;
-    da_int thresh_start_idx = feat_idx * (X_binned->max_bin - 1);
+    size_t thresh_start_idx = (size_t)feat_idx * (X_binned->max_bin - 1);
     for (da_int cat = 0; cat < n_cat; ++cat) {
         if (ws.hist_count_samples[cat] == 0)
             continue;
@@ -307,7 +307,7 @@ void decision_tree<T>::update_feature_values(da_int start_idx, da_int end_idx,
                                              da_int feat_idx, split_workspace<T> &ws,
                                              std::vector<da_int> &samp) {
     /* fill the ws.feature_values array with the values of X marked by the samples_idx and feat_idx */
-    da_int col_idx = ldx * feat_idx;
+    size_t col_idx = (size_t)ldx * feat_idx;
     for (da_int i = start_idx; i <= end_idx; i++)
         ws.feature_values[i] = X[col_idx + samp[i]];
 }
@@ -327,13 +327,13 @@ void decision_tree<T>::split_raw_onevall(const node<T> &current_node, da_int fea
         da_int idx = samp[i];
         da_int c = y[idx];
         da_int cat = std::round(ws.feature_values[i]);
-        ws.cat_feat_table[cat * n_class + c]++;
+        ws.cat_feat_table[(size_t)cat * n_class + c]++;
     }
 
     for (da_int cat = 0; cat < feat_prop[feat_idx]; cat++) {
         da_int ns_left = 0, ns_right = 0;
         for (da_int c = 0; c < n_class; c++) {
-            ws.count_left_classes[c] = ws.cat_feat_table[cat * n_class + c];
+            ws.count_left_classes[c] = ws.cat_feat_table[(size_t)cat * n_class + c];
             ns_left += ws.count_left_classes[c];
             ws.count_right_classes[c] = count_classes[c] - ws.count_left_classes[c];
         }

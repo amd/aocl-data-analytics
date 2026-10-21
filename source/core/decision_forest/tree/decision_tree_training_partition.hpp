@@ -50,7 +50,7 @@ da_int decision_tree<T>::partition_samples_raw_continuous(const node<T> &nd) {
      * continuous feature: all samples below the node threshold are first
      */
     da_int head_idx = nd.start_idx, tail_idx = nd.end_idx;
-    da_int start_col = ldx * nd.feature;
+    size_t start_col = (size_t)ldx * nd.feature;
     while (head_idx < tail_idx) {
         da_int h_sidx = samples_idx[head_idx];
         da_int t_sidx = samples_idx[tail_idx];
@@ -74,7 +74,7 @@ da_int decision_tree<T>::partition_samples_raw_categorical(const node<T> &nd) {
      */
     da_int head_idx = nd.start_idx;
     da_int tail_idx = nd.end_idx;
-    da_int col_idx = ldx * nd.feature;
+    size_t col_idx = (size_t)ldx * nd.feature;
     while (head_idx < tail_idx) {
         da_int head = samples_idx[head_idx];
         da_int tail = samples_idx[tail_idx];
@@ -96,7 +96,7 @@ da_int decision_tree<T>::partition_samples_hist_ordered(const node<T> &nd) {
     da_int head_idx = nd.start_idx;
     da_int tail_idx = nd.end_idx;
     uint16_t cat_thresh = nd.category;
-    da_int col_idx = ldx * nd.feature;
+    size_t col_idx = (size_t)ldx * nd.feature;
     while (head_idx < tail_idx) {
         da_int head = samples_idx[head_idx];
         da_int tail = samples_idx[tail_idx];
@@ -120,7 +120,7 @@ da_int decision_tree<T>::partition_samples_hist_onevall(const node<T> &nd) {
     da_int head_idx = nd.start_idx;
     da_int tail_idx = nd.end_idx;
     uint16_t cat_thresh = nd.category;
-    da_int col_idx = ldx * nd.feature;
+    size_t col_idx = (size_t)ldx * nd.feature;
     while (head_idx < tail_idx) {
         da_int head = samples_idx[head_idx];
         da_int tail = samples_idx[tail_idx];

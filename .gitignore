@@ -15,7 +15,9 @@ tags
 
 # Compiled R wrappers
 RcppExports.cpp
+
 AI_plans/
 .github/agents
+.handoff
 paper
 

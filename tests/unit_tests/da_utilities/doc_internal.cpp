@@ -118,6 +118,12 @@ TEST(DocOptions, RST_handle) {
     std::cout << "In all the following tables, :math:`\\varepsilon`, refers to "
                  "a *safe* machine precision (twice the actual machine precision) "
                  "for the given floating point data type.\n";
+    std::cout << "\n**Notes**\n\n";
+    std::cout << "The \"Notes\" column provides additional context or important "
+                 "information about each option. A \"Foundational\" label indicates "
+                 "that the option is *fundamental*: changing it makes any previously "
+                 "trained model obsolete, so the model must be retrained where "
+                 "appropriate.\n";
     std::string str;
     for (auto htype : htypes) {
         str = cleanstring(htype.second);

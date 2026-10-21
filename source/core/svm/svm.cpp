@@ -299,11 +299,32 @@ da_status svm<T>::set_data(da_int n_samples, da_int n_features, const T *X_in,
         return da_error(this->err, da_status_unknown_query,
                         "SVM model has not been selected.");
 
-    da_status status =
-        this->store_2D_array(n_samples, n_features, X_in, ldx_train, &X_temp, &X,
-                             this->ldx_train, "n_samples", "n_features", "X", "ldx");
+    std::string opt_order;
+    da_int iorder;
+    da_status status = this->opts.get("storage order", opt_order, iorder);
+    this->order = da_order(iorder);
+
+    status = this->check_2D_array(this->order, n_samples, n_features, X_in, ldx_train,
+                                  "n_samples", "n_features", "X", "ldx");
     if (status != da_status_success)
         return status;
+
+    if (this->order == row_major) {
+        try {
+            X_temp =
+                new T[static_cast<size_t>(n_samples) * static_cast<size_t>(n_features)];
+        } catch (std::bad_alloc const &) {
+            return da_error(this->err, da_status_memory_error, // LCOV_EXCL_LINE
+                            "Memory allocation error");
+        }
+        da_utils::copy_transpose_2D_array_row_to_column_major(
+            n_samples, n_features, X_in, ldx_train, X_temp, n_samples);
+        X = X_temp;
+        this->ldx_train = n_samples;
+    } else {
+        X = X_in;
+        this->ldx_train = ldx_train;
+    }
 
     status = this->check_1D_array(n_samples, y_in, "n_samples", "y", 1);
     if (status != da_status_success)
@@ -785,11 +806,26 @@ da_status svm<T>::predict(da_int nsamples, da_int nfeat, const T *X_test, da_int
         return da_error(this->err, da_status_out_of_date,
                         "The model has not been trained yet.");
 
-    da_status status = this->store_2D_array(
-        nsamples, nfeat, X_test, ldx_test, &utility_ptr1, &X_test_temp, ldx_test_temp,
-        "n_samples", "n_features", "X_test", "ldx_test");
+    da_status status =
+        this->check_2D_array(this->order, nsamples, nfeat, X_test, ldx_test, "n_samples",
+                             "n_features", "X_test", "ldx_test");
     if (status != da_status_success)
         return status;
+    if (this->order == row_major) {
+        try {
+            utility_ptr1 = new T[nsamples * nfeat];
+        } catch (std::bad_alloc const &) {
+            return da_error(this->err, da_status_memory_error, // LCOV_EXCL_LINE
+                            "Memory allocation error");
+        }
+        da_utils::copy_transpose_2D_array_row_to_column_major(
+            nsamples, nfeat, X_test, ldx_test, utility_ptr1, nsamples);
+        X_test_temp = utility_ptr1;
+        ldx_test_temp = nsamples;
+    } else {
+        X_test_temp = X_test;
+        ldx_test_temp = ldx_test;
+    }
 
     if (ismulticlass) {
         std::vector<da_int> votes;
@@ -872,21 +908,35 @@ da_status svm<T>::decision_function(da_int nsamples, da_int nfeat, const T *X_te
     // Auxiliary variables for storing array
     const T *X_test_temp;
     T *utility_ptr1 = nullptr;
-    T *utility_ptr2 = nullptr;
-    T *decision_values_temp = nullptr;
     da_int ldx_test_temp;
-    da_int ldd_temp;
 
-    da_status status = this->store_2D_array(
-        nsamples, nfeat, X_test, ldx_test, &utility_ptr1, &X_test_temp, ldx_test_temp,
-        "n_samples", "n_features", "X_test", "ldx_test");
+    da_status status =
+        this->check_2D_array(this->order, nsamples, nfeat, X_test, ldx_test, "n_samples",
+                             "n_features", "X_test", "ldx_test");
     if (status != da_status_success)
         return status;
-    status = this->store_2D_array(n_rows, n_cols, decision_values, ldd, &utility_ptr2,
-                                  const_cast<const T **>(&decision_values_temp), ldd_temp,
-                                  "n_rows", "n_cols", "decision_values", "ldd", 1);
-    if (status != da_status_success)
+    if (this->order == row_major) {
+        try {
+            utility_ptr1 = new T[nsamples * nfeat];
+        } catch (std::bad_alloc const &) {
+            return da_error(this->err, da_status_memory_error, // LCOV_EXCL_LINE
+                            "Memory allocation error");
+        }
+        da_utils::copy_transpose_2D_array_row_to_column_major(
+            nsamples, nfeat, X_test, ldx_test, utility_ptr1, nsamples);
+        X_test_temp = utility_ptr1;
+        ldx_test_temp = nsamples;
+    } else {
+        X_test_temp = X_test;
+        ldx_test_temp = ldx_test;
+    }
+    status = da_utils::check_2D_array(false, this->order, this->err, n_rows, n_cols,
+                                      decision_values, ldd, "n_rows", "n_cols",
+                                      "decision_values", "ldd", 1, 1);
+    if (status != da_status_success) {
+        delete[] (utility_ptr1);
         return status;
+    }
 
     std::vector<T> decision_values_ovo;
     try {
@@ -903,8 +953,6 @@ da_status svm<T>::decision_function(da_int nsamples, da_int nfeat, const T *X_te
         if (status != da_status_success) {
             if (utility_ptr1)
                 delete[] (utility_ptr1);
-            if (utility_ptr2)
-                delete[] (utility_ptr2);
             return status;
         }
     }
@@ -974,8 +1022,6 @@ da_status svm<T>::decision_function(da_int nsamples, da_int nfeat, const T *X_te
 
     if (utility_ptr1)
         delete[] (utility_ptr1);
-    if (utility_ptr2)
-        delete[] (utility_ptr2);
     return da_status_success;
 }
 
@@ -996,13 +1042,9 @@ da_status svm<T>::score(da_int nsamples, da_int nfeat, const T *X_test, da_int l
         return da_error(this->err, da_status_out_of_date,
                         "The model has not been trained yet.");
 
-    const T *X_test_temp;
-    T *utility_ptr1 = nullptr;
-    da_int ldx_test_temp;
-
-    da_status status = this->store_2D_array(
-        nsamples, nfeat, X_test, ldx_test, &utility_ptr1, &X_test_temp, ldx_test_temp,
-        "n_samples", "n_features", "X_test", "ldx_test");
+    da_status status =
+        this->check_2D_array(this->order, nsamples, nfeat, X_test, ldx_test, "n_samples",
+                             "n_features", "X_test", "ldx_test");
     if (status != da_status_success)
         return status;
 
@@ -1046,8 +1088,6 @@ da_status svm<T>::score(da_int nsamples, da_int nfeat, const T *X_test, da_int l
         else
             *score = T(1 - rss / tss);
     }
-    if (utility_ptr1)
-        delete[] (utility_ptr1);
     return da_status_success;
 }
 
@@ -1079,16 +1119,46 @@ da_status svm<T>::predict_proba(da_int nsamples, da_int nfeat, const T *X_test,
     da_int ldx_test_temp;
     da_int ldy_temp;
 
-    da_status status = this->store_2D_array(
-        nsamples, nfeat, X_test, ldx_test, &utility_ptr1, &X_test_temp, ldx_test_temp,
-        "n_samples", "n_features", "X_test", "ldx_test");
+    da_status status =
+        this->check_2D_array(this->order, nsamples, nfeat, X_test, ldx_test, "n_samples",
+                             "n_features", "X_test", "ldx_test");
     if (status != da_status_success)
         return status;
-    status = this->store_2D_array(nsamples, n_class, y_proba, ldy, &utility_ptr2,
-                                  const_cast<const T **>(&y_proba_temp), ldy_temp,
-                                  "n_rows", "n_cols", "y_proba", "ldy", 1);
-    if (status != da_status_success)
+    if (this->order == row_major) {
+        try {
+            utility_ptr1 = new T[nsamples * nfeat];
+        } catch (std::bad_alloc const &) {
+            return da_error(this->err, da_status_memory_error, // LCOV_EXCL_LINE
+                            "Memory allocation error");
+        }
+        da_utils::copy_transpose_2D_array_row_to_column_major(
+            nsamples, nfeat, X_test, ldx_test, utility_ptr1, nsamples);
+        X_test_temp = utility_ptr1;
+        ldx_test_temp = nsamples;
+    } else {
+        X_test_temp = X_test;
+        ldx_test_temp = ldx_test;
+    }
+    status = da_utils::check_2D_array(false, this->order, this->err, nsamples, n_class,
+                                      y_proba, ldy, "n_rows", "n_cols", "y_proba", "ldy",
+                                      1, 1);
+    if (status != da_status_success) {
+        delete[] (utility_ptr1);
         return status;
+    }
+    if (this->order == row_major) {
+        try {
+            utility_ptr2 = new T[nsamples * n_class];
+        } catch (std::bad_alloc const &) {
+            delete[] (utility_ptr1);
+            return da_error(this->err, da_status_memory_error, "Memory allocation error");
+        }
+        y_proba_temp = utility_ptr2;
+        ldy_temp = nsamples;
+    } else {
+        y_proba_temp = y_proba;
+        ldy_temp = ldy;
+    }
     std::vector<T> dec_values;
     try {
         dec_values.resize(nsamples * n_classifiers);

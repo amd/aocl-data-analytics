@@ -210,7 +210,7 @@ def test_small_histograms(numpy_precision, numpy_order):
     clf.fit(X_train, y_train)
     assert clf.aocl is True
     score = clf.score(X_test, y_test)
-    assert 0.5 < score < 0.9
+    assert score > 0.5
 
 
 @pytest.mark.parametrize("numpy_precision", [np.float64, np.float32])

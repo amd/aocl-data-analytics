@@ -30,6 +30,10 @@
 #include "da_omp.hpp"
 #include "gmock/gmock.h"
 #include "gtest/gtest.h"
+#include <algorithm>
+#include <cmath>
+#include <string>
+#include <vector>
 
 TEST(decision_forest_internal, parallel_split) {
     // Load training data from CSV
@@ -124,4 +128,120 @@ TEST(decision_forest_internal, parallel_split) {
     EXPECT_EQ((da_int)rinfo[5], expected_threads);
 
     da_handle_destroy(&forest_handle);
+}
+
+// Regression test for the sample-blocking path in forest inference. Forcing a
+// tiny per-buffer element budget via the hidden setting
+// "decision_forest.inference_block_elems" drives block_nsamp down to 1 (see
+// decision_forest<T>::inference_block_nsamp), so the inference loops run with
+// n_blocks == nsamp (>= 2). The blocked results must reproduce the default
+// single-block results: bit-identical for predict/score and within tolerance
+// for the normalized probabilities. Both storage orders are exercised.
+TEST(decision_forest_internal, inference_blocking) {
+    const std::string block_key = "decision_forest.inference_block_elems";
+
+    // Make sure we start from the default (single-block) budget
+    ASSERT_EQ(da_debug_set(block_key.c_str(), ""), da_status_success);
+
+    for (const std::string &order :
+         {std::string("column-major"), std::string("row-major")}) {
+        bool row = order == "row-major";
+        da_order storage_order = row ? row_major : column_major;
+
+        std::string input_data_fname =
+            std::string(DATA_DIR) + "/df_data/gen_500x20_4class_data.csv";
+        std::vector<double> X;
+        std::vector<da_int> y;
+        da_int nsamples, nfeat;
+        ASSERT_TRUE(da_test::read_features_response_csv(input_data_fname, X, nsamples,
+                                                        nfeat, storage_order, y));
+
+        input_data_fname = std::string(DATA_DIR) + "/df_data/gen_500x20_4class_test.csv";
+        std::vector<double> X_test;
+        std::vector<da_int> y_test;
+        da_int nsamples_test;
+        ASSERT_TRUE(da_test::read_features_response_csv(
+            input_data_fname, X_test, nsamples_test, nfeat, storage_order, y_test));
+        ASSERT_GE(nsamples_test, 2); // needed so block_nsamp == 1 gives n_blocks >= 2
+
+        da_int n_class = *std::max_element(y.begin(), y.end()) + 1;
+        da_int ldx_train = row ? nfeat : nsamples;
+        da_int ldx_test = row ? nfeat : nsamples_test;
+        da_int ldy = row ? n_class : nsamples_test;
+
+        da_handle forest_handle = nullptr;
+        ASSERT_EQ(da_handle_init<double>(&forest_handle, da_handle_decision_forest),
+                  da_status_success);
+        ASSERT_EQ(da_options_set_string(forest_handle, "storage order", order.c_str()),
+                  da_status_success);
+        ASSERT_EQ(da_options_set(forest_handle, "number of trees", (da_int)20),
+                  da_status_success);
+        ASSERT_EQ(da_options_set(forest_handle, "seed", (da_int)42), da_status_success);
+        ASSERT_EQ(da_options_set(forest_handle, "features selection", "all"),
+                  da_status_success);
+        ASSERT_EQ(da_forest_set_training_data(forest_handle, nsamples, nfeat, n_class,
+                                              X.data(), ldx_train, y.data()),
+                  da_status_success);
+        ASSERT_EQ(da_forest_fit<double>(forest_handle), da_status_success);
+
+        // Runs predict / predict_proba / predict_log_proba / score with whatever
+        // budget is currently set
+        auto run_inference = [&](std::vector<da_int> &pred, std::vector<double> &proba,
+                                 std::vector<double> &log_proba, double &acc) {
+            pred.assign(nsamples_test, -1);
+            proba.assign((size_t)nsamples_test * n_class, 0.0);
+            log_proba.assign((size_t)nsamples_test * n_class, 0.0);
+            acc = -1.0;
+            ASSERT_EQ(da_forest_predict(forest_handle, nsamples_test, nfeat,
+                                        X_test.data(), ldx_test, pred.data()),
+                      da_status_success);
+            ASSERT_EQ(da_forest_predict_proba(forest_handle, nsamples_test, nfeat,
+                                              X_test.data(), ldx_test, proba.data(),
+                                              n_class, ldy),
+                      da_status_success);
+            ASSERT_EQ(da_forest_predict_log_proba(forest_handle, nsamples_test, nfeat,
+                                                  X_test.data(), ldx_test,
+                                                  log_proba.data(), n_class, ldy),
+                      da_status_success);
+            ASSERT_EQ(da_forest_score(forest_handle, nsamples_test, nfeat, X_test.data(),
+                                      ldx_test, y_test.data(), &acc),
+                      da_status_success);
+        };
+
+        // Baseline: default budget => single block
+        std::vector<da_int> pred_base;
+        std::vector<double> proba_base, log_proba_base;
+        double acc_base;
+        run_inference(pred_base, proba_base, log_proba_base, acc_base);
+
+        // Blocked: budget of 1 element forces block_nsamp == 1, hence
+        // n_blocks == nsamples_test (>= 2)
+        ASSERT_EQ(da_debug_set(block_key.c_str(), "1"), da_status_success);
+        std::vector<da_int> pred_blk;
+        std::vector<double> proba_blk, log_proba_blk;
+        double acc_blk;
+        run_inference(pred_blk, proba_blk, log_proba_blk, acc_blk);
+        ASSERT_EQ(da_debug_set(block_key.c_str(), ""),
+                  da_status_success); // restore default
+
+        // predict and score must be bit-identical; probabilities within tolerance
+        EXPECT_EQ(pred_base, pred_blk) << "order=" << order;
+        EXPECT_EQ(acc_base, acc_blk) << "order=" << order;
+        for (size_t k = 0; k < proba_base.size(); k++)
+            EXPECT_NEAR(proba_base[k], proba_blk[k], 1.0e-13)
+                << "order=" << order << " k=" << k;
+        for (size_t k = 0; k < log_proba_base.size(); k++) {
+            if (std::isfinite(log_proba_base[k]) && std::isfinite(log_proba_blk[k]))
+                EXPECT_NEAR(log_proba_base[k], log_proba_blk[k], 1.0e-13)
+                    << "order=" << order << " k=" << k;
+            else
+                EXPECT_EQ(log_proba_base[k], log_proba_blk[k])
+                    << "order=" << order << " k=" << k;
+        }
+
+        da_handle_destroy(&forest_handle);
+    }
+
+    // Leave the context in its default state for subsequent tests
+    ASSERT_EQ(da_debug_set(block_key.c_str(), ""), da_status_success);
 }

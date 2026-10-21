@@ -25,7 +25,7 @@
 """
 Contains the functions to replace symbols from Scikit-learn by the AOCL-DA patch
 """
-# pylint: disable = possibly-used-before-assignment
+# pylint: disable = possibly-used-before-assignment, duplicate-code
 
 import sklearn.covariance as cov_sklearn
 import sklearn.decomposition as decomp_sklearn
@@ -38,6 +38,7 @@ import sklearn.metrics.pairwise as pairwise_sklearn
 import sklearn.model_selection as model_selection_sklearn
 import sklearn.neighbors as nearest_neighbors_sklearn
 import sklearn.svm as svm_sklearn
+from .._patching import register_patch, requested_patches
 from ._empirical_covariance import EmpiricalCovariance as cov_da
 from ._pca import PCA as PCA_da
 from ._kernel_pca import KernelPCA as KernelPCA_da
@@ -68,84 +69,48 @@ from ._tsne import TSNE as TSNE_da
 # key: class name
 # value: dict containing the sklearn symbols and their replacements
 #        pack - sklearn subpackage
-#        sk_sym - name of the sklearn symbol to replace
+#        orig_sym - original sklearn symbol to restore
 #        da_sym - equivalent name in the DA sklearn lib
-AMD_SYMBOLS = {'EmpiricalCovariance': {'pack': cov_sklearn,
-                                       'sk_sym': getattr(cov_sklearn, "EmpiricalCovariance"),
-                                       'da_sym': cov_da},
-               'PCA': {'pack': decomp_sklearn,
-                       'sk_sym': getattr(decomp_sklearn, "PCA"),
-                       'da_sym': PCA_da},
-               'KernelPCA': {'pack': decomp_sklearn,
-                             'sk_sym': getattr(decomp_sklearn, 'KernelPCA'),
-                             'da_sym': KernelPCA_da},
-               'NMF': {'pack': decomp_sklearn,
-                       'sk_sym': getattr(decomp_sklearn, 'NMF'),
-                       'da_sym': NMF_da},
-               'LinearRegression': {'pack': linmod_sklearn,
-                                    'sk_sym': getattr(linmod_sklearn, 'LinearRegression'),
-                                    'da_sym': LinearRegression_da},
-               'Ridge': {'pack': linmod_sklearn,
-                         'sk_sym': getattr(linmod_sklearn, 'Ridge'),
-                         'da_sym': Ridge_da},
-               'Lasso': {'pack': linmod_sklearn,
-                         'sk_sym': getattr(linmod_sklearn, 'Lasso'),
-                         'da_sym': Lasso_da},
-               'ElasticNet': {'pack': linmod_sklearn,
-                              'sk_sym': getattr(linmod_sklearn, 'ElasticNet'),
-                              'da_sym': ElasticNet_da},
-               'LogisticRegression': {'pack': linmod_sklearn,
-                                      'sk_sym': getattr(linmod_sklearn, 'LogisticRegression'),
-                                      'da_sym': LogisticRegression_da},
-               'KMeans': {'pack': clustering_sklearn,
-                          'sk_sym': getattr(clustering_sklearn, "KMeans"),
-                          'da_sym': kmeans_da},
-               'DBSCAN': {'pack': clustering_sklearn,
-                          'sk_sym': getattr(clustering_sklearn, "DBSCAN"),
-                          'da_sym': DBSCAN_da},
-               'TSNE': {'pack': manifold_sklearn,
-                        'sk_sym': getattr(manifold_sklearn, "TSNE"),
-                        'da_sym': TSNE_da},
-               'DecisionTreeClassifier': {'pack': decision_tree_sklearn,
-                                          'sk_sym': getattr(decision_tree_sklearn, 'DecisionTreeClassifier'),
-                                          'da_sym': DecisionTreeClassifier_da},
-               'RandomForestClassifier': {'pack': decision_forest_sklearn,
-                                          'sk_sym': getattr(decision_forest_sklearn, 'RandomForestClassifier'),
-                                          'da_sym': RandomForestClassifier_da},
-               'pairwise_distances': {'pack': pairwise_sklearn,
-                                      'sk_sym': getattr(pairwise_sklearn, "pairwise_distances"),
-                                      'da_sym': pairwise_distances_da},
-               'train_test_split': {'pack': model_selection_sklearn,
-                                    'sk_sym': getattr(model_selection_sklearn, "train_test_split"),
-                                    'da_sym': train_test_split_da},
-               'KNeighborsClassifier': {'pack': nearest_neighbors_sklearn,
-                                        'sk_sym': getattr(nearest_neighbors_sklearn, 'KNeighborsClassifier'),
-                                        'da_sym': KNeighborsClassifier_da},
-               'KNeighborsRegressor': {'pack': nearest_neighbors_sklearn,
-                                       'sk_sym': getattr(nearest_neighbors_sklearn, 'KNeighborsRegressor'),
-                                       'da_sym': KNeighborsRegressor_da},
-               'NearestNeighbors': {'pack': nearest_neighbors_sklearn,
-                                    'sk_sym': getattr(nearest_neighbors_sklearn, 'NearestNeighbors'),
-                                    'da_sym': NearestNeighbors_da},
-               'RadiusNeighborsClassifier': {'pack': nearest_neighbors_sklearn,
-                                             'sk_sym': getattr(nearest_neighbors_sklearn, 'RadiusNeighborsClassifier'),
-                                             'da_sym': RadiusNeighborsClassifier_da},
-               'RadiusNeighborsRegressor': {'pack': nearest_neighbors_sklearn,
-                                            'sk_sym': getattr(nearest_neighbors_sklearn, 'RadiusNeighborsRegressor'),
-                                            'da_sym': RadiusNeighborsRegressor_da},
-               'SVC': {'pack': svm_sklearn,
-                       'sk_sym': getattr(svm_sklearn, 'SVC'),
-                       'da_sym': SVC_da},
-               'SVR': {'pack': svm_sklearn,
-                       'sk_sym': getattr(svm_sklearn, 'SVR'),
-                       'da_sym': SVR_da},
-               'NuSVC': {'pack': svm_sklearn,
-                         'sk_sym': getattr(svm_sklearn, 'NuSVC'),
-                         'da_sym': NuSVC_da},
-               'NuSVR': {'pack': svm_sklearn,
-                         'sk_sym': getattr(svm_sklearn, 'NuSVR'),
-                         'da_sym': NuSVR_da},
-               }
+AMD_SYMBOLS = {}
+UNAVAILABLE_SYMBOLS = {}
+
+_PATCHES = (
+    ('EmpiricalCovariance', cov_sklearn, cov_da),
+    ('PCA', decomp_sklearn, PCA_da),
+    ('KernelPCA', decomp_sklearn, KernelPCA_da),
+    ('NMF', decomp_sklearn, NMF_da),
+    ('LinearRegression', linmod_sklearn, LinearRegression_da),
+    ('Ridge', linmod_sklearn, Ridge_da),
+    ('Lasso', linmod_sklearn, Lasso_da),
+    ('ElasticNet', linmod_sklearn, ElasticNet_da),
+    ('LogisticRegression', linmod_sklearn, LogisticRegression_da),
+    ('KMeans', clustering_sklearn, kmeans_da),
+    ('DBSCAN', clustering_sklearn, DBSCAN_da),
+    ('TSNE', manifold_sklearn, TSNE_da),
+    ('DecisionTreeClassifier', decision_tree_sklearn,
+     DecisionTreeClassifier_da),
+    ('RandomForestClassifier', decision_forest_sklearn,
+     RandomForestClassifier_da),
+    ('pairwise_distances', pairwise_sklearn, pairwise_distances_da),
+    ('train_test_split', model_selection_sklearn, train_test_split_da),
+    ('KNeighborsClassifier', nearest_neighbors_sklearn,
+     KNeighborsClassifier_da),
+    ('KNeighborsRegressor', nearest_neighbors_sklearn,
+     KNeighborsRegressor_da),
+    ('NearestNeighbors', nearest_neighbors_sklearn, NearestNeighbors_da),
+    ('RadiusNeighborsClassifier', nearest_neighbors_sklearn,
+     RadiusNeighborsClassifier_da),
+    ('RadiusNeighborsRegressor', nearest_neighbors_sklearn,
+     RadiusNeighborsRegressor_da),
+    ('SVC', svm_sklearn, SVC_da),
+    ('SVR', svm_sklearn, SVR_da),
+    ('NuSVC', svm_sklearn, NuSVC_da),
+    ('NuSVR', svm_sklearn, NuSVR_da),
+)
+
+for _name, _package, _da_symbol in _PATCHES:
+    register_patch(AMD_SYMBOLS, UNAVAILABLE_SYMBOLS,
+                   _name, _package, _da_symbol)
 
 
 def skpatch(*args, print_patched=True):
@@ -153,15 +118,7 @@ def skpatch(*args, print_patched=True):
     Replace specified scikit-learn packages by their AOCL-DA equivalent
     """
 
-    if not args:
-        # No arguments specified, so patch everything possible
-        packages = AMD_SYMBOLS.keys()
-    elif isinstance(args[0], str):
-        packages = [args[0]]
-    elif isinstance(args[0], (list, tuple)):
-        packages = args[0]
-    else:
-        raise TypeError("Unrecognized argument")
+    packages = requested_patches(args, AMD_SYMBOLS, UNAVAILABLE_SYMBOLS)
 
     # packages is a list of candidate package names to patch
 
@@ -169,13 +126,10 @@ def skpatch(*args, print_patched=True):
 
     for package in packages:
 
-        try:
-            pack = AMD_SYMBOLS[package]['pack']
-            sym = AMD_SYMBOLS[package]['da_sym']
-            setattr(pack, package, sym)
-            successfully_patched.append(package)
-        except KeyError:
-            print(f"The package {package} was not found.")
+        pack = AMD_SYMBOLS[package]['pack']
+        sym = AMD_SYMBOLS[package]['da_sym']
+        setattr(pack, package, sym)
+        successfully_patched.append(package)
 
     if successfully_patched and print_patched:
         print(
@@ -189,25 +143,15 @@ def undo_skpatch(*args, print_patched=True):
     Reinstate scikit-learn packages with their original symbols
     """
 
-    if not args:
-        packages = AMD_SYMBOLS.keys()
-    elif isinstance(args[0], str):
-        packages = [args[0]]
-    elif isinstance(args[0], (list, tuple)):
-        packages = args[0]
-    else:
-        raise TypeError("Unrecognized argument")
+    packages = requested_patches(args, AMD_SYMBOLS, UNAVAILABLE_SYMBOLS)
 
     successfully_unpatched = []
 
     for package in packages:
-        try:
-            pack = AMD_SYMBOLS[package]['pack']
-            sym = AMD_SYMBOLS[package]['sk_sym']
-            setattr(pack, package, sym)
-            successfully_unpatched.append(package)
-        except KeyError:
-            print(f"The package {package} was not found.")
+        pack = AMD_SYMBOLS[package]['pack']
+        sym = AMD_SYMBOLS[package]['orig_sym']
+        setattr(pack, package, sym)
+        successfully_unpatched.append(package)
 
     if successfully_unpatched and print_patched:
         print(

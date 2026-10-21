@@ -146,38 +146,17 @@ if(NOT WIN32)
 endif()
 
 enable_language(Fortran)
-# Aux function to distinguish between AOCC Flang and upstream LLVM Flang-new
-# Sets OUT_VAR to TRUE if the current Fortran compiler is AMD's AOCC flang,
-function(IsAOCCFlang OUT_VAR)
-  execute_process(
-    COMMAND "${CMAKE_Fortran_COMPILER}" -v
-    OUTPUT_VARIABLE _ver_stdout
-    ERROR_VARIABLE _ver_stderr
-    OUTPUT_STRIP_TRAILING_WHITESPACE
-    ERROR_STRIP_TRAILING_WHITESPACE
-  )
-  # flang-new -v writes to stderr; capture both to be safe
-  if("${_ver_stdout}\n${_ver_stderr}" MATCHES "AOCC|AMD AOCC aof")
-    set(${OUT_VAR} TRUE PARENT_SCOPE)
-  else()
-    set(${OUT_VAR} FALSE PARENT_SCOPE)
-  endif()
-endfunction()
 
 if(NOT WIN32)
-  if(CMAKE_Fortran_COMPILER_ID STREQUAL "Flang") # AOCC 5.x
-    set(FORTRAN_RUNTIME "flang")
-  elseif(CMAKE_Fortran_COMPILER_ID STREQUAL "GNU")
-    set(FORTRAN_RUNTIME "gfortran")
-  elseif(CMAKE_Fortran_COMPILER_ID STREQUAL "LLVMFlang")
-    IsAOCCFlang(IS_AOCC_FLANG)
-    if(IS_AOCC_FLANG)
-      set(FORTRAN_RUNTIME "flang") # AOCC AOF 6+
-    else()
-      set(FORTRAN_RUNTIME "FortranRuntime") # upstream LLVM 19+ Flang-new
-    endif()
-  else()
-    message(FATAL_ERROR "Unsupported Fortran compiler on GNU/Linux: ${CMAKE_Fortran_COMPILER_ID}")
+  # Forward Fortran toolchain implicit link libraries/directories
+  set(FORTRAN_RUNTIME ${CMAKE_Fortran_IMPLICIT_LINK_LIBRARIES})
+  set(FLANG_LIBS ${CMAKE_Fortran_IMPLICIT_LINK_DIRECTORIES})
+  # Drop the Fortran program-entry object; it defines main() and hijacks our
+  # C/C++ entry point in static executables (undefined MAIN__ at link time).
+  list(REMOVE_ITEM FORTRAN_RUNTIME flangmain Fortran_main flang_rt.main)
+  # When we link a real OpenMP runtime, drop the compiler's stub OpenMP lib (e.g. flang's ompstub)
+  if(BUILD_SMP)
+    list(REMOVE_ITEM FORTRAN_RUNTIME ompstub)
   endif()
 endif()
 
@@ -194,6 +173,7 @@ foreach(ex_source ${DA_EX})
   endif()
   add_executable(${ex_target} ${ex_source})
   target_include_directories(${ex_target} PRIVATE ${DA_INCLUDE_DIR})
+  target_link_directories(${ex_target} PRIVATE ${FLANG_LIBS})
   target_link_libraries(
     ${ex_target}
     PRIVATE ${AOCL_DA}

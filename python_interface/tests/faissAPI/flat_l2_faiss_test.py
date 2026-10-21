@@ -23,6 +23,10 @@
 # POSSIBILITY OF SUCH DAMAGE.
 #
 
+# pylint: disable = missing-module-docstring, missing-function-docstring
+# pylint: disable = unused-argument, no-value-for-parameter
+# pylint: disable = import-outside-toplevel, no-member, protected-access
+
 import pickle
 import warnings
 import numpy as np
@@ -81,6 +85,30 @@ def test_flat_l2_distance_correctness(patched_faiss, dtype, order):
 
     np.testing.assert_array_equal(I_ref, I_da)
     np.testing.assert_allclose(D_ref, D_da, rtol=1e-5, atol=1e-5)
+
+
+def test_flat_l2_add_copies_input(patched_faiss):
+    corpus = np.asfortranarray(X_CORPUS)
+    expected = corpus.copy()
+    idx = faiss.IndexFlatL2(D)
+    idx.add(corpus)
+
+    corpus[:] = 0
+
+    np.testing.assert_array_equal(idx.reconstruct_n(0, N), expected)
+
+
+def test_flat_l2_search_pads_when_k_exceeds_ntotal(patched_faiss):
+    idx = faiss.IndexFlatL2(D)
+    idx.add(X_CORPUS[:3])
+
+    D_arr, I_arr, R = idx.search_and_reconstruct(X_QUERY[:2], 5)
+
+    assert D_arr.shape == (2, 5)
+    np.testing.assert_array_equal(I_arr[:, 3:], -1)
+    np.testing.assert_array_equal(
+        D_arr[:, 3:], np.finfo(D_arr.dtype).max)
+    np.testing.assert_array_equal(R[:, 3:], 0)
 
 
 def test_flat_l2_reset(patched_faiss):
@@ -206,9 +234,7 @@ def test_flat_l2_search_and_reconstruct(patched_faiss):
     D_arr, I_arr, R = idx.search_and_reconstruct(X_QUERY, K)
     assert R.shape == (NQ, K, D)
     assert R.dtype == np.float32
-    for q in range(NQ):
-        for j in range(K):
-            np.testing.assert_array_equal(R[q, j], X_CORPUS[I_arr[q, j]])
+    np.testing.assert_array_equal(R, X_CORPUS[I_arr])
 
 
 def test_setattr(patched_faiss):

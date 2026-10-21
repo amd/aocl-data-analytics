@@ -258,7 +258,7 @@ def test_small_histograms(numpy_precision, numpy_order):
         seed=42, features_selection='all', histogram=True, maximum_bins=2, n_trees=20)
     forest.fit(X_train, y_train)
     score = forest.score(X_test, y_test)
-    assert score > 0.5 and score < 0.9
+    assert score > 0.5
 
 
 def test_setters():

@@ -288,7 +288,7 @@ da_status nmf<T>::nmf_set_data(da_int n_samples, da_int n_components, const T *W
         return da_error(this->err, da_status_invalid_input,
                         "At least one of W or H must be provided.");
 
-    /* Check that if this function is called twice to set W and H separately, 
+    /* Check that if this function is called twice to set W and H separately,
      * the number of components matches. */
     if ((this->custom_w_set || this->custom_h_set) && this->k_init > 0 &&
         n_components != this->k_init)
@@ -405,7 +405,7 @@ template <typename T> da_status nmf<T>::do_nndsvd_init(da_nmf_types::nmf_init va
     }
 
     /* p=10 oversampling is clamped inside da_random_svd to min(m,n)-k, so
-     * sketch_size never exceeds min(n_samples, n_features) even for small matrices. 
+     * sketch_size never exceeds min(n_samples, n_features) even for small matrices.
      * q=-1 signals to auto-select the number of power iterations. */
     da_status status = da_random_svd<T>(this->n_samples, this->n_features, this->A,
                                         this->lda, U.data(), this->n_samples, S.data(),

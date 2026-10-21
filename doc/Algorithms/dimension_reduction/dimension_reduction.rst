@@ -187,23 +187,23 @@ Options
       .. update options using table _opts_t-sne
 
       .. csv-table:: *t*-SNE options
-         :header: "Option name", "Type", "Default", "Description", "Constraints"
+         :header: "Option name", "Type", "Default", "Description", "Constraints", "Notes"
 
-         "n_components", "integer", ":math:`i=2`", "Number of embedding dimensions.", ":math:`1 \le i \le 3`"
-         "perplexity", "real", ":math:`r=30`", "Target perplexity for conditional probabilities.", ":math:`1 \le r`"
-         "learning rate", "real", ":math:`r=-1`", "Gradient descent learning rate. Use any non-positive value for auto: max(N / early_exaggeration / 4, 50).", "There are no constraints on :math:`r`."
-         "max_iter", "integer", ":math:`i=1000`", "Maximum number of gradient descent iterations.", ":math:`1 \le i`"
-         "n_iter_without_progress", "integer", ":math:`i=300`", "Stop if no progress is made for this many iterations.", ":math:`0 \le i`"
-         "min_grad_norm", "real", ":math:`r=1e-07`", "Stop if the gradient norm is below this threshold.", ":math:`0 \le r`"
-         "early exaggeration", "real", ":math:`r=12`", "Exaggeration factor for early iterations.", ":math:`1 \le r`"
-         "theta", "real", ":math:`r=0.5`", "Barnes-Hut approximation parameter (0 for exact).", ":math:`0 \le r \le 1`"
-         "init", "string", ":math:`s=` `pca`", "Initialization method for the embedding.", ":math:`s=` `pca`, `random`, or `supplied`."
-         "seed", "integer", ":math:`i=0`", "Seed for random number generation; set to -1 for non-deterministic results.", ":math:`-1 \le i`"
-         "mixed precision", "string", ":math:`s=` `no`", "Whether to use mixed precision iterative refinement, in which lower precision arithmetic is used before switching to the working precision for the final iterations.", ":math:`s=` `no`, or `yes`."
-         "low precision max_iter", "integer", ":math:`i=200`", "If mixed precision iterative refinement is enabled, maximum number of iterations for the low precision phase.", ":math:`1 \le i`"
-         "low precision min_grad_norm", "real", ":math:`r=0.0001`", "If mixed precision iterative refinement is enabled, gradient norm convergence threshold for the low precision phase.", ":math:`0 \le r`"
-         "check data", "string", ":math:`s=` `no`", "Check input data for NaNs prior to performing computation.", ":math:`s=` `no`, or `yes`."
-         "storage order", "string", ":math:`s=` `column-major`", "Whether data is supplied and returned in row- or column-major order.", ":math:`s=` `c`, `column-major`, `f`, `fortran`, or `row-major`."
+         "n_components", "integer", ":math:`i=2`", "Number of embedding dimensions.", ":math:`1 \le i \le 3`", Foundational.
+         "perplexity", "real", ":math:`r=30`", "Target perplexity for conditional probabilities.", ":math:`1 \le r`", Foundational.
+         "learning rate", "real", ":math:`r=-1`", "Gradient descent learning rate. Use any non-positive value for auto: max(N / early_exaggeration / 4, 50).", "There are no constraints on :math:`r`.", Foundational.
+         "max_iter", "integer", ":math:`i=1000`", "Maximum number of gradient descent iterations.", ":math:`1 \le i`", Foundational.
+         "n_iter_without_progress", "integer", ":math:`i=300`", "Stop if no progress is made for this many iterations.", ":math:`0 \le i`", Foundational.
+         "min_grad_norm", "real", ":math:`r=1e-07`", "Stop if the gradient norm is below this threshold.", ":math:`0 \le r`", Foundational.
+         "early exaggeration", "real", ":math:`r=12`", "Exaggeration factor for early iterations.", ":math:`1 \le r`", Foundational.
+         "theta", "real", ":math:`r=0.5`", "Barnes-Hut approximation parameter (0 for exact).", ":math:`0 \le r \le 1`", Foundational.
+         "init", "string", ":math:`s=` `pca`", "Initialization method for the embedding.", ":math:`s=` `pca`, `random`, or `supplied`.", Foundational.
+         "seed", "integer", ":math:`i=0`", "Seed for random number generation; set to -1 for non-deterministic results.", ":math:`-1 \le i`", Foundational.
+         "mixed precision", "string", ":math:`s=` `no`", "Whether to use mixed precision iterative refinement, in which lower precision arithmetic is used before switching to the working precision for the final iterations.", ":math:`s=` `no`, or `yes`.", Foundational.
+         "low precision max_iter", "integer", ":math:`i=200`", "If mixed precision iterative refinement is enabled, maximum number of iterations for the low precision phase.", ":math:`1 \le i`", Foundational.
+         "low precision min_grad_norm", "real", ":math:`r=0.0001`", "If mixed precision iterative refinement is enabled, gradient norm convergence threshold for the low precision phase.", ":math:`0 \le r`", Foundational.
+         "check data", "string", ":math:`s=` `no`", "Check input data for NaNs prior to performing computation.", ":math:`s=` `no`, or `yes`.", Foundational.
+         "storage order", "string", ":math:`s=` `column-major`", "Whether data is supplied and returned in row- or column-major order.", ":math:`s=` `c`, `column-major`, `f`, `fortran`, or `row-major`.", Foundational.
 
       If ``init`` is set to ``supplied``, an explicit initial embedding must be provided
       via :ref:`da_tsne_set_init_embedding_? <da_tsne_set_init_embedding>` before calling

@@ -1,4 +1,4 @@
-# Copyright (C) 2024-2025 Advanced Micro Devices, Inc. All rights reserved.
+# Copyright (C) 2024-2026 Advanced Micro Devices, Inc. All rights reserved.
 #
 # Redistribution and use in source and binary forms, with or without modification,
 # are permitted provided that the following conditions are met:
@@ -29,17 +29,21 @@ Check that the python -m aoclda.sklearn dummy.py calls work
 as expected
 """
 
+from pathlib import Path
 import subprocess
+import sys
 
 
 def test_command_line():
     """
     Command line test
     """
-    command1 = ["python", "-m", "aoclda.sklearn", "dummy.py"]
-    result1 = subprocess.run(command1, check=True)
+    test_directory = Path(__file__).parent
+
+    command1 = [sys.executable, "-m", "aoclda.sklearn", "dummy.py"]
+    result1 = subprocess.run(command1, check=True, cwd=test_directory)
     assert result1.returncode == 0
 
-    command2 = ["python", "-m", "aoclda.sklearn", "-m", "dummy"]
-    result2 = subprocess.run(command2, check=True)
+    command2 = [sys.executable, "-m", "aoclda.sklearn", "-m", "dummy"]
+    result2 = subprocess.run(command2, check=True, cwd=test_directory)
     assert result2.returncode == 0

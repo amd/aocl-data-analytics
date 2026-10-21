@@ -24,7 +24,7 @@
 #
 
 # pylint: disable = missing-module-docstring, missing-function-docstring
-# pylint: disable = unused-argument
+# pylint: disable = unused-argument, no-name-in-module, duplicate-code
 
 import pytest
 import faiss
@@ -33,8 +33,10 @@ from aoclda.faiss._index_ivfflat import IndexIVFFlat as IndexIVFFlat_da
 from aoclda.faiss._index_ivfsq import IndexIVFScalarQuantizer as IndexIVFScalarQuantizer_da
 from aoclda.faiss._index_sq import IndexScalarQuantizer as IndexScalarQuantizer_da
 from aoclda.faiss._index_flat_l2 import IndexFlatL2 as IndexFlatL2_da
+from aoclda.faiss._index_flat_ip import IndexFlatIP as IndexFlatIP_da
 from conftest import (
     _native_IndexFlatL2,
+    _native_IndexFlatIP,
     _native_IndexIVFFlat,
     _native_IndexIVFScalarQuantizer,
     _native_IndexScalarQuantizer,
@@ -53,6 +55,7 @@ def test_patch_installs(capsys):
     assert faiss.IndexIVFScalarQuantizer is IndexIVFScalarQuantizer_da
     assert faiss.IndexScalarQuantizer is IndexScalarQuantizer_da
     assert faiss.IndexFlatL2 is IndexFlatL2_da
+    assert faiss.IndexFlatIP is IndexFlatIP_da
     out = capsys.readouterr().out
     assert "AOCL Extension for faiss enabled" in out
     undo_faiss_patch(print_patched=False)
@@ -65,6 +68,7 @@ def test_unpatch_restores(capsys):
     assert faiss.IndexIVFScalarQuantizer is _native_IndexIVFScalarQuantizer
     assert faiss.IndexScalarQuantizer is _native_IndexScalarQuantizer
     assert faiss.IndexFlatL2 is _native_IndexFlatL2
+    assert faiss.IndexFlatIP is _native_IndexFlatIP
     out = capsys.readouterr().out
     assert "AOCL Extension for faiss disabled" in out
 
@@ -88,12 +92,13 @@ def test_selective_patch_by_string():
 def test_selective_patch_by_list():
     faiss_patch(
         ['IndexIVFFlat', 'IndexIVFScalarQuantizer',
-         'IndexScalarQuantizer', 'IndexFlatL2'],
+         'IndexScalarQuantizer', 'IndexFlatL2', 'IndexFlatIP'],
         print_patched=False)
     assert faiss.IndexIVFFlat is IndexIVFFlat_da
     assert faiss.IndexIVFScalarQuantizer is IndexIVFScalarQuantizer_da
     assert faiss.IndexScalarQuantizer is IndexScalarQuantizer_da
     assert faiss.IndexFlatL2 is IndexFlatL2_da
+    assert faiss.IndexFlatIP is IndexFlatIP_da
     undo_faiss_patch(print_patched=False)
 
 
@@ -105,10 +110,12 @@ def test_selective_unpatch_by_string():
     undo_faiss_patch(print_patched=False)
 
 
-def test_patch_unknown_symbol(capsys):
-    faiss_patch('NonExistentIndex', print_patched=False)
-    undo_faiss_patch(print_patched=False)
-    assert "NonExistentIndex was not found" in capsys.readouterr().out
+def test_patch_unknown_symbol():
+    with pytest.raises(ValueError, match="NonExistentIndex"):
+        faiss_patch('NonExistentIndex', print_patched=False)
+
+    with pytest.raises(ValueError, match="NonExistentIndex"):
+        undo_faiss_patch('NonExistentIndex', print_patched=False)
 
 
 def test_patch_bad_type_raises():
@@ -137,10 +144,14 @@ def test_index_factory_ivfflat_string(patched_faiss):
     assert idx.nlist == 64
 
 
-def test_index_factory_flat_string_returns_da_wrapper(patched_faiss):
-    # _aoclda_index_factory routes "Flat" + METRIC_L2 to IndexFlatL2_da
-    idx = faiss.index_factory(D, "Flat")
-    assert isinstance(idx, IndexFlatL2_da)
+@pytest.mark.parametrize(
+    "metric,index_type",
+    [(faiss.METRIC_L2, IndexFlatL2_da),
+     (faiss.METRIC_INNER_PRODUCT, IndexFlatIP_da)])
+def test_index_factory_flat_returns_da_wrapper(patched_faiss, metric, index_type):
+    idx = faiss.index_factory(D, "Flat", metric)
+    assert isinstance(idx, index_type)
+    assert idx.metric_type == metric
 
 
 def test_index_factory_metric_inner_product(patched_faiss):

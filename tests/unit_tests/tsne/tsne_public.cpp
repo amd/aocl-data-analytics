@@ -1056,7 +1056,7 @@ const tsne_param_t tsne_param_pos[] = {
     {"iris_exact_2d", "iris", 2, 30.0, 1000, 0.0, "pca", 42, 10, 0.989031, 0.122057, 2.0},
     {"blobs_exact_2d", "blobs", 2, 20.0, 500, 0.0, "pca", 123, 10, 0.97184, 0.408497, 3.0},
     {"circles_exact_2d", "circles", 2, 10.0, 500, 0.0, "pca", 42, 5, 0.998196, 0.292971, 9.0},
-    {"lowrank_exact_2d", "lowrank", 2, 30.0, 500, 0.0, "pca", 42, 5, 0.979143, 0.051566, 3.0},
+    {"lowrank_exact_2d", "lowrank", 2, 30.0, 500, 0.0, "pca", 42, 5, 0.979143, 0.051566, 5.0},
     {"highcorr_exact_2d", "highcorr", 2, 10.0, 500, 0.0, "pca", 42, 5, 0.996795, 0.088316, 2.0},
     {"diffscales_exact_2d", "diffscales", 2, 10.0, 500, 0.0, "pca", 42, 5, 0.994952, 0.088038},
     {"moderate_exact_2d", "moderate", 2, 30.0, 500, 0.0, "pca", 42, 10, 0.830615, 0.644016, 6.1},

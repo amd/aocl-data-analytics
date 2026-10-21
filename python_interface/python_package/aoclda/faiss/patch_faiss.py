@@ -25,16 +25,19 @@
 
 """Contains the functions to replace FAISS index classes with AOCL-DA optimized equivalents."""
 
+# pylint: disable = duplicate-code
+
 import re
 import faiss
+from .._patching import register_patch, requested_patches
 from ._index_ivfflat import IndexIVFFlat as IndexIVFFlat_da
 from ._index_ivfsq import IndexIVFScalarQuantizer as IndexIVFScalarQuantizer_da
 from ._index_sq import IndexScalarQuantizer as IndexScalarQuantizer_da
 from ._index_flat_l2 import IndexFlatL2 as IndexFlatL2_da
+from ._index_flat_ip import IndexFlatIP as IndexFlatIP_da
 from ._kmeans import Kmeans as Kmeans_da
 
-_orig_index_factory = faiss.index_factory
-_orig_kmeans = faiss.Kmeans
+_orig_index_factory = getattr(faiss, 'index_factory', None)
 
 # Map FAISS's canonical factory tokens to the qtypes accepted by the wrapper.
 # QT_4bit_uniform is constructor-only in FAISS; there is no SQ4_uniform token.
@@ -67,65 +70,42 @@ def _aoclda_index_factory(d, description, metric=faiss.METRIC_L2):
         return IndexScalarQuantizer_da(d, _SQ_FACTORY_QTYPES[desc], metric)
     if desc == 'Flat' and metric == faiss.METRIC_L2:
         return IndexFlatL2_da(d)
+    if desc == 'Flat' and metric == faiss.METRIC_INNER_PRODUCT:
+        return IndexFlatIP_da(d)
     return _orig_index_factory(d, description, metric)
 
 
-AMD_FAISS_SYMBOLS = {
-    'IndexIVFFlat': {
-        'pack': faiss,
-        'faiss_sym': getattr(faiss, 'IndexIVFFlat'),
-        'da_sym': IndexIVFFlat_da,
-    },
-    'IndexIVFScalarQuantizer': {
-        'pack': faiss,
-        'faiss_sym': getattr(faiss, 'IndexIVFScalarQuantizer'),
-        'da_sym': IndexIVFScalarQuantizer_da,
-    },
-    'IndexScalarQuantizer': {
-        'pack': faiss,
-        'faiss_sym': getattr(faiss, 'IndexScalarQuantizer'),
-        'da_sym': IndexScalarQuantizer_da,
-    },
-    'IndexFlatL2': {
-        'pack': faiss,
-        'faiss_sym': getattr(faiss, 'IndexFlatL2'),
-        'da_sym': IndexFlatL2_da,
-    },
-    'index_factory': {
-        'pack': faiss,
-        'faiss_sym': _orig_index_factory,
-        'da_sym': _aoclda_index_factory,
-    },
-    'Kmeans': {
-        'pack': faiss,
-        'faiss_sym': _orig_kmeans,
-        'da_sym': Kmeans_da,
-    },
-}
+AMD_SYMBOLS = {}
+UNAVAILABLE_SYMBOLS = {}
+
+_PATCHES = (
+    ('IndexIVFFlat', IndexIVFFlat_da),
+    ('IndexIVFScalarQuantizer', IndexIVFScalarQuantizer_da),
+    ('IndexScalarQuantizer', IndexScalarQuantizer_da),
+    ('IndexFlatL2', IndexFlatL2_da),
+    ('IndexFlatIP', IndexFlatIP_da),
+    ('index_factory', _aoclda_index_factory),
+    ('Kmeans', Kmeans_da),
+)
+
+for _name, _da_symbol in _PATCHES:
+    register_patch(AMD_SYMBOLS, UNAVAILABLE_SYMBOLS,
+                   _name, faiss, _da_symbol)
 
 
 def faiss_patch(*args, print_patched=True):
     """Replace specified faiss index classes with AOCL-DA optimized equivalents."""
 
-    if not args:
-        packages = AMD_FAISS_SYMBOLS.keys()
-    elif isinstance(args[0], str):
-        packages = [args[0]]
-    elif isinstance(args[0], (list, tuple)):
-        packages = args[0]
-    else:
-        raise TypeError("Unrecognized argument")
+    packages = requested_patches(
+        args, AMD_SYMBOLS, UNAVAILABLE_SYMBOLS)
 
     successfully_patched = []
 
     for package in packages:
-        try:
-            pack = AMD_FAISS_SYMBOLS[package]['pack']
-            sym = AMD_FAISS_SYMBOLS[package]['da_sym']
-            setattr(pack, package, sym)
-            successfully_patched.append(package)
-        except KeyError:
-            print(f"The symbol {package} was not found.")
+        pack = AMD_SYMBOLS[package]['pack']
+        sym = AMD_SYMBOLS[package]['da_sym']
+        setattr(pack, package, sym)
+        successfully_patched.append(package)
 
     if successfully_patched and print_patched:
         print("AOCL Extension for faiss enabled for the following symbols:")
@@ -135,25 +115,16 @@ def faiss_patch(*args, print_patched=True):
 def undo_faiss_patch(*args, print_patched=True):
     """Reinstate faiss index classes with their original symbols."""
 
-    if not args:
-        packages = AMD_FAISS_SYMBOLS.keys()
-    elif isinstance(args[0], str):
-        packages = [args[0]]
-    elif isinstance(args[0], (list, tuple)):
-        packages = args[0]
-    else:
-        raise TypeError("Unrecognized argument")
+    packages = requested_patches(
+        args, AMD_SYMBOLS, UNAVAILABLE_SYMBOLS)
 
     successfully_unpatched = []
 
     for package in packages:
-        try:
-            pack = AMD_FAISS_SYMBOLS[package]['pack']
-            sym = AMD_FAISS_SYMBOLS[package]['faiss_sym']
-            setattr(pack, package, sym)
-            successfully_unpatched.append(package)
-        except KeyError:
-            print(f"The symbol {package} was not found.")
+        pack = AMD_SYMBOLS[package]['pack']
+        sym = AMD_SYMBOLS[package]['orig_sym']
+        setattr(pack, package, sym)
+        successfully_unpatched.append(package)
 
     if successfully_unpatched and print_patched:
         print("AOCL Extension for faiss disabled for the following symbols:")

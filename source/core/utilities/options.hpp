@@ -30,6 +30,7 @@
 #include <cctype>
 #include <cmath>
 #include <cstdio>
+#include <functional>
 #include <iostream>
 #include <limits>
 #include <map>
@@ -39,12 +40,11 @@
 #include <string>
 #include <type_traits>
 #include <unordered_map>
+#include <variant>
 
 // Remove windows macros
 #undef min
 #undef max
-
-// DOCUMENTATION NEED: Print destructive
 
 /*
  * da_options namespace provides a Registry class that "registers"
@@ -82,6 +82,7 @@ using std::map;
 using std::shared_ptr;
 
 const da_int max_da_int = std::numeric_limits<da_int>::max();
+const da_int prn_opt_align{40};
 
 template <typename T> struct safe_eps {
     static constexpr T eps = 2 * std::numeric_limits<T>::epsilon();
@@ -190,6 +191,8 @@ template <> struct get_type<bool>        { constexpr operator option_t() const n
 template <> struct get_type<bool*>       { constexpr operator option_t() const noexcept { return option_t::opt_bool;   } };
 // clang-format on
 
+using option_variant_t = std::variant<bool, da_int, float, double, std::string>;
+
 struct OptionUtils {
     static void prep_str(string &str) {
         // This string preparation function is quite expensive,
@@ -206,10 +209,12 @@ struct OptionUtils {
 
 class OptionBase {
   protected:
-    bool destructive{true};
+    bool destructive{true}; // changing the value of this option
+                            // indicates that the model should be retrained.
 
   public:
     const string setby_l[3] = {"(default)", "(user)", "(solver)"};
+    const string setby_shrt[3] = {"", "*", "**"};
 
     bool strict{false}; // Be strict when creating an option:
     // make sure the strings passed are checked for tidyness
@@ -299,6 +304,19 @@ class OptionBase {
     // Function used to get the size of an option type
     virtual size_t serialized_size() = 0;
 
+    // Generic getter for each option type to implement
+    virtual option_variant_t get(void) const = 0;
+
+    // Prepare the option key/value pair to be printed on screen.
+    // Called with option "print options = yes"
+    virtual string print_option(void) const = 0;
+    // Compose the option details (used for documentation)
+    // Screen = true => print it in plain text pretty print
+    // Screen = false => used to indicate a file format is requested
+    // => doxygen = true => format is set to Doxygen
+    // => doxygen = false => format is set to ReStructuredText
+    virtual string print_details(bool screen = true, bool doxygen = false) const = 0;
+
   protected:
     // Name i.e. "Iteration Limit"
     string name;
@@ -307,15 +325,6 @@ class OptionBase {
     string desc; // Brief description (free text)
     setby_t setby;
     string errmsg = ""; // internal error buffer
-    // Prepare the option key/value pair to be printed on screen.
-    // Called with option "print options = yes"
-    virtual string print_option(void) = 0;
-    // Compose the option details (used for documentation)
-    // Screen = true => print it in plain text pretty print
-    // Screen = false => used to indicate a file format is requested
-    // => doxygen = true => format is set to Doxygen
-    // => doxygen = false => format is set to ReStructuredText
-    virtual string print_details(bool screen = true, bool doxygen = false) = 0;
 };
 
 template <typename T> class OptionNumeric : public OptionBase {
@@ -378,19 +387,27 @@ template <typename T> class OptionNumeric : public OptionBase {
         OptionNumeric::destructive = destructive;
     };
 
-    virtual ~OptionNumeric(){};
+    ~OptionNumeric() override = default;
 
-    string print_option(void) {
+    string print_option(void) const override {
         ostringstream rec;
         rec << " " << name << " = ";
         if constexpr (std::is_same_v<T, bool>) {
             rec << std::boolalpha;
         }
-        rec << value << endl;
+        rec << value;
+        if (destructive || setby != setby_t::def) {
+            const size_t len = rec.str().size();
+            rec << (len < prn_opt_align ? string(prn_opt_align - len, ' ') : "  ") << '(';
+            rec << (destructive ? "f" : "");
+            rec << setby_shrt[static_cast<int>(setby)];
+            rec << ')';
+        }
+        rec << endl;
         return rec.str();
     }
 
-    string print_details(bool screen = true, bool doxygen = false) {
+    string print_details(bool screen = true, bool doxygen = false) const override {
         ostringstream rec;
         string tylab = option_tl[get_type<T>()];
         string t = tylab.substr(0, 1);
@@ -437,6 +454,8 @@ template <typename T> class OptionNumeric : public OptionBase {
                     rec << "\\f$. |||" << endl;
                 }
             }
+            rec << " * | "
+                << "Foundational: " << (destructive ? "yes" : "no") << "|||" << endl;
         } else if (!screen) { // Restructured text
             if (otype == option_t::opt_bool) {
                 rec << "   \"" << name << "\", \"" << tylab << "\", \":math:`" << t
@@ -452,7 +471,7 @@ template <typename T> class OptionNumeric : public OptionBase {
             }
 
             if (lbound == m_inf && ubound == p_inf) {
-                rec << "There are no constraints on :math:`" << t << "`.\"" << endl;
+                rec << "There are no constraints on :math:`" << t << "`.\"";
             } else {
                 if (otype == option_t::opt_bool) {
                     rec << "true, or false.";
@@ -471,8 +490,12 @@ template <typename T> class OptionNumeric : public OptionBase {
                     }
                     rec << "`";
                 }
-                rec << "\"" << endl;
+                rec << "\"";
             }
+            rec << ", ";
+            if (destructive)
+                rec << "Foundational.";
+            rec << endl;
         } else { // Plain text
             rec << "Begin Option [" << tylab << "]" << endl;
             rec << "   Name: '" << name << "'" << endl;
@@ -504,12 +527,14 @@ template <typename T> class OptionNumeric : public OptionBase {
             }
             rec << "   Desc: " << desc << endl;
             rec << "   Set-by: " << setby_l[setby] << endl;
+            rec << "   Foundational: " << (destructive ? "true" : "false") << endl;
             rec << "End Option" << endl;
         }
         return rec.str();
     }
 
     void get(T &value) const { value = OptionNumeric<T>::value; };
+    option_variant_t get() const override { return this->value; };
 
     da_status set(T value, setby_t setby = setby_t::user) {
         da_status status = da_status_success;
@@ -523,14 +548,18 @@ template <typename T> class OptionNumeric : public OptionBase {
         return status; // Compose error with status+errmsg
     };
 
-    da_status serialize_option(da_model_persistence::serialization_buffer &buffer) {
+    da_status
+    serialize_option(da_model_persistence::serialization_buffer &buffer) override {
         return buffer.serialize_data(this->value);
     }
-    da_status deserialize_option(da_model_persistence::serialization_buffer &buffer) {
+    da_status
+    deserialize_option(da_model_persistence::serialization_buffer &buffer) override {
         return buffer.deserialize_data(this->value);
     }
 
-    size_t serialized_size() { return da_model_persistence::get_type_size(this->value); }
+    size_t serialized_size() override {
+        return da_model_persistence::get_type_size(this->value);
+    }
 };
 
 // Add OptionString class
@@ -604,14 +633,23 @@ class OptionString : public OptionBase {
         OptionString::destructive = destructive;
     };
 
-    virtual ~OptionString(){};
+    ~OptionString() override = default;
 
-    string print_option(void) {
+    string print_option(void) const override {
         ostringstream rec;
-        rec << " " << name << " = " << value << endl;
+        rec << " " << name << " = ";
+        rec << value;
+        if (destructive || setby != setby_t::def) {
+            const size_t len = rec.str().size();
+            rec << (len < prn_opt_align ? string(prn_opt_align - len, ' ') : "  ") << '(';
+            rec << (destructive ? "f" : "");
+            rec << setby_shrt[static_cast<int>(setby)];
+            rec << ')';
+        }
+        rec << endl;
         return rec.str();
     }
-    string print_details(bool screen = true, bool doxygen = false) {
+    string print_details(bool screen = true, bool doxygen = false) const override {
         ostringstream rec;
         if (!screen && doxygen) {
             rec << " * | **" << name << "** | string | \\f$ s = \\f$ `" << vdefault
@@ -641,6 +679,8 @@ class OptionString : public OptionBase {
                     rec << " |||" << endl;
                 }
             }
+            rec << " * | "
+                << "Foundational: " << (destructive ? "yes" : "no") << "|||" << endl;
         } else if (!screen) { // Restructured text
             rec << "   \"" << name << "\", \"string\", ";
             if (vdefault != "") {
@@ -679,7 +719,10 @@ class OptionString : public OptionBase {
                     }
                 }
             }
-            rec << "\"" << endl;
+            rec << "\", ";
+            if (destructive)
+                rec << "Foundational.";
+            rec << endl;
         } else { // Plain text
             rec << "Begin Option [string]" << endl;
             rec << "   Name: '" << name << "'" << endl;
@@ -694,6 +737,7 @@ class OptionString : public OptionBase {
             }
             rec << "   Desc: " << desc << endl;
             rec << "   Set-by: " << setby_l[setby] << endl;
+            rec << "   Foundational: " << (destructive ? "true" : "false") << endl;
             rec << "End Option" << endl;
         }
         return rec.str();
@@ -710,6 +754,7 @@ class OptionString : public OptionBase {
             id = -1;
         }
     }
+    option_variant_t get() const override { return this->value; };
     da_status query_map(string &value, da_int &id, bool find_by_value) {
         // option("option name", "value", id)
         // find_by_value true => given the value, it finds id
@@ -768,14 +813,18 @@ class OptionString : public OptionBase {
         return da_status_success;
     };
 
-    da_status serialize_option(da_model_persistence::serialization_buffer &buffer) {
+    da_status
+    serialize_option(da_model_persistence::serialization_buffer &buffer) override {
         return buffer.serialize_data(this->value);
     }
-    da_status deserialize_option(da_model_persistence::serialization_buffer &buffer) {
+    da_status
+    deserialize_option(da_model_persistence::serialization_buffer &buffer) override {
         return buffer.deserialize_data(this->value);
     }
 
-    size_t serialized_size() { return da_model_persistence::get_type_size(this->value); }
+    size_t serialized_size() override {
+        return da_model_persistence::get_type_size(this->value);
+    }
 };
 
 // R E G I S T R Y
@@ -791,7 +840,7 @@ class OptionRegistry {
 
   public:
     OptionRegistry() { readonly = false; };
-    ~OptionRegistry(){};
+    ~OptionRegistry() = default;
     void lock(void) { readonly = true; }
     void unlock(void) { readonly = false; }
     string errmsg = "";
@@ -1077,43 +1126,23 @@ class OptionRegistry {
     }
 
     // Auxiliary
-    void print_options(void) {
+    void print_options(void) const {
         std::cout << "Begin Options" << std::endl;
         for (auto const &o : registry) {
-            option_t otype = (o.second)->get_option_t();
-            switch (otype) {
-            case option_t::opt_int:
-                std::cout << std::static_pointer_cast<OptionNumeric<da_int>>(o.second)
-                                 ->print_option();
-                break;
-            case option_t::opt_float:
-                std::cout << std::static_pointer_cast<OptionNumeric<float>>(o.second)
-                                 ->print_option();
-                break;
-            case option_t::opt_double:
-                std::cout << std::static_pointer_cast<OptionNumeric<double>>(o.second)
-                                 ->print_option();
-                break;
-            case option_t::opt_string:
-                std::cout
-                    << std::static_pointer_cast<OptionString>(o.second)->print_option();
-                break;
-            case option_t::opt_bool:
-                std::cout << std::static_pointer_cast<OptionNumeric<bool>>(o.second)
-                                 ->print_option();
-                break;
-            default: // LCOV_EXCL_LINE
-                // LCOV_EXCL_START
-                std::cout << "Internal ERROR: unexpected option with option_t::undefined"
-                          << std::endl;
-                // LCOV_EXCL_STOP
+            // LCOV_EXCL_START
+            if (o.second->get_option_t() == option_t::opt_undefined) {
+                std::cout << "Internal ERROR: unexpected option " << o.first
+                          << " with option_t::opt_undefined!" << std::endl;
+                continue;
             }
+            // LCOV_EXCL_STOP
+            std::cout << o.second->print_option();
         }
         std::cout << "End Options" << std::endl;
     }
 
     void print_details(bool screen = true, bool doxygen = false,
-                       const std::string caption = "Options table") {
+                       const std::string caption = "Options table") const {
         bool sep = false;
         if (!screen && doxygen) {
             std::cout << " *" << std::endl;
@@ -1125,44 +1154,24 @@ class OptionRegistry {
             std::cout << "The following options are supported." << std::endl;
             std::cout << "\n.. csv-table:: " << caption << "\n   :escape: ~\n";
             std::cout << "   :header: \"Option name\", \"Type\", \"Default\", "
-                         "\"Description\", \"Constraints\""
+                         "\"Description\", \"Constraints\", \"Notes\""
                       << std::endl;
             std::cout << "   " << std::endl;
         } else { // Plain text
             std::cout << "Begin (detailed print of options)" << std::endl;
         }
         for (auto const &o : registry) {
+            // LCOV_EXCL_START
+            if (o.second->get_option_t() == option_t::opt_undefined) {
+                std::cout << "Internal ERROR: unexpected option " << o.first
+                          << " with option_t::opt_undefined!" << std::endl;
+                continue;
+            }
+            // LCOV_EXCL_STOP
             if (sep && doxygen)
                 std::cout << " * | |||" << std::endl;
 
-            option_t otype = (o.second)->get_option_t();
-            switch (otype) {
-            case option_t::opt_int:
-                std::cout << std::static_pointer_cast<OptionNumeric<da_int>>(o.second)
-                                 ->print_details(screen, doxygen);
-                break;
-            case option_t::opt_float:
-                std::cout << std::static_pointer_cast<OptionNumeric<float>>(o.second)
-                                 ->print_details(screen, doxygen);
-                break;
-            case option_t::opt_double:
-                std::cout << std::static_pointer_cast<OptionNumeric<double>>(o.second)
-                                 ->print_details(screen, doxygen);
-                break;
-            case option_t::opt_string:
-                std::cout << std::static_pointer_cast<OptionString>(o.second)
-                                 ->print_details(screen, doxygen);
-                break;
-            case option_t::opt_bool:
-                std::cout << std::static_pointer_cast<OptionNumeric<bool>>(o.second)
-                                 ->print_details(screen, doxygen);
-                break;
-            default: // LCOV_EXCL_LINE
-                // LCOV_EXCL_START
-                std::cout << "Internal ERROR: unexpected option with option_t::undefined"
-                          << std::endl;
-                // LCOV_EXCL_STOP
-            }
+            std::cout << o.second->print_details(screen, doxygen);
             sep = true;
         }
         // Restructured text does not require any termination
@@ -1170,6 +1179,13 @@ class OptionRegistry {
             std::cout << " *" << std::endl;
         } else if (screen) {
             std::cout << "End" << std::endl;
+        }
+    };
+
+    void export_registry(
+        std::function<void(const std::string &, option_variant_t)> exporter) const {
+        for (auto const &o : registry) {
+            exporter(o.first, o.second->get());
         }
     };
 };

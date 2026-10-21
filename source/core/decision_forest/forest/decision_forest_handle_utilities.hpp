@@ -112,11 +112,32 @@ da_status decision_forest<T>::set_training_data(da_int n_samples, da_int n_featu
         X_temp = nullptr;
     }
 
-    da_status status =
-        this->store_2D_array(n_samples, n_features, X, ldx, &X_temp, &this->X, this->ldx,
-                             "n_samples", "n_features", "X", "ldx");
+    std::string opt_order;
+    da_int iorder;
+    da_status status = this->opts.get("storage order", opt_order, iorder);
+    this->order = da_order(iorder);
+
+    status = this->check_2D_array(this->order, n_samples, n_features, X, ldx, "n_samples",
+                                  "n_features", "X", "ldx");
     if (status != da_status_success)
         return status;
+
+    if (this->order == row_major) {
+        try {
+            X_temp =
+                new T[static_cast<size_t>(n_samples) * static_cast<size_t>(n_features)];
+        } catch (std::bad_alloc const &) {
+            return da_error(this->err, da_status_memory_error, // LCOV_EXCL_LINE
+                            "Memory allocation failed.");
+        }
+        da_utils::copy_transpose_2D_array_row_to_column_major(n_samples, n_features, X,
+                                                              ldx, X_temp, n_samples);
+        this->X = X_temp;
+        this->ldx = n_samples;
+    } else {
+        this->X = X;
+        this->ldx = ldx;
+    }
 
     status = this->check_1D_array(n_samples, y, "n_samples", "y", 1);
     if (status != da_status_success)
