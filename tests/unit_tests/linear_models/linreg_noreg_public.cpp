@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2024-2025 Advanced Micro Devices, Inc. All rights reserved.
+ * Copyright (C) 2024-2026 Advanced Micro Devices, Inc. All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without modification,
  * are permitted provided that the following conditions are met:
@@ -321,7 +321,7 @@ const linregParam linregParamNoReg[] = {
 {  "NoReg/ShortFat/coord/0/n", "short_fat", {{"intercept", 0}, {"print level", 1}},
                                      {{"optim method", "coord"}, {"scaling", "scale only"}},
                                      {{"optim convergence tol", 1.e-7f}, {"lambda", 0.005f}, {"alpha", 0.0f},{"optim dual gap tol", 7e-3}},
-                                     {{"optim convergence tol", 1.e-7}, {"lambda", 0.005}, {"alpha", 0.0},{"optim dual gap tol", 7e-3}},
+                                     {{"optim convergence tol", 1.e-7}, {"lambda", 0.005}, {"alpha", 0.0},{"optim dual gap tol", 1e-3},{"optim coord skip tol", -5}},
                                      true, false, 200.0},
     // 40 Add some regularization to find minimal norm solution, relax tolerance
 {  "NoReg/ShortFat/coord/0/c", "short_fat", {{"intercept", 0}, {"print level", 1}},

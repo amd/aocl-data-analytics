@@ -70,9 +70,8 @@ template <typename T> struct kd_node : public node<T> {
     // For a non-leaf node, the index of the point that splits the node
     da_int point;
 
-    // shared_ptr to the child nodes means we don't have to worry about memory management
-    std::shared_ptr<kd_node<T>> left_child = nullptr;
-    std::shared_ptr<kd_node<T>> right_child = nullptr;
+    std::unique_ptr<kd_node<T>> left_child = nullptr;
+    std::unique_ptr<kd_node<T>> right_child = nullptr;
 
     // bounding box for the node
     std::vector<T> min_bounds;
@@ -92,9 +91,8 @@ template <typename T> struct kd_node : public node<T> {
 
 template <typename T> struct ball_node : public node<T> {
 
-    // shared_ptr to the child nodes means we don't have to worry about memory management
-    std::shared_ptr<ball_node<T>> left_child = nullptr;
-    std::shared_ptr<ball_node<T>> right_child = nullptr;
+    std::unique_ptr<ball_node<T>> left_child = nullptr;
+    std::unique_ptr<ball_node<T>> right_child = nullptr;
 
     // center and radius of the ball
     std::vector<T> centroid; // centroid of the ball
@@ -201,11 +199,11 @@ template <typename Derived, typename NodeType> class binary_tree {
     std::vector<T> A_norms;
 
     // Root node of the tree
-    std::shared_ptr<NodeType> root = nullptr;
+    std::unique_ptr<NodeType> root = nullptr;
 
   private:
     da_status tree_serialization(da_model_persistence::serialization_buffer &buffer,
-                                 std::shared_ptr<NodeType> &node);
+                                 std::unique_ptr<NodeType> &node);
     template <bool ReturnDistances>
     da_status radius_neighbors_loop(da_int m_samples, const T *X, da_int ldx, T eps,
                                     T eps_internal,
@@ -229,20 +227,19 @@ template <typename T> class kd_tree : public binary_tree<kd_tree<T>, kd_node<T>>
     T single_pass_variance(da_int *indices, da_int n_indices, da_int dim);
 
     // Inherited functions used in tree construction and tree traversal to find neighbours
-    da_status radius_neighbors_recursive(std::shared_ptr<kd_node<T>> current_node, T *X,
-                                         T eps, T eps_internal,
+    da_status radius_neighbors_recursive(kd_node<T> *current_node, T *X, T eps,
+                                         T eps_internal,
                                          da_vector::da_vector<da_int> &neighbors,
                                          da_vector::da_vector<T> &distances,
                                          bool return_distance, bool X_is_A,
                                          da_int index_X, T X_norm);
 
-    da_status k_neighbors_recursive(std::shared_ptr<kd_node<T>> current_node, T *X,
-                                    da_int k, bool X_is_A, da_int index_X, T X_norm,
-                                    MaxHeap<T> &heap);
+    da_status k_neighbors_recursive(kd_node<T> *current_node, T *X, da_int k, bool X_is_A,
+                                    da_int index_X, T X_norm, MaxHeap<T> &heap);
 
   private:
     // Build the k-d tree from the dataset
-    std::shared_ptr<kd_node<T>> build_tree(da_int depth, da_int *indices,
+    std::unique_ptr<kd_node<T>> build_tree(da_int depth, da_int *indices,
                                            da_int n_indices,
                                            std::vector<T> *min_bounds = nullptr,
                                            std::vector<T> *max_bounds = nullptr,
@@ -268,20 +265,20 @@ template <typename T> class ball_tree : public binary_tree<ball_tree<T>, ball_no
     ball_tree(const T *A_in, da_int lda_in);
 
     // Inherited functions used in tree construction and tree traversal to find neighbours
-    da_status radius_neighbors_recursive(std::shared_ptr<ball_node<T>> current_node, T *X,
-                                         T eps, T eps_internal,
+    da_status radius_neighbors_recursive(ball_node<T> *current_node, T *X, T eps,
+                                         T eps_internal,
                                          da_vector::da_vector<da_int> &neighbors,
                                          da_vector::da_vector<T> &distances,
                                          bool return_distance, bool X_is_A,
                                          da_int index_X, T X_norm);
 
-    da_status k_neighbors_recursive(std::shared_ptr<ball_node<T>> current_node, T *X,
-                                    da_int k, bool X_is_A, da_int index_X, T X_norm,
+    da_status k_neighbors_recursive(ball_node<T> *current_node, T *X, da_int k,
+                                    bool X_is_A, da_int index_X, T X_norm,
                                     MaxHeap<T> &heap);
 
   private:
     // Build the ball tree from the dataset
-    std::shared_ptr<ball_node<T>> build_tree(da_int depth, da_int *indices,
+    std::unique_ptr<ball_node<T>> build_tree(da_int depth, da_int *indices,
                                              da_int n_indices,
                                              std::vector<T> *centroid = nullptr,
                                              T radius = 0.0);

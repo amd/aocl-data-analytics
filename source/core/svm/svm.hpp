@@ -259,7 +259,7 @@ template <typename T> class base_svm {
                                std::vector<da_int> &real_indices);
 
     // Functions that need specialisation
-    virtual da_status initialisation(da_int &size, std::vector<T> &gradient,
+    virtual da_status initialization(da_int &size, std::vector<T> &gradient,
                                      std::vector<T> &response, std::vector<T> &alpha,
                                      da_cache::LRUCache<T> &cache) = 0;
     virtual void outer_wss(da_int &size, std::vector<da_int> &selected_ws_idx,
@@ -392,7 +392,7 @@ template <typename T> class csvm : public base_svm<T> {
                        std::vector<T> &response, da_int &size, T &bias);
 
     // Inherited functions
-    virtual da_status initialisation(da_int &size, std::vector<T> &gradient,
+    virtual da_status initialization(da_int &size, std::vector<T> &gradient,
                                      std::vector<T> &response, std::vector<T> &alpha,
                                      da_cache::LRUCache<T> &cache) = 0;
     virtual da_status set_sv(std::vector<T> &alpha, da_int &n_support) = 0;
@@ -405,7 +405,7 @@ template <typename T> class svc : public csvm<T> {
     svc() = default;
     virtual ~svc(); // Make the destructor virtual to remove warnings
     // Specialised functions
-    da_status initialisation(da_int &size, std::vector<T> &gradient,
+    da_status initialization(da_int &size, std::vector<T> &gradient,
                              std::vector<T> &response, std::vector<T> &alpha,
                              da_cache::LRUCache<T> &cache);
     da_status set_sv(std::vector<T> &alpha, da_int &n_support);
@@ -418,7 +418,7 @@ template <typename T> class svr : public csvm<T> {
     svr() = default;
     virtual ~svr(); // Make the destructor virtual to remove warnings
     // Specialised functions
-    da_status initialisation(da_int &size, std::vector<T> &gradient,
+    da_status initialization(da_int &size, std::vector<T> &gradient,
                              std::vector<T> &response, std::vector<T> &alpha,
                              da_cache::LRUCache<T> &cache);
     da_status set_sv(std::vector<T> &alpha, da_int &n_support);
@@ -447,13 +447,13 @@ template <typename T> class nusvm : public base_svm<T> {
                        std::vector<T> &response, da_int &size, T &bias);
 
     // Inherited functions
-    virtual da_status initialisation(da_int &size, std::vector<T> &gradient,
+    virtual da_status initialization(da_int &size, std::vector<T> &gradient,
                                      std::vector<T> &response, std::vector<T> &alpha,
                                      da_cache::LRUCache<T> &cache) = 0;
     virtual da_status set_sv(std::vector<T> &alpha, da_int &n_support) = 0;
 
     // Auxiliary functions
-    da_status initialise_gradient(std::vector<T> &alpha_diff, da_int counter,
+    da_status initialize_gradient(std::vector<T> &alpha_diff, da_int counter,
                                   std::vector<T> &gradient, da_cache::LRUCache<T> &cache);
 };
 
@@ -464,7 +464,7 @@ template <typename T> class nusvc : public nusvm<T> {
     nusvc() = default;
     virtual ~nusvc(); // Make the destructor virtual to remove warnings
     // Specialised functions
-    da_status initialisation(da_int &size, std::vector<T> &gradient,
+    da_status initialization(da_int &size, std::vector<T> &gradient,
                              std::vector<T> &response, std::vector<T> &alpha,
                              da_cache::LRUCache<T> &cache);
     da_status set_sv(std::vector<T> &alpha, da_int &n_support);
@@ -477,7 +477,7 @@ template <typename T> class nusvr : public nusvm<T> {
     nusvr() = default;
     virtual ~nusvr(); // Make the destructor virtual to remove warnings
     // Specialised functions
-    da_status initialisation(da_int &size, std::vector<T> &gradient,
+    da_status initialization(da_int &size, std::vector<T> &gradient,
                              std::vector<T> &response, std::vector<T> &alpha,
                              da_cache::LRUCache<T> &cache);
     da_status set_sv(std::vector<T> &alpha, da_int &n_support);

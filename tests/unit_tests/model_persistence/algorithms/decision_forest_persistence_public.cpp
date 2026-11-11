@@ -56,7 +56,7 @@ void PrintTo(const dforest_serial_params &param, ::std::ostream *os) {
 const std::vector<dforest_serial_params> dforest_serialization_params = {
     {"entropy_nobootstrap_all", "cross-entropy", "no", "all", 15, 77},
     {"gini_nobootstrap_sqrt", "gini", "no", "sqrt", 10, 42},
-    {"cross_entropy_bootstrap_log2", "cross-entropy", "yes", "log2", 10, 123},
+    {"cross_entropy_bootstrap_log2", "cross-entropy", "yes", "log2", 15, 123},
     {"misclass_bootstrap_all", "misclass", "yes", "all", 5, 456},
 };
 

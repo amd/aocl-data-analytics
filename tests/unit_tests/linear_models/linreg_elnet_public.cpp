@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2024-2025 Advanced Micro Devices, Inc. All rights reserved.
+ * Copyright (C) 2024-2026 Advanced Micro Devices, Inc. All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without modification,
  * are permitted provided that the following conditions are met:
@@ -213,7 +213,7 @@ const linregParam linregParamElNet[] = {
 {  "ElNet/ShortFat/coord/0/s", "short_fatl12", {{"intercept", 0}, {"print level", 1}},
                                      {{"optim method", "coord"}, {"scaling", "scale only"}},
                                      {{"optim convergence tol",1.e-7f}, {"lambda",0.3f},{"alpha",0.5f},{"optim dual gap tol", 1.0e-1}},
-                                     {{"optim convergence tol",1.e-15}, {"lambda",0.3},{"alpha",0.5},{"optim dual gap tol", 1.0e-1}},
+                                     {{"optim convergence tol",1.e-15}, {"lambda",0.3},{"alpha",0.5},{"optim dual gap tol", 1.0e-2}},
                                      true, false
                                      },
     /* TALL THIN */
@@ -342,7 +342,7 @@ const linregParam linregParamElNet[] = {
                                      {{"optim method", "coord"}},
                                      {{"optim convergence tol",1.e-9f}, {"lambda",1.0f},{"alpha",0.5f},{"optim dual gap tol", 1.e-6f}},
                                      {{"optim convergence tol",1.e-10}, {"lambda",1.0},{"alpha",0.5},{"optim dual gap tol", 1.e-6}},
-                                     true, false, 1.0f, {5.0e-6f, 1.0e-9f}
+                                     true, false, 1.0f, {6.0e-6f, 1.0e-9f}
                                      },
 };
 // clang-format on

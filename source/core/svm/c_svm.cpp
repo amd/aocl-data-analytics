@@ -264,10 +264,10 @@ da_status csvm<T>::set_bias(std::vector<T> &alpha, std::vector<T> &gradient,
 }
 
 template <typename T>
-da_status svc<T>::initialisation(da_int &size, std::vector<T> &gradient,
+da_status svc<T>::initialization(da_int &size, std::vector<T> &gradient,
                                  std::vector<T> &response, std::vector<T> &alpha,
                                  [[maybe_unused]] da_cache::LRUCache<T> &cache) {
-    // Initialise response
+    // Initialize response
     for (da_int i = 0; i < size; i++) {
         response[i] = this->y[i] == 0 ? (T)-1.0 : this->y[i];
     }
@@ -284,10 +284,10 @@ da_status svc<T>::initialisation(da_int &size, std::vector<T> &gradient,
 }
 
 template <typename T>
-da_status svr<T>::initialisation(da_int &size, std::vector<T> &gradient,
+da_status svr<T>::initialization(da_int &size, std::vector<T> &gradient,
                                  std::vector<T> &response, std::vector<T> &alpha,
                                  [[maybe_unused]] da_cache::LRUCache<T> &cache) {
-    // Initialise response
+    // Initialize response
     for (da_int i = 0; i < size; i++) {
         response[i] = (T)1.0;
         response[i + size] = (T)-1.0;

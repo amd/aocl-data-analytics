@@ -1,0 +1,108 @@
+---
+# Copyright (C) 2026 Advanced Micro Devices, Inc. All rights reserved.
+#
+# Redistribution and use in source and binary forms, with or without modification,
+# are permitted provided that the following conditions are met:
+# 1. Redistributions of source code must retain the above copyright notice,
+#    this list of conditions and the following disclaimer.
+# 2. Redistributions in binary form must reproduce the above copyright notice,
+#    this list of conditions and the following disclaimer in the documentation
+#    and/or other materials provided with the distribution.
+# 3. Neither the name of the copyright holder nor the names of its contributors
+#    may be used to endorse or promote products derived from this software without
+#    specific prior written permission.
+#
+# THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS "AS IS" AND
+# ANY EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED TO, THE IMPLIED
+# WARRANTIES OF MERCHANTABILITY AND FITNESS FOR A PARTICULAR PURPOSE ARE DISCLAIMED.
+# IN NO EVENT SHALL THE COPYRIGHT HOLDER OR CONTRIBUTORS BE LIABLE FOR ANY DIRECT,
+# INDIRECT, INCIDENTAL, SPECIAL, EXEMPLARY, OR CONSEQUENTIAL DAMAGES (INCLUDING,
+# BUT NOT LIMITED TO, PROCUREMENT OF SUBSTITUTE GOODS OR SERVICES; LOSS OF USE, DATA,
+# OR PROFITS; OR BUSINESS INTERRUPTION) HOWEVER CAUSED AND ON ANY THEORY OF LIABILITY,
+# WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE)
+# ARISING IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE
+# POSSIBILITY OF SUCH DAMAGE.
+
+title: "Maximum Inner Product Search (MIPS)"
+output: html_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+## Overview
+
+This example demonstrates k-nearest neighbors with Maximum Inner Product Search (MIPS) using the `aoclda` package.
+
+```{r library}
+library(aoclda)
+```
+
+## Define Data
+
+```{r data}
+x_train <- matrix(
+  c(
+     3.0,  1.0, -1.0,  0.0,  2.0, -2.0, -1.0,
+     1.0,  2.0,  0.0, -2.0,  3.0, -3.0, -4.0
+  ),
+  nrow = 7, ncol = 2
+)
+
+x_test <- matrix(
+  c(
+     1.0,  0.0, -1.0,
+     1.0, -1.0, -2.0
+  ),
+  nrow = 3, ncol = 2
+)
+```
+
+## Fit and Query
+
+```{r mips}
+knn <- nearest_neighbors$new(metric = "inner_product", algorithm = "brute")
+knn$fit(x_train)
+
+result <- knn$kneighbors(x_test, n_neighbors = 3, return_distance = TRUE)
+k_ind <- result$indices
+k_dist <- result$distances
+
+cat("Indices of the k most similar training vectors (per query):\n")
+print(k_ind)
+
+cat("\nCorresponding inner products (largest to smallest):\n")
+print(k_dist)
+```
+
+## Verify Results
+
+```{r verify}
+# Indices are 0-based (matching the C++ backend)
+expected_ind <- matrix(
+  c(4, 0, 1,
+    6, 5, 3,
+    6, 5, 3),
+  nrow = 3, ncol = 3, byrow = TRUE
+)
+
+expected_dist <- matrix(
+  c(5.0, 4.0, 3.0,
+    4.0, 3.0, 2.0,
+    9.0, 8.0, 4.0),
+  nrow = 3, ncol = 3, byrow = TRUE
+)
+
+tol <- 1.0e-8
+norm_dist <- norm(k_dist - expected_dist, type = "F")
+incorrect_indices <- any(k_ind != expected_ind)
+
+if (norm_dist > tol || incorrect_indices) {
+  cat("\nSolution is not within expected tolerance\n")
+  cat("norm_dist =", norm_dist, "\n")
+  cat("incorrect_indices =", incorrect_indices, "\n")
+} else {
+  cat("\nMIPS k-nearest neighbors successfully computed\n")
+}
+```

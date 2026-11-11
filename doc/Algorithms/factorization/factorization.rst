@@ -52,7 +52,7 @@ The PCA is closely related to a matrix factorization known as the *singular valu
 .. math::
    A = U\Sigma V^T,
 
-where :math:`A` is a (standardized) data matrix of size :math:`n_{\mathrm{samples}} \times n_{\mathrm{features}}`, :math:`\Sigma` is a non-negative diagonal matrix of size :math:`n_{\mathrm{samples}} \times n_{\mathrm{features}}` and :math:`U` and :math:`V` are orthogonal matrices of size :math:`n_{\mathrm{samples}} \times n_{\mathrm{samples}}` and  :math:`n_{\mathrm{features}} \times n_{\mathrm{features}}` respectively.
+where :math:`A` is a (standardized) data matrix of size :math:`n_{\mathrm{samples}} \times n_{\mathrm{features}}`, :math:`\Sigma` is a nonnegative diagonal matrix of size :math:`n_{\mathrm{samples}} \times n_{\mathrm{features}}` and :math:`U` and :math:`V` are orthogonal matrices of size :math:`n_{\mathrm{samples}} \times n_{\mathrm{samples}}` and  :math:`n_{\mathrm{features}} \times n_{\mathrm{features}}` respectively.
 The nonzero entries of :math:`\Sigma` are known as the *singular values* of :math:`A`.
 
 AOCL-DA can compute the PCA via the SVD (with :math:`\Sigma` and :math:`V` truncated according to the number of principal components requested) or using an eigenvalue decomposition of the covariance/correlation matrix (which is faster for tall, thin matrices, but can be numerically unstable for ill-conditioned problems).
@@ -318,6 +318,155 @@ Options
       For the ``rbf``, ``poly``, and ``sigmoid`` kernels, when ``gamma`` is not set (or set to a value less than :math:`0`) it defaults to :math:`1/n_{\mathrm{features}}` and is resolved at compute time.
       The resolved value can be retrieved via ``da_handle_get_result_?`` with ``da_kernel_pca_gamma``.
 
+.. _nmf_intro:
+
+Nonnegative matrix factorization
+==================================
+
+Given a nonnegative data matrix :math:`A` of size :math:`n_{\mathrm{samples}} \times n_{\mathrm{features}}`,
+nonnegative matrix factorization (NMF) finds two nonnegative matrices :math:`W`
+and :math:`H` of sizes :math:`n_{\mathrm{samples}} \times k` and
+:math:`k \times n_{\mathrm{features}}` respectively, such that
+
+.. math::
+   A \approx W H,
+
+where :math:`k` (``n_components``) is a user-specified rank that is typically much smaller than
+both :math:`n_{\mathrm{samples}}` and :math:`n_{\mathrm{features}}`.
+The nonnegativity constraints on :math:`W` and :math:`H` make the representation additive, which means that
+each column of :math:`W` can be interpreted as a basis vector in feature space and each row of
+:math:`H` as a nonnegative combination of the corresponding basis vectors.
+
+AOCL-DA minimizes the Frobenius reconstruction error
+
+.. math::
+   \min_{W \ge 0,\, H \ge 0} \tfrac{1}{2}\|A - WH\|_F^2
+
+using the multiplicative update (MU) algorithm :cite:t:`da_ls01`, which multiplies each entry
+of :math:`W` and :math:`H` by an element-wise ratio that guarantees the objective is non-increasing
+at every step.
+
+Initialization
+--------------
+
+The quality of the factorization depends on the initial estimates of :math:`W^{(0)}` and :math:`H^{(0)}`.
+AOCL-DA supports the following initialization strategies via the ``init`` option:
+
+- ``nndsvda`` (default) - Nonnegative randomized SVD with average fill: near-zero entries are replaced by the overall mean of :math:`A` :cite:t:`da_bou08`. Deterministic and well-suited for dense data.
+- ``nndsvd`` - Nonnegative randomized SVD: near-zero entries are left at zero :cite:t:`da_bou08`. Deterministic, but produces sparser factors.
+- ``nndsvdar`` - Nonnegative randomized SVD with random fill: near-zero entries are replaced by small random values. Controlled by the ``random_state`` option.
+- ``random`` - Both :math:`W` and :math:`H` are initialized from a standard normal distribution, scaled by :math:`\sqrt{\operatorname{mean}(A)/k}`, where :math:`k` is the number of components. Controlled by the ``random_state`` option.
+- ``custom`` - User-supplied :math:`W^{(0)}` and :math:`H^{(0)}` are provided via :ref:`da_nmf_set_data_? <da_nmf_set_data>` (C API) or the ``W`` and ``H`` arguments of :func:`aoclda.factorization.NMF.fit_transform` (Python API) before calling compute.
+
+The NNDSVD-based strategies derive the initial factors from a truncated randomized SVD of :math:`A`,
+which produces orthogonal matrices :math:`U` and :math:`V` and nonnegative singular values
+:math:`\sigma_j` such that :math:`A \approx \sum_j \sigma_j u_j v_j^T`.
+For each rank-1 outer product :math:`u_j v_j^T` (where :math:`u_j` and :math:`v_j`
+are the :math:`j`-th columns of :math:`U` and :math:`V` respectively), the positive and negative parts are
+separated to form nonneg­ative column/row pairs for :math:`W^{(0)}` and :math:`H^{(0)}`.
+Entries that cannot be assigned a positive value in this way are near-zero and are handled
+differently by each variant: set to zero (``nndsvd``), replaced by the mean of :math:`A`
+(``nndsvda``), or replaced by small random values (``nndsvdar``).
+
+Convergence
+-----------
+
+Iterations stop when the maximum number of iterations ``max_iter`` is reached, or when the
+relative improvement of the Frobenius residual for the :math:`i`-th iteration falls below ``tol``:
+
+.. math::
+   \frac{\|A - W^{(i-1)} H^{(i-1)}\|_F
+         - \|A - W^{(i)} H^{(i)}\|_F}
+        {\|A\|_F} < \texttt{tol}.
+
+The residual is evaluated once every ``check_every`` MU steps to reduce overhead.
+Setting ``tol = 0`` disables early stopping and runs exactly ``max_iter`` iterations.
+
+Outputs from the NMF
+---------------------
+
+After a successful NMF computation the following results are available:
+
+- :math:`W` - the :math:`n_{\mathrm{samples}} \times k` left factor (basis coefficients per sample).
+- :math:`H` - the :math:`k \times n_{\mathrm{features}}` right factor (component basis vectors).
+- **reconstruction_err** - the Frobenius reconstruction error :math:`\|A - WH\|_F`.
+- **n_iter** - the number of multiplicative-update iterations performed.
+- **n_components** - the number of components requested (``n_components`` option), or min(``n_samples``, ``n_features``) if set to 0.
+- **n_samples, n_features** - the number of training samples and features used to fit the model.
+
+After the NMF has been computed, two post-processing operations may be of interest:
+
+- **transform** - given a new nonnegative data matrix :math:`X` with the same number of features, find its NMF representation :math:`W_{\mathrm{new}}` such that :math:`X \approx W_{\mathrm{new}} H`, with :math:`H` held fixed.
+- **inverse transform** - given a coefficient matrix :math:`Y`, reconstruct the data via :math:`YH`.
+
+Typical workflow for NMF
+------------------------
+
+The standard way of computing the nonnegative matrix factorization using AOCL-DA is as follows.
+
+.. tab-set::
+
+   .. tab-item:: Python
+      :sync: Python
+
+      1. Initialize a :func:`aoclda.factorization.NMF` object with options set in the class constructor.
+      2. Compute the NMF using :func:`aoclda.factorization.NMF.fit` or :func:`aoclda.factorization.NMF.fit_transform`. For custom initialization, pass ``W`` and ``H`` arguments to :func:`aoclda.factorization.NMF.fit_transform`.
+      3. Perform further transformations as necessary using :func:`aoclda.factorization.NMF.transform` or :func:`aoclda.factorization.NMF.inverse_transform`.
+      4. Extract results from the :func:`aoclda.factorization.NMF` object via its class attributes.
+
+   .. tab-item:: C
+      :sync: C
+
+      1. Initialize a :cpp:type:`da_handle` with :cpp:type:`da_handle_type` ``da_handle_nmf``.
+      2. Pass data to the matrix using :ref:`da_nmf_init_? <da_nmf_init>`.
+      3. Set options using :ref:`da_options_set_? <da_options_set>` (see :ref:`below <nmf_options>`).
+      4. For custom initialization, upload :math:`W^{(0)}` and :math:`H^{(0)}` using :ref:`da_nmf_set_data_? <da_nmf_set_data>`.
+      5. Compute the NMF using :ref:`da_nmf_compute_? <da_nmf_compute>`.
+      6. Perform further transformations as necessary using :ref:`da_nmf_transform_? <da_nmf_transform>` or :ref:`da_nmf_inverse_transform_? <da_nmf_inverse_transform>`.
+      7. Extract results using :ref:`da_handle_get_result_? <da_handle_get_result>`.
+
+.. _nmf_options:
+
+Options
+-------
+
+.. tab-set::
+
+   .. tab-item:: Python
+      :sync: Python
+
+      The available Python options are detailed in the :func:`aoclda.factorization.NMF` class constructor.
+
+   .. tab-item:: C
+      :sync: C
+
+      The following options can be set using :ref:`da_options_set_? <da_options_set>`:
+
+      .. update options using table _opts_nonnegativematrixfactorization
+
+      .. csv-table:: NMF options
+         :header: "Option Name", "Type", "Default", "Description", "Constraints"
+
+         "n_components", "integer", ":math:`i=0`", "Number of components to compute. If 0 (default), all components are kept.", ":math:`0 \le i`"
+         "max_iter", "integer", ":math:`i=200`", "Maximum number of MU iterations.", ":math:`1 \le i`"
+         "tol", "real", ":math:`r=0.0001`", "Tolerance for the stopping condition: iterations stop when the relative improvement of the Frobenius residual falls below this value. Set to 0 to disable early stopping. The check frequency is controlled by the 'check_every' option.", ":math:`0 \le r`"
+         "check_every", "integer", ":math:`i=10`", "Number of MU iterations between successive convergence checks. The convergence criterion (relative change of the Frobenius residual against tol) is evaluated once every check_every iterations. Larger values reduce the overhead of the residual computation at the cost of potentially running extra iterations after the threshold is met. Only effective when tol > 0.", ":math:`1 \le i`"
+         "init", "string", ":math:`s=` `auto`", "Procedure used to initialize W and H.", ":math:`s=` `auto`, `custom`, `nndsvd`, `nndsvda`, `nndsvdar`, or `random`."
+         "solver", "string", ":math:`s=` `mu`", "NMF solver to use. Currently only multiplicative update.", ":math:`s=` `mu`."
+         "beta_loss", "string", ":math:`s=` `frobenius`", "Loss function to minimize. Currently only Frobenius norm.", ":math:`s=` `frobenius`."
+         "random_state", "integer", ":math:`i=-1`", "Random seed used to initialize W and H.", ":math:`-1 \le i`"
+         "storage order", "string", ":math:`s=` `column-major`", "Whether data is supplied and returned in row- or column-major order.", ":math:`s=` `c`, `column-major`, `f`, `fortran`, or `row-major`."
+         "check data", "string", ":math:`s=` `no`", "Check input data for NaNs prior to performing computation.", ":math:`s=` `no`, or `yes`."
+
+      If ``n_components`` is set to 0, ``min(n_samples, n_features)`` components are computed.
+
+      The ``init`` option selects the initialization method for :math:`W` and :math:`H`. The available strategies are described in the :ref:`Initialization <nmf_intro>` section above.
+      The ``random_state`` option controls the random seed used by the ``random`` and ``nndsvdar`` initialization methods and the randomized SVD used internally by the NNDSVD-based initializers. Set to ``-1`` for non-deterministic results.
+
+      Convergence is checked every ``check_every`` iterations when ``tol > 0``.
+      Setting ``tol = 0`` disables early stopping and runs exactly ``max_iter`` iterations.
+
+
 Examples
 ========
 
@@ -340,6 +489,12 @@ Examples
               :language: Python
               :linenos:
 
+      .. dropdown:: NMF Example
+
+          .. literalinclude:: ../../../python_interface/python_package/aoclda/examples/nmf_ex.py
+              :language: Python
+              :linenos:
+
    .. tab-item:: C
       :sync: C
 
@@ -354,6 +509,12 @@ Examples
       .. dropdown:: Kernel PCA Example
 
           .. literalinclude:: ../../../tests/examples/kernel_pca.cpp
+              :language: C++
+              :linenos:
+
+      .. dropdown:: NMF Example
+
+          .. literalinclude:: ../../../tests/examples/nmf.cpp
               :language: C++
               :linenos:
 
@@ -445,4 +606,55 @@ Kernel principal component analysis
          :project: da
          :outline:
       .. doxygenfunction:: da_kernel_pca_inverse_transform_d
+         :project: da
+
+Nonnegative matrix factorization
+----------------------------------
+.. tab-set::
+
+   .. tab-item:: Python
+
+      .. autoclass:: aoclda.factorization.NMF(n_components=1, solver='mu', beta_loss='frobenius', max_iter=200, tol=1.0e-4, init='nndsvda', random_state=0, check_every=10, check_data=False)
+         :members:
+
+   .. tab-item:: C
+
+      .. _da_nmf_init:
+
+      .. doxygenfunction:: da_nmf_init_s
+         :project: da
+         :outline:
+      .. doxygenfunction:: da_nmf_init_d
+         :project: da
+
+      .. _da_nmf_set_data:
+
+      .. doxygenfunction:: da_nmf_set_data_s
+         :project: da
+         :outline:
+      .. doxygenfunction:: da_nmf_set_data_d
+         :project: da
+
+      .. _da_nmf_compute:
+
+      .. doxygenfunction:: da_nmf_compute_s
+         :project: da
+         :outline:
+      .. doxygenfunction:: da_nmf_compute_d
+         :project: da
+
+      .. _da_nmf_transform:
+
+      .. doxygenfunction:: da_nmf_transform_s
+         :project: da
+         :outline:
+      .. doxygenfunction:: da_nmf_transform_d
+         :project: da
+
+      .. _da_nmf_inverse_transform:
+
+      .. doxygenfunction:: da_nmf_inverse_transform_s
+         :project: da
+         :outline:
+      .. doxygenfunction:: da_nmf_inverse_transform_d
          :project: da

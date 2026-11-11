@@ -50,6 +50,8 @@ Your installation is also packaged with C++ and Python example programs.
 The source code for AOCL-DA can be obtained from https://github.com/amd/aocl-data-analytics/.
 You can also install AOCL-DA using the AOCL spack recipe: https://www.amd.com/en/developer/zen-software-studio/applications/spack/spack-aocl.html.
 
+Experimental R wrappers are also available in the ``r_interface/`` directory.
+
 .. AOCL-DA is developed and maintained by AMD (https://www.amd.com/). For support or queries, you can e-mail us on
    toolchainsupport@amd.com.
 

@@ -249,6 +249,11 @@ set(DLP)
 
 linalg_libs()
 
+# Prepend the in-tree public headers with BEFORE to
+# ensure they always win over any installed (stale) aoclda_*.h.
+# from e.g. ${AOCL_ROOT}/include_${INT_LIB}
+include_directories(BEFORE ${CMAKE_SOURCE_DIR}/source/include)
+
 # Static DLP needs to be linking with the --whole-archive flag
 if(NOT WIN32 AND NOT BUILD_SHARED_LIBS AND NOT "${DLP}" STREQUAL "")
   set(DLP_LINK "$<LINK_LIBRARY:WHOLE_ARCHIVE,${DLP}>")

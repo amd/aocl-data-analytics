@@ -1,4 +1,4 @@
-# Copyright (C) 2025 Advanced Micro Devices, Inc. All rights reserved.
+# Copyright (C) 2025-2026 Advanced Micro Devices, Inc. All rights reserved.
 #
 # Redistribution and use in source and binary forms, with or without modification,
 # are permitted provided that the following conditions are met:
@@ -27,9 +27,6 @@ Contains the functions to replace symbols from Scikit-learn by the AOCL-DA patch
 """
 # pylint: disable = possibly-used-before-assignment
 
-import os
-import warnings
-import contextlib
 import sklearn.covariance as cov_sklearn
 import sklearn.decomposition as decomp_sklearn
 import sklearn.linear_model as linmod_sklearn
@@ -44,6 +41,7 @@ import sklearn.svm as svm_sklearn
 from ._empirical_covariance import EmpiricalCovariance as cov_da
 from ._pca import PCA as PCA_da
 from ._kernel_pca import KernelPCA as KernelPCA_da
+from ._nmf import NMF as NMF_da
 from ._kmeans import kmeans as kmeans_da
 from ._dbscan import DBSCAN as DBSCAN_da
 from ._linear_model import LinearRegression as LinearRegression_da
@@ -81,6 +79,9 @@ AMD_SYMBOLS = {'EmpiricalCovariance': {'pack': cov_sklearn,
                'KernelPCA': {'pack': decomp_sklearn,
                              'sk_sym': getattr(decomp_sklearn, 'KernelPCA'),
                              'da_sym': KernelPCA_da},
+               'NMF': {'pack': decomp_sklearn,
+                       'sk_sym': getattr(decomp_sklearn, 'NMF'),
+                       'da_sym': NMF_da},
                'LinearRegression': {'pack': linmod_sklearn,
                                     'sk_sym': getattr(linmod_sklearn, 'LinearRegression'),
                                     'da_sym': LinearRegression_da},

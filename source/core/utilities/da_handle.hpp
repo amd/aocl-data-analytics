@@ -62,7 +62,8 @@ struct _da_handle {
             err->clear();
     };
 
-    da_status get_current_opts(da_options::OptionRegistry **opts, bool refresh = false);
+    da_status get_current_opts(da_options::OptionRegistry **opts);
+    da_status handle_refresh();
 
     template <typename T> basic_handle<T> *get_alg_handle();
 

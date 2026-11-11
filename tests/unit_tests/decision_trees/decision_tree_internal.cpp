@@ -28,6 +28,7 @@
 #include "../datests_cblas.hh"
 #include "../utest_utils.hpp"
 #include "common/idx_sorting.hpp"
+#include "da_kernel_utils.hpp"
 #include "da_omp.hpp"
 #include "decision_tree_utils.hpp"
 #include "tree/decision_tree.hpp"
@@ -37,6 +38,11 @@
 #include <numeric>
 
 using namespace TEST_ARCH::da_decision_forest;
+
+static vectorization_type available_vectorization_type() {
+    return context::get_context()->has_avx512 ? vectorization_type::avx512
+                                              : vectorization_type::avx2;
+}
 
 template <typename T> class decision_tree_internal_test : public testing::Test {
   public:
@@ -181,10 +187,10 @@ TYPED_TEST(decision_tree_internal_test, individual_splits) {
     EXPECT_EQ(tree.opts.set("maximum depth", (da_int)1), da_status_success);
     tree.refresh();
     tree.fit();
-    EXPECT_EQ(tree.get_tree()[0].left_child_idx, 2);
-    EXPECT_EQ(tree.get_tree()[0].right_child_idx, 1);
-    EXPECT_NEAR(tree.get_tree()[2].score, 0.444444, tol);
-    EXPECT_NEAR(tree.get_tree()[1].score, 0., tol);
+    EXPECT_EQ(tree.get_tree()[0].left_child_idx, 1);
+    EXPECT_EQ(tree.get_tree()[0].right_child_idx, 2);
+    EXPECT_NEAR(tree.get_tree()[2].score, 0., tol);
+    EXPECT_NEAR(tree.get_tree()[1].score, 0.444444, tol);
 
     // Only 1.0 in the training data, no splitting should occur
     set_data_identical(data);
@@ -342,6 +348,12 @@ TEST(decision_tree_internal_test, compress_indices) {
     EXPECT_ARR_EQ(5, count, count_exp, 1, 1, 0, 0);
 }
 
+TEST(decision_tree_internal_test, invalid_indices) {
+    std::vector<da_int> indices = {4, -1};
+    std::vector<da_int> count(2);
+    EXPECT_EQ(compress_count_occurences(indices, count), da_status_invalid_input);
+}
+
 TYPED_TEST(decision_tree_internal_test, bootstrap) {
     // Data with 4 trivially separated classes
     // [0, 4]x[0, 4] : 0
@@ -473,6 +485,148 @@ TYPED_TEST(decision_tree_internal_test, parallel_splits) {
     EXPECT_EQ((da_int)rinfo[7], expected_threads);
 }
 
+template <typename T, da_order order> void test_inference_fixed_path() {
+    const char *order_str = (order == da_order::row_major) ? "row-major" : "column-major";
+
+    // Read training and test data from CSV in the requested storage order
+    std::string input_data_fname =
+        std::string(DATA_DIR) + "/df_data/gen_500x20_4class_data.csv";
+    da_int ncols, nrows, nrows_test, ncols_test;
+    std::vector<T> X, X_test;
+    std::vector<da_int> y;
+    std::vector<da_int> y_test;
+    ASSERT_TRUE(
+        da_test::read_features_response_csv(input_data_fname, X, nrows, ncols, order, y));
+    std::string test_data_fname =
+        std::string(DATA_DIR) + "/df_data/gen_500x20_4class_test.csv";
+    ASSERT_TRUE(da_test::read_features_response_csv(test_data_fname, X_test, nrows_test,
+                                                    ncols_test, order, y_test));
+
+    // Leading dimensions depend on the storage order
+    da_int ldx_train = (order == da_order::row_major) ? ncols : nrows;
+    da_int ldx_test = (order == da_order::row_major) ? ncols_test : nrows_test;
+
+    // Initialize and train the tree
+    da_errors::da_error_t err(da_errors::DA_RECORD);
+    decision_tree<T> tree(err);
+    ASSERT_EQ(tree.opts.set("storage order", order_str), da_status_success);
+    ASSERT_EQ(tree.set_training_data(nrows, ncols, X.data(), ldx_train, y.data()),
+              da_status_success);
+    ASSERT_EQ(tree.fit(), da_status_success);
+
+    // Check accuracy on the test data using reference score function
+    T accuracy_ref;
+    da_int n_class = 4;
+    da_int ldy = (order == da_order::row_major) ? n_class : nrows_test;
+    std::vector<da_int> y_pred_ref(nrows_test);
+    std::vector<T> y_proba_ref(nrows_test * n_class);
+    ASSERT_EQ(tree.score_training_tree(nrows_test, ncols_test, X_test.data(), ldx_test,
+                                       y_test.data(), &accuracy_ref),
+              da_status_success);
+    ASSERT_GT(accuracy_ref, (T)0.8);
+    ASSERT_EQ(tree.predict_training_tree(nrows_test, ncols_test, X_test.data(), ldx_test,
+                                         y_pred_ref.data()),
+              da_status_success);
+    ASSERT_EQ(tree.predict_proba_training_tree(nrows_test, ncols_test, X_test.data(),
+                                               ldx_test, y_proba_ref.data(), n_class,
+                                               ldy),
+              da_status_success);
+
+    // check that the new inference code paths return the same results
+    // predict functions
+    std::vector<da_int> y_pred(nrows_test);
+    std::vector<T> y_proba(nrows_test * n_class);
+    ASSERT_EQ((tree.template compact_traverse_sequential<order, false>(
+                  nrows_test, X_test.data(), ldx_test, y_pred.data())),
+              da_status_success);
+    EXPECT_ARR_EQ(nrows_test, y_pred, y_pred_ref, 1, 1, 0, 0);
+    ASSERT_EQ((tree.template compact_traverse_sequential<order, true>(
+                  nrows_test, X_test.data(), ldx_test, y_pred.data())),
+              da_status_success);
+    EXPECT_ARR_EQ(nrows_test, y_pred, y_pred_ref, 1, 1, 0, 0);
+    ASSERT_EQ((tree.template compact_traverse_BFS<order, false>(nrows_test, X_test.data(),
+                                                                ldx_test, y_pred.data())),
+              da_status_success);
+    EXPECT_ARR_EQ(nrows_test, y_pred, y_pred_ref, 1, 1, 0, 0);
+    ASSERT_EQ((tree.template compact_traverse_BFS<order, true>(nrows_test, X_test.data(),
+                                                               ldx_test, y_pred.data())),
+              da_status_success);
+    EXPECT_ARR_EQ(nrows_test, y_pred, y_pred_ref, 1, 1, 0, 0);
+    // The vectorized kernel only supports row-major data
+    if constexpr (order == da_order::row_major) {
+        ASSERT_EQ((tree.compact_traverse_sequential_vectorized(
+                      nrows_test, X_test.data(), ldx_test, y_pred.data(),
+                      available_vectorization_type())),
+                  da_status_success);
+        EXPECT_ARR_EQ(nrows_test, y_pred, y_pred_ref, 1, 1, 0, 0);
+    }
+
+    // proba functions
+    ASSERT_EQ((tree.template compact_traverse_sequential<order, false>(
+                  nrows_test, X_test.data(), ldx_test, y_proba.data(), n_class, ldy)),
+              da_status_success);
+    EXPECT_ARR_NEAR(nrows_test * n_class, y_proba, y_proba_ref, 1.0e-10);
+    ASSERT_EQ((tree.template compact_traverse_sequential<order, true>(
+                  nrows_test, X_test.data(), ldx_test, y_proba.data(), n_class, ldy)),
+              da_status_success);
+    EXPECT_ARR_NEAR(nrows_test * n_class, y_proba, y_proba_ref, 1.0e-10);
+    ASSERT_EQ((tree.template compact_traverse_BFS<order, false>(
+                  nrows_test, X_test.data(), ldx_test, y_proba.data(), n_class, ldy)),
+              da_status_success);
+    EXPECT_ARR_NEAR(nrows_test * n_class, y_proba, y_proba_ref, 1.0e-10);
+    ASSERT_EQ((tree.template compact_traverse_BFS<order, true>(
+                  nrows_test, X_test.data(), ldx_test, y_proba.data(), n_class, ldy)),
+              da_status_success);
+    EXPECT_ARR_NEAR(nrows_test * n_class, y_proba, y_proba_ref, 1.0e-10);
+}
+
+TYPED_TEST(decision_tree_internal_test, inference_fixed_path) {
+    test_inference_fixed_path<TypeParam, da_order::row_major>();
+    test_inference_fixed_path<TypeParam, da_order::column_major>();
+}
+
+TEST(decision_tree_internal_test, inference_vectorized) {
+    test_data_type<float> data;
+    set_test_data_8x2_unique<float>(data);
+
+    da_errors::da_error_t err(da_errors::DA_RECORD);
+    decision_tree<float> tree(err);
+    EXPECT_EQ(tree.set_training_data(data.n_samples_train, data.n_feat,
+                                     data.X_train.data(), data.n_samples_train,
+                                     data.y_train.data()),
+              da_status_success);
+    EXPECT_EQ(tree.fit(), da_status_success);
+
+    da_int nsamp_test = 16;
+    // clang-format off
+    std::vector<float> X_test = {(float)0.25, (float)0.25, 
+                                 (float)0.75, (float)0.75,
+                                 (float)0.25, (float)0.75,
+                                 (float)0.25, (float)0.75,
+                                 (float)0.25, (float)0.25,
+                                 (float)0.88, (float)0.88,
+                                 (float)0.25, (float)0.88,
+                                 (float)0.25, (float)0.88,
+                                     
+                                 (float)0.32, (float)0.32,
+                                 (float)0.75, (float)0.75,
+                                 (float)0.32, (float)0.75,
+                                 (float)0.32, (float)0.75,
+                                                                 
+                                 (float)0.25, (float)0.25,
+                                 (float)0.75, (float)0.75,
+                                 (float)0.25, (float)0.75,
+                                 (float)0.25, (float)0.75};
+    // clang-format on
+    std::vector<da_int> y_expected = {0, 1, 1, 1, 0, 1, 1, 1, 0, 1, 1, 1, 0, 1, 1, 1};
+    std::vector<da_int> y_pred(nsamp_test);
+    EXPECT_EQ(tree.compact_traverse_sequential_vectorized(nsamp_test, X_test.data(),
+                                                          data.n_feat, y_pred.data(),
+                                                          available_vectorization_type()),
+              da_status_success);
+    EXPECT_ARR_NEAR(nsamp_test, y_pred, y_expected, 1.0e-10);
+}
+
 TEST(decision_tree_internal_test, row_major) {
 
     // Get the training data
@@ -586,6 +740,7 @@ TEST(decision_tree_internal_test, row_major) {
     //Check row and column outputs agree
     datest_blas::imatcopy('T', n_class, n_samples, 1.0, y_proba_row.data(), n_class,
                           n_samples);
+
     datest_blas::imatcopy('T', n_class, n_samples, 1.0, y_log_proba_row.data(), n_class,
                           n_samples);
     EXPECT_ARR_NEAR(n_samples, y_pred.data(), y_pred_row.data(),

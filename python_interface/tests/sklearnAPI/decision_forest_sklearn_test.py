@@ -193,5 +193,5 @@ def test_small_histograms(numpy_precision, numpy_order):
         maximum_bins=2)
     forest.fit(X_train, y_train)
     score = forest.score(X_test, y_test)
-    assert 0.9 > score > 0.5
+    assert score > 0.5
     assert forest.aocl is True

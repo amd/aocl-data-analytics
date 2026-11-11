@@ -1,3 +1,4 @@
+sphinx_collapse
 sphinxcontrib.bibtex
 breathe
 rocm-docs-core==0.34.2

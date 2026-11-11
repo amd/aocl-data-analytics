@@ -121,11 +121,11 @@ class pyda_handle {
         free(message);
     }
     /* Extract the storage scheme of a numpy array and check if it matches the order stored in the class.
-       If this is the first call to such a routine, then set the order accordingly.
+       If this is the first call to such a routine or force_order_update is true, then set the order accordingly.
     */
     template <typename T>
     void get_numpy_array_properties(py::array_t<T> &X, da_int &n_rows, da_int &n_cols,
-                                    da_int &ldx) {
+                                    da_int &ldx, bool force_order_update = false) {
 
         if (X.ndim() == 1) {
             n_rows = X.shape()[0];
@@ -171,8 +171,8 @@ class pyda_handle {
         }
 
         // Check if we match expected order
-        if (order == undetermined) {
-            // Order hasn't yet been se, so set it
+        if (order == undetermined || force_order_update) {
+            // Order not yet set, or caller allows it to change (e.g. inference)
             order = X_order;
             return;
         } else if (order != X_order) {
@@ -287,7 +287,6 @@ template <typename T> py::array_t<T> copy_numpy_array(py::array_t<T> &X) {
 
 /* Parsing error codes
  * Translate codes into standard C++ exceptions that are translated automatically in Python
- * doc: https://pybind11.readthedocs.io/en/stable/advanced/exceptions.html
  * This function is intended for use with basic stats, where there are no handles and no warning exits
  */
 void status_to_exception(da_status status) {

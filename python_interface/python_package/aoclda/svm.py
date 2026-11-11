@@ -313,6 +313,9 @@ class SVC(BaseSVM):
             Use -1 for non deterministic behavior. Default=0.
         tau (float, optional): Numerical stability parameter. If it is None then machine \
             epsilon is used. Default=None.
+        max_ws_size (int, optional): Maximum working set size. A value divisible by 64 is \
+            recommended for optimal performance. Setting -1 automatically selects the \
+            optimal size based on the input data. Default=-1.
         mixed_precision (bool, optional): Whether to use mixed precision iterative refinement, \
             in which lower precision arithmetic is used before switching to the working precision \
             for the final iterations. Default = False.
@@ -548,12 +551,13 @@ class SVR(BaseSVM):
         coef0 (float, optional): Independent term in kernel function (check :func:`kernel \
             functions <aoclda.kernel_functions.polynomial_kernel>` for more details). \
             It is only used in 'poly' and 'sigmoid' kernel functions. Default=0.0.
-        probability (bool, optional): Currently not supported. Whether to enable \
-            probability estimates. Default=False.
         tol (float, optional): Tolerance for stopping criterion. Default=0.001.
         cache_size (float, optional): Size of the kernel cache (in MB). Default=200.0.
         max_iter (int, optional): Hard limit on iterations within solver, or 0 for no limit. \
             Default=0.
+        max_ws_size (int, optional): Maximum working set size. A value divisible by 64 is \
+            recommended for optimal performance. Setting -1 automatically selects the \
+            optimal size based on the input data. Default=-1.
         tau (float, optional): Numerical stability parameter. If it is None then machine \
             epsilon is used. Default=None.
         mixed_precision (bool, optional): Whether to use mixed precision iterative refinement, \
@@ -713,6 +717,9 @@ class NuSVC(BaseSVM):
             Default=0.
         random_state (int, optional): Random seed used for probability estimates \
             Use -1 for non deterministic behavior. Default=0.
+        max_ws_size (int, optional): Maximum working set size. A value divisible by 64 is \
+            recommended for optimal performance. Setting -1 automatically selects the \
+            optimal size based on the input data. Default=-1.
         tau (float, optional): Numerical stability parameter. If it is None then machine \
             epsilon is used. Default=None.
         mixed_precision (bool, optional): Whether to use mixed precision iterative refinement, \
@@ -948,12 +955,13 @@ class NuSVR(BaseSVM):
         coef0 (float, optional): Independent term in kernel function (check :func:`kernel \
             functions <aoclda.kernel_functions.polynomial_kernel>` for more details). \
             It is only used in 'poly' and 'sigmoid' kernel functions. Default=0.0.
-        probability (bool, optional): Currently not supported. Whether to enable \
-            probability estimates. Default=False.
         tol (float, optional): Tolerance for stopping criterion. Default=0.001.
         cache_size (float, optional): Size of the kernel cache (in MB). Default=200.0.
         max_iter (int, optional): Hard limit on iterations within solver, or 0 for no limit. \
             Default=0.
+        max_ws_size (int, optional): Maximum working set size. A value divisible by 64 is \
+            recommended for optimal performance. Setting -1 automatically selects the \
+            optimal size based on the input data. Default=-1.
         tau (float, optional): Numerical stability parameter. If it is None then machine \
             epsilon is used. Default=None.
         mixed_precision (bool, optional): Whether to use mixed precision iterative refinement, \

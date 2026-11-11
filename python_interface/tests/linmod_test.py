@@ -31,6 +31,7 @@ Linear models Python test script
 import numpy as np
 import pytest
 from aoclda.linear_model import linmod
+from aoclda._internal_utils import debug as dbg
 
 
 @pytest.fixture(scope="function", name="no_fortran")
@@ -135,9 +136,25 @@ parameters_list_linreg = [
     {"mod": "mse", "reg_lambda": 0.1, "reg_alpha": 0.5, "tol": 1e-6,
      "intercept": True, "actual_coef": elastic_net_answer},
     {"mod": "mse", "reg_lambda": 1.0, "reg_alpha": 1.0, "tol": 1e-6,
+     "dual_tol": 1e-4, "optim_coord_skip_min": 3, "optim_coord_skip_max": 13,
+     "optim_coord_skip_tol": 1e-5, "solver": "coord",
      "intercept": True, "actual_coef": lasso_answer},
     {"mod": "mse", "reg_lambda": 1.0, "reg_alpha": 0.0, "tol": 1e-6,
      "intercept": True, "solver": "sparse_cg", "actual_coef": ridge_answer}]
+
+
+@pytest.mark.parametrize("skip_tol", [-4.0, 0.0, 1.0e-4])
+def test_coord_skip_options(skip_tol):
+    X = np.array([[0.497, -0.138], [0.648, 1.523], [-0.469, 0.543],
+                  [1.579, 0.767], [-0.234, -0.234], [-0.463, -0.466]])
+    y = np.array([6.132, 99.065, 13.28, 88.632, -20.423, -39.951])
+    model = linmod("mse", reg_lambda=1.0, reg_alpha=1.0, tol=1e-6,
+                   dual_tol=1e-4, solver="coord", intercept=True,
+                   optim_coord_skip_min=3, optim_coord_skip_max=13,
+                   optim_coord_skip_tol=skip_tol)
+
+    model.fit(X, y)
+    assert model.coef == pytest.approx(lasso_answer, abs=1e-4)
 
 
 @pytest.mark.parametrize("problem", parameters_list_linreg,
@@ -151,6 +168,13 @@ def test_warmstart_l1_l2(problem, numpy_precision, numpy_order):
     y = np.array([6.132, 99.065, 13.28, 88.632, -
                  20.423, -39.951], dtype=numpy_precision)
     problem_copy = problem.copy()
+
+    if problem_copy["reg_lambda"] >0 and problem_copy["reg_alpha"] == 1.0:
+        # Exercise hidden registry
+        dbg.set({"print options": "1"})
+        dbg.set({"print level": "1"})
+    else:
+        dbg.set({"print level": "0"})
 
     true_coefs = problem_copy["actual_coef"]
     del problem_copy["actual_coef"]
@@ -535,12 +559,14 @@ def test_logit_storage_order(no_fortran, constr, intercept, numpy_order):
     """
     if no_fortran:
         pytest.skip("Skipping test due to no_fortran flag")
-    X = np.reshape([0.5112507, -0.8260241, -0.1424458, -0.4039709, 0.3485765, 0.3567505, -0.257416,
-                    1.432360, 0.9424596, 1.836593, 2.111865, 1.916961, 0.9455847, 1.334214, -2.279365,
-                    -2.850008, -3.496761, -2.906845, -2.386532,
-                    -0.7558991, -0.1399068, -0.9634618, 0.4722355, -0.2858268, -0.4037604, 0.162241,
-                    1.123676, 1.1810599, 1.327981, 1.368268, 1.735552, 2.7652231, 1.239765, 2.297571,
-                    2.633976, 1.875603, 2.045181, 1.610652], shape=(19, 2), order='F')
+    X = np.reshape([0.5112507, -0.8260241, -0.1424458, -0.4039709,  0.3485765,
+                    0.3567505, -0.257416,   1.432360,   0.9424596,  1.836593,
+                    2.111865,   1.916961,   0.9455847,  1.334214,  -2.279365,
+                   -2.850008,  -3.496761,  -2.906845,  -2.386532,  -0.7558991,
+                   -0.1399068, -0.9634618,  0.4722355, -0.2858268, -0.4037604,
+                    0.162241,   1.123676,   1.1810599,  1.327981,   1.368268,
+                    1.735552,   2.7652231,  1.239765,   2.297571,   2.633976,
+                    1.875603, 2.045181, 1.610652], shape=(19, 2), order='F')
     X = np.asfortranarray(X) if numpy_order == "F" else np.ascontiguousarray(X)
     y = np.array([0, 0, 0, 0, 0, 0, 0, 1, 1, 1, 1, 1, 1, 1, 2, 2, 2, 2, 2])
     l = linmod("logistic", intercept=1 if intercept else 0, constraint=constr)

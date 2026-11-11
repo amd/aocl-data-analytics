@@ -56,9 +56,6 @@ class decision_tree():
         min_samples_split (int, optional): The minimum number of samples required to
             split an internal node. Default = 2.
 
-        build_order (str, optional): Select in which order to explore the nodes. It can
-            take the values 'breadth first' or 'depth first'. Default 'breadth first'.
-
         min_impurity_decrease (float, optional): Minimum score improvement needed to consider a
             split from the parent node. Default = 0.0
 
@@ -71,15 +68,6 @@ class decision_tree():
         precision (str, optional): Whether to initialize the decision_tree object in double or
             single precision. It can take the values 'single' or 'double'.
             Default = 'double'.
-
-        detect_categorical_data (bool, optional): Whether to check which features are categorical
-            in X. Default = False.
-
-        max_category (int, optional): Maximum number of categories for a given feature to be
-            considered categorical. Default = 50.
-
-        category_tolerance (float, optional): How far data can be from an integer to be considered
-            not categorical. Default = 1.0e-05
 
         category_split_strategy (str, optional): The strategy to use for splitting categorical
             features. It can take the values 'ordered' or 'one-vs-all'. Default = 'ordered'.
@@ -106,9 +94,6 @@ class decision_tree():
             min_impurity_decrease=0.0,
             min_split_score=0.0,
             feat_thresh=1.0e-05,
-            detect_categorical_data=False,
-            max_category=50,
-            category_tolerance=1.0e-05,
             category_split_strategy="ordered",
             histogram=False,
             maximum_bins=256,
@@ -122,8 +107,6 @@ class decision_tree():
             min_samples_split=min_samples_split,
             max_features=max_features,
             precision="double",
-            detect_categorical_data=detect_categorical_data,
-            max_category=max_category,
             category_split_strategy=category_split_strategy,
             histogram=histogram,
             maximum_bins=maximum_bins,
@@ -136,8 +119,6 @@ class decision_tree():
             min_samples_split=min_samples_split,
             max_features=max_features,
             precision="single",
-            detect_categorical_data=detect_categorical_data,
-            max_category=max_category,
             category_split_strategy=category_split_strategy,
             histogram=histogram,
             maximum_bins=maximum_bins,
@@ -147,7 +128,6 @@ class decision_tree():
 
         self._order = 'A'
         self._dtype = 'float'
-        self._category_tolerance = category_tolerance
         self._max_features = max_features
         self._min_impurity_decrease = min_impurity_decrease
         self._min_split_score = min_split_score
@@ -201,7 +181,6 @@ class decision_tree():
                                              self._min_impurity_decrease,
                                              self._min_split_score,
                                              self._feat_thresh,
-                                             self._category_tolerance,
                                              categorical_features)
 
     def score(self, X, y):
@@ -293,7 +272,6 @@ class decision_tree():
             'pybind_state': pickle.dumps(self.decision_tree),
             'order': self._order,
             'dtype': self._dtype,
-            'category_tolerance': self._category_tolerance,
             'max_features': self._max_features,
             'min_impurity_decrease': self._min_impurity_decrease,
             'min_split_score': self._min_split_score,
@@ -306,7 +284,6 @@ class decision_tree():
         self.decision_tree = pickle.loads(state['pybind_state'])
         self._order = state['order']
         self._dtype = state['dtype']
-        self._category_tolerance = state['category_tolerance']
         self._max_features = state['max_features']
         self._min_impurity_decrease = state['min_impurity_decrease']
         self._min_split_score = state['min_split_score']

@@ -241,7 +241,7 @@ class Ridge(Ridge_sklearn):
                   'tol': self.tol,
                   'mixed_precision': self.mixed_precision,
                   'low_precision_max_iter': self.low_precision_max_iter,
-                  'low_precision_tol': self.low_precision_tol,
+                  'low_precision_tol': self.low_precision_tol
                   }
         return params
 
@@ -311,16 +311,23 @@ class Lasso(Lasso_sklearn):
                  selection='cyclic',
                  mixed_precision=False,
                  low_precision_max_iter=500,
-                 low_precision_tol=1e-2):
+                 low_precision_tol=1e-2,
+                 optim_coord_skip_tol=1.0e-4,
+                 optim_coord_skip_min=2,
+                 optim_coord_skip_max=100):
         # supported attributes
         self.alpha = alpha
         self.fit_intercept = fit_intercept
         self.max_iter = max_iter
         self.tol = tol
+        self.dual_tol = tol
         self.warm_start = warm_start
         self.mixed_precision = mixed_precision
         self.low_precision_max_iter = low_precision_max_iter
         self.low_precision_tol = low_precision_tol
+        self.optim_coord_skip_tol = optim_coord_skip_tol
+        self.optim_coord_skip_min= optim_coord_skip_min
+        self.optim_coord_skip_max= optim_coord_skip_max
 
         # Currently ignored attributes
         self.precompute = precompute
@@ -343,9 +350,13 @@ class Lasso(Lasso_sklearn):
             reg_alpha=1.0,
             warm_start=self.warm_start,
             tol=self.tol,
+            dual_tol=self.tol,
             mixed_precision=self.mixed_precision,
             low_precision_max_iter=self.low_precision_max_iter,
-            low_precision_tol=self.low_precision_tol)
+            low_precision_tol=self.low_precision_tol,
+            optim_coord_skip_tol=self.optim_coord_skip_tol,
+            optim_coord_skip_min=self.optim_coord_skip_min,
+            optim_coord_skip_max=self.optim_coord_skip_max)
 
     def fit(self, X, y, sample_weight=None, check_input=True):
         if sample_weight is not None:
@@ -373,7 +384,10 @@ class Lasso(Lasso_sklearn):
                   'selection': self.selection,
                   'mixed_precision': self.mixed_precision,
                   'low_precision_max_iter': self.low_precision_max_iter,
-                  'low_precision_tol': self.low_precision_tol
+                  'low_precision_tol': self.low_precision_tol,
+                  'optim_coord_skip_tol': self.optim_coord_skip_tol,
+                  'optim_coord_skip_min': self.optim_coord_skip_min,
+                  'optim_coord_skip_max': self.optim_coord_skip_max
                   }
         return params
 
@@ -449,17 +463,24 @@ class ElasticNet(ElasticNet_sklearn):
             selection="cyclic",
             mixed_precision=False,
             low_precision_max_iter=500,
-            low_precision_tol=1e-2):
+            low_precision_tol=1e-2,
+            optim_coord_skip_tol=1.0e-4,
+            optim_coord_skip_min=2,
+            optim_coord_skip_max=100):
         # supported attributes
         self.alpha = alpha
         self.l1_ratio = l1_ratio
         self.fit_intercept = fit_intercept
         self.max_iter = max_iter
         self.tol = tol
+        self.dual_tol = tol
         self.warm_start = warm_start
         self.mixed_precision = mixed_precision
         self.low_precision_max_iter = low_precision_max_iter
         self.low_precision_tol = low_precision_tol
+        self.optim_coord_skip_tol = optim_coord_skip_tol
+        self.optim_coord_skip_min= optim_coord_skip_min
+        self.optim_coord_skip_max= optim_coord_skip_max
 
         # Currently ignored attributes
         self.precompute = precompute
@@ -482,9 +503,13 @@ class ElasticNet(ElasticNet_sklearn):
             reg_alpha=self.l1_ratio,
             warm_start=self.warm_start,
             tol=self.tol,
+            dual_tol=self.dual_tol,
             mixed_precision=self.mixed_precision,
             low_precision_max_iter=self.low_precision_max_iter,
-            low_precision_tol=self.low_precision_tol)
+            low_precision_tol=self.low_precision_tol,
+            optim_coord_skip_tol=self.optim_coord_skip_tol,
+            optim_coord_skip_min=self.optim_coord_skip_min,
+            optim_coord_skip_max=self.optim_coord_skip_max)
 
     def fit(self, X, y, sample_weight=None, check_input=True):
         if sample_weight is not None:
@@ -513,7 +538,10 @@ class ElasticNet(ElasticNet_sklearn):
                   'l1_ratio': self.l1_ratio,
                   'mixed_precision': self.mixed_precision,
                   'low_precision_max_iter': self.low_precision_max_iter,
-                  'low_precision_tol': self.low_precision_tol
+                  'low_precision_tol': self.low_precision_tol,
+                  'optim_coord_skip_tol': self.optim_coord_skip_tol,
+                  'optim_coord_skip_min': self.optim_coord_skip_min,
+                  'optim_coord_skip_max': self.optim_coord_skip_max
                   }
         return params
 

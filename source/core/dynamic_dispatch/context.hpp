@@ -145,7 +145,6 @@ class context {
             cpuflags[f] = false;
 
         // Check for the list of flags supported
-        // Note: Utils does not support BF16 flag lookup
         this->cpuflags[static_cast<int>(context_isa_t::AVX2)] =
             Cpu.hasFlag(Au::ECpuidFlag::avx2);
 
@@ -167,11 +166,14 @@ class context {
         this->cpuflags[static_cast<int>(context_isa_t::AVX512BW)] =
             Cpu.hasFlag(Au::ECpuidFlag::avx512bw);
 
+        this->cpuflags[static_cast<int>(context_isa_t::AVX512_BF16)] =
+            Cpu.hasFlag(Au::ECpuidFlag::avx512_bf16);
+
         this->cpuflags[static_cast<int>(context_isa_t::AVX512_VBMI)] =
             Cpu.hasFlag(Au::ECpuidFlag::avx512vbmi);
 
         this->cpuflags[static_cast<int>(context_isa_t::AVX512_VNNI)] =
-            Cpu.hasFlag(Au::ECpuidFlag::avx512_4vnniw);
+            Cpu.hasFlag(Au::ECpuidFlag::avx512_vnni);
 
         this->cpuflags[static_cast<int>(context_isa_t::AVX512_VPOPCNTDQ)] =
             Cpu.hasFlag(Au::ECpuidFlag::avx512_vpopcntdq);
@@ -183,7 +185,14 @@ class context {
                      this->cpuflags[static_cast<int>(context_isa_t::AVX512DQ)] &&
                      this->cpuflags[static_cast<int>(context_isa_t::AVX512VL)];
 
-        has_avx512_fp16 = this->cpuflags[static_cast<int>(context_isa_t::AVX512_FP16)];
+        has_avx512_bf16 =
+            has_avx512 && this->cpuflags[static_cast<int>(context_isa_t::AVX512_BF16)];
+
+        has_avx512_fp16 =
+            has_avx512 && this->cpuflags[static_cast<int>(context_isa_t::AVX512_FP16)];
+
+        has_avx512_vnni =
+            has_avx512 && this->cpuflags[static_cast<int>(context_isa_t::AVX512_VNNI)];
 
         //LCOV_EXCL_START
         switch (uarch) {
@@ -256,8 +265,14 @@ local arch can be:
     // shortcut to check if the architecture supports AVX512
     bool has_avx512 = false;
 
+    // shortcut to check if the architecture supports AVX512 BF16
+    bool has_avx512_bf16 = false;
+
     // shortcut to check if the architecture supports AVX512 FP16
     bool has_avx512_fp16 = false;
+
+    // shortcut to check if the architecture supports AVX512 VNNI
+    bool has_avx512_vnni = false;
 
     dispatch_architecture arch = generic;
 

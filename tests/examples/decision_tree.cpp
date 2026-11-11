@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2023-2025 Advanced Micro Devices, Inc. All rights reserved.
+ * Copyright (C) 2023-2026 Advanced Micro Devices, Inc. All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without modification,
  * are permitted provided that the following conditions are met:
@@ -95,6 +95,8 @@ int main() {
         std::cout << "Failure while fitting the tree\n";
         return 1;
     }
+    std::cout << "Tree fitted successfully." << std::endl;
+    ;
     // Read in data for making predictions
     filename = DATA_DIR;
     filename += "/decision_test.csv";

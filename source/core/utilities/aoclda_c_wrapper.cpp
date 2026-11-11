@@ -498,6 +498,59 @@ da_status da_pca_inverse_transform_s(da_handle handle, da_int k_samples,
                                            Y_inv_transform, ldy_inv_transform);
 }
 
+/* ======================== NMF (aoclda_nmf.h) ======================== */
+
+da_status da_nmf_init_d(da_handle handle, da_int n_samples, da_int n_features,
+                        const double *A, da_int lda) {
+    return da_nmf_init<double>(handle, n_samples, n_features, A, lda);
+}
+da_status da_nmf_init_s(da_handle handle, da_int n_samples, da_int n_features,
+                        const float *A, da_int lda) {
+    return da_nmf_init<float>(handle, n_samples, n_features, A, lda);
+}
+
+da_status da_nmf_compute_d(da_handle handle) { return da_nmf_compute<double>(handle); }
+da_status da_nmf_compute_s(da_handle handle) { return da_nmf_compute<float>(handle); }
+
+da_status da_nmf_set_data_d(da_handle handle, da_int n_samples, da_int n_components,
+                            const double *W, da_int ldw, da_int n_features,
+                            const double *H, da_int ldh) {
+    return da_nmf_set_data<double>(handle, n_samples, n_components, W, ldw, n_features, H,
+                                   ldh);
+}
+da_status da_nmf_set_data_s(da_handle handle, da_int n_samples, da_int n_components,
+                            const float *W, da_int ldw, da_int n_features, const float *H,
+                            da_int ldh) {
+    return da_nmf_set_data<float>(handle, n_samples, n_components, W, ldw, n_features, H,
+                                  ldh);
+}
+
+da_status da_nmf_transform_d(da_handle handle, da_int m_samples, da_int m_features,
+                             const double *X, da_int ldx, double *X_transform,
+                             da_int ldx_transform) {
+    return da_nmf_transform<double>(handle, m_samples, m_features, X, ldx, X_transform,
+                                    ldx_transform);
+}
+da_status da_nmf_transform_s(da_handle handle, da_int m_samples, da_int m_features,
+                             const float *X, da_int ldx, float *X_transform,
+                             da_int ldx_transform) {
+    return da_nmf_transform<float>(handle, m_samples, m_features, X, ldx, X_transform,
+                                   ldx_transform);
+}
+
+da_status da_nmf_inverse_transform_d(da_handle handle, da_int k_samples,
+                                     da_int k_components, const double *Y, da_int ldy,
+                                     double *Y_inv_transform, da_int ldy_inv_transform) {
+    return da_nmf_inverse_transform<double>(handle, k_samples, k_components, Y, ldy,
+                                            Y_inv_transform, ldy_inv_transform);
+}
+da_status da_nmf_inverse_transform_s(da_handle handle, da_int k_samples,
+                                     da_int k_components, const float *Y, da_int ldy,
+                                     float *Y_inv_transform, da_int ldy_inv_transform) {
+    return da_nmf_inverse_transform<float>(handle, k_samples, k_components, Y, ldy,
+                                           Y_inv_transform, ldy_inv_transform);
+}
+
 /* ======================== Kernel PCA (aoclda_pca.h) ======================== */
 
 da_status da_kernel_pca_set_data_d(da_handle handle, da_int n_samples, da_int n_features,

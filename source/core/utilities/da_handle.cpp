@@ -29,12 +29,9 @@
 #include "aoclda.h"
 
 /*
- * Get pointer to the option member of the currently active sub-handle, also
- * if refresh is true, the it calls the appropriate sub-handle's refresh()
- * member to indicate that substantial changes have occurred in the handle.
- * E.g. options changes that alter the model requiring re-training, etc...
+ * Get pointer to the option member of the currently active sub-handle.
  */
-da_status _da_handle::get_current_opts(da_options::OptionRegistry **opts, bool refresh) {
+da_status _da_handle::get_current_opts(da_options::OptionRegistry **opts) {
     const std::string msg = "handle seems to be corrupted.";
 
     switch (precision) {
@@ -42,15 +39,11 @@ da_status _da_handle::get_current_opts(da_options::OptionRegistry **opts, bool r
         if (alg_handle_d == nullptr)
             return da_error(this->err, da_status_invalid_pointer, msg);
         *opts = &alg_handle_d->opts;
-        if (refresh)
-            alg_handle_d->refresh();
         break;
     case da_single:
         if (alg_handle_s == nullptr)
             return da_error(this->err, da_status_invalid_pointer, msg);
         *opts = &alg_handle_s->opts;
-        if (refresh)
-            alg_handle_s->refresh();
         break;
     default:
         return da_error(this->err, da_status_internal_error, // LCOV_EXCL_LINE
@@ -58,6 +51,29 @@ da_status _da_handle::get_current_opts(da_options::OptionRegistry **opts, bool r
         break;
     }
     return da_status_success;
+}
+
+da_status _da_handle::handle_refresh() {
+    da_status status = da_status_success;
+    switch (precision) {
+    case da_double:
+        if (alg_handle_d == nullptr)
+            return da_error(this->err, da_status_invalid_pointer,
+                            "handle seems to be corrupted.");
+        alg_handle_d->refresh();
+        break;
+    case da_single:
+        if (alg_handle_s == nullptr)
+            return da_error(this->err, da_status_invalid_pointer,
+                            "handle seems to be corrupted.");
+        alg_handle_s->refresh();
+        break;
+    default:
+        return da_error(this->err, da_status_internal_error, // LCOV_EXCL_LINE
+                        "handle precision was not correctly set");
+        break;
+    }
+    return status;
 }
 
 da_status _da_handle::save_handle(std::vector<char> &buffer_data) {

@@ -234,19 +234,12 @@ da_status basic_handle<T>::store_2D_array(
 template <typename T>
 void basic_handle<T>::copy_2D_results_array(da_int n_rows, da_int n_cols, T *data,
                                             da_int lddata, T *results_arr) {
-    // Assumes input data is in column-major order and output is specified by this->order
-    if (order == column_major) {
-        for (da_int j = 0; j < n_cols; ++j) {
-            for (da_int i = 0; i < n_rows; ++i) {
-                results_arr[i + j * n_rows] = data[i + lddata * j];
-            }
-        }
+    if (this->order == column_major) {
+        ARCH::da_utils::copy_array_convert_precision<T, T>(
+            column_major, n_rows, n_cols, data, lddata, results_arr, n_rows);
     } else {
-        for (da_int i = 0; i < n_rows; ++i) {
-            for (da_int j = 0; j < n_cols; ++j) {
-                results_arr[i * n_cols + j] = data[i + lddata * j];
-            }
-        }
+        ARCH::da_utils::copy_transpose_2D_array_column_to_row_major(
+            n_rows, n_cols, data, lddata, results_arr, n_cols);
     }
 }
 
@@ -368,8 +361,10 @@ da_status basic_handle<T>::get_result_common(da_result query, da_int *dim,
     }
 }
 
+#ifdef DA_BASIC_HANDLE_COMMON
 template class basic_handle<double>;
 template class basic_handle<float>;
-#ifdef __AVX512FP16__
+#endif
+#if defined(DA_BASIC_HANDLE_FP16) && defined(__AVX512FP16__)
 template class basic_handle<_Float16>;
 #endif

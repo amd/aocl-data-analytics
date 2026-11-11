@@ -40,6 +40,7 @@
 #endif
 
 #include "kmeans.hpp"
+#include "da_utils.hpp"
 #include "fp16_helpers.hpp"
 #include "kmeans_elkan.hpp"
 #include "kmeans_hartigan_wong.hpp"
@@ -66,6 +67,14 @@ namespace da_kmeans {
 using namespace da_model_persistence;
 using namespace da_kmeans_types;
 using namespace std::literals::string_literals;
+
+#if defined(__GNUC__) && !defined(__clang__) && __GNUC__ >= 12 && __GNUC__ < 15 &&       \
+    defined(__AVX512FP16__)
+// Keep GCC 12-14 from combining the comparison with an invalid zero-masked store.
+__attribute__((noipa)) static _Float16 clamp_nonnegative_fp16(_Float16 value) {
+    return value > (_Float16)0.0 ? value : (_Float16)0.0;
+}
+#endif
 
 template <typename T> inline T safe_inv_sqrt(T x) {
     return (x > (T)0.0) ? (T)1.0 / da_std::sqrt(x) : (T)0.0;
@@ -390,6 +399,16 @@ template <typename T> da_status kmeans<T>::compute() {
         da_int int_mp;
         this->opts.get("mixed precision", opt_mp, int_mp);
         this->use_mixed_precision = (int_mp == 1);
+
+        if constexpr (std::is_same_v<T, float>) {
+            if (this->use_mixed_precision && !da_arch::fp16_available()) {
+                return da_error(
+                    this->err, da_status_invalid_option,
+                    "Mixed precision iterative refinement with float32 data requires "
+                    "AVX-512-FP16 hardware support, which is not available on this "
+                    "system.");
+            }
+        }
 
         std::string opt_ec;
         this->opts.get("empty clusters", opt_ec, this->empty_cluster_handling);
@@ -1504,7 +1523,16 @@ void kmeans<T>::compute_distances_to_point(da_int centre_idx, T *dist_out) {
             } else {
                 cos_sim = dot;
             }
+#if defined(__GNUC__) && !defined(__clang__) && __GNUC__ >= 12 && __GNUC__ < 15 &&       \
+    defined(__AVX512FP16__)
+            if constexpr (std::is_same_v<T, _Float16>) {
+                dist_out[i] = clamp_nonnegative_fp16((T)1.0 - cos_sim);
+            } else {
+                dist_out[i] = std::max((T)0.0, (T)1.0 - cos_sim);
+            }
+#else
             dist_out[i] = std::max((T)0.0, (T)1.0 - cos_sim);
+#endif
         }
     } else {
         T dummy = (T)0.0;

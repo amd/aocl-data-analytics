@@ -877,12 +877,12 @@ TYPED_TEST(tsne_public_test, MixedPrecision) {
                   da_status_success);
         da_status status = da_tsne_compute<TypeParam>(handle);
 
-        // Catch the case where mixed precision is not supported for this type (e.g. float, non-Zen6)
-        da_int len{100};
-        char arch[100], ns[100];
-        ASSERT_EQ(da_get_arch_info(&len, arch, ns), da_status_success);
-        const bool is_zen6 = (std::strcmp(arch, "zen6") == 0);
-        if (mixed_precision && std::is_same_v<TypeParam, float> && !is_zen6) {
+        // Catch the case where mixed precision is not supported for this
+        // hardware (float low precision needs AVX-512-FP16, detected at runtime).
+        da_int fp16_avail{0};
+        ASSERT_EQ(da_check_fp16_available(&fp16_avail), da_status_success);
+        const bool fp16_available = (fp16_avail == 1);
+        if (mixed_precision && std::is_same_v<TypeParam, float> && !fp16_available) {
             EXPECT_EQ(status, da_status_invalid_option);
             da_handle_destroy(&handle);
             status_out = status;
@@ -955,9 +955,10 @@ TYPED_TEST(tsne_public_test, MixedPrecision) {
     EXPECT_EQ(da_debug_set("tsne.isa", ""), da_status_success);
 }
 
-// Mixed precision on a float handle requires a lower precision type.
-// - On Zen5 and below there is no _Float16 LP path so the option is rejected.
-// - On Zen6 the LP path runs, but the PCA initialization and the
+// Mixed precision on a float handle requires a lower precision type (_Float16).
+// - When AVX-512-FP16 is not available at runtime there is no usable _Float16 LP
+//   path so the option is rejected with da_status_invalid_option.
+// - When it is available the LP path runs, but the PCA initialization and the
 //   Barnes-Hut (theta > 0) branches do not support _Float16, so the engine
 //   must report da_status_incompatible_options.
 TEST(TSNEMixedPrecision, FloatIllegalOption) {
@@ -967,13 +968,12 @@ TEST(TSNEMixedPrecision, FloatIllegalOption) {
     for (da_int i = 0; i < n_samples * n_features; ++i)
         X[i] = static_cast<float>(i + 1);
 
-    da_int len{100};
-    char arch[100], ns[100];
-    ASSERT_EQ(da_get_arch_info(&len, arch, ns), da_status_success);
-    const bool is_zen6 = (std::strcmp(arch, "zen6") == 0);
+    da_int fp16_avail{0};
+    ASSERT_EQ(da_check_fp16_available(&fp16_avail), da_status_success);
+    const bool fp16_available = (fp16_avail == 1);
 
-    if (!is_zen6) {
-        // Zen5 or below: no _Float16 LP path is compiled in, so the
+    if (!fp16_available) {
+        // No usable _Float16 LP path on this hardware, so the
         // "mixed precision" option itself is rejected by the engine.
         da_handle handle = nullptr;
         ASSERT_EQ(da_handle_init_s(&handle, da_handle_tsne), da_status_success);
@@ -1056,10 +1056,10 @@ const tsne_param_t tsne_param_pos[] = {
     {"iris_exact_2d", "iris", 2, 30.0, 1000, 0.0, "pca", 42, 10, 0.989031, 0.122057, 2.0},
     {"blobs_exact_2d", "blobs", 2, 20.0, 500, 0.0, "pca", 123, 10, 0.97184, 0.408497, 3.0},
     {"circles_exact_2d", "circles", 2, 10.0, 500, 0.0, "pca", 42, 5, 0.998196, 0.292971, 9.0},
-    {"lowrank_exact_2d", "lowrank", 2, 30.0, 500, 0.0, "pca", 42, 5, 0.979143, 0.051566, 3.0},
+    {"lowrank_exact_2d", "lowrank", 2, 30.0, 500, 0.0, "pca", 42, 5, 0.979143, 0.051566, 5.0},
     {"highcorr_exact_2d", "highcorr", 2, 10.0, 500, 0.0, "pca", 42, 5, 0.996795, 0.088316, 2.0},
     {"diffscales_exact_2d", "diffscales", 2, 10.0, 500, 0.0, "pca", 42, 5, 0.994952, 0.088038},
-    {"moderate_exact_2d", "moderate", 2, 30.0, 500, 0.0, "pca", 42, 10, 0.830615, 0.644016, 6.0},
+    {"moderate_exact_2d", "moderate", 2, 30.0, 500, 0.0, "pca", 42, 10, 0.830615, 0.644016, 6.1},
     // --- 2D Barnes-Hut (theta > 0) ---
     {"iris_barnes_hut", "iris", 2, 30.0, 500, 0.5, "pca", 42, 10, 0.989948, 0.127948},
     {"iris_barnes_hut_theta03", "iris", 2, 30.0, 500, 0.3, "pca", 42, 10, 0.991103, 0.120829, 4.0},

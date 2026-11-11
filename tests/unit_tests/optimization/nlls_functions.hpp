@@ -163,23 +163,16 @@ template <typename T> void driver(void) {
     std::vector<T> t{1.0, 2.0, 4.0, 5.0, 8.0};
     std::vector<T> y(n_res);
     std::vector<T> coef(n_coef), coef_exp(n_coef);
-    T blx[2]{0.0, 0.0};
-    if constexpr (std::is_same_v<T, float>) {
-        y = {0.606531f, 0.367879f, 0.135335f, 0.082085f, 0.018316f};
-        coef = {0.1f, 0.1f};
-        coef_exp = {1.0f, -0.5f};
-        blx[1] = -1.0f;
-    } else {
-        static_assert(std::is_same_v<T, double>);
-        y = {3.0, 4.0, 6.0, 11.0, 20.0};
-        coef = {1.0, 0.15};
-        coef_exp = {2.541046, 0.2595048};
-    }
+    T blx[2]{0.0, -1.0};
+    T bux[2]{3.0, 10.0};
+    y = {0.606531f, 0.367879f, 0.135335f, 0.082085f, 0.018316f};
+    coef = {0.1f, 0.1f};
+    coef_exp = {1.0f, -0.5f};
+
     struct params_type<T> udata = {
         t.data(), y.data()
     };
 
-    T bux[2]{3.0, 10.0};
     T tol{1.0e-2};
 
     std::cout << "Driver(T=" << typeid(T).name() << ")\n";

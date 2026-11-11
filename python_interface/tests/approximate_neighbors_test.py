@@ -263,6 +263,63 @@ def test_approx_nn_functionality(numpy_precision, numpy_order, test_case):
 
 @pytest.mark.parametrize("numpy_precision", [np.float64, np.float32])
 @pytest.mark.parametrize("numpy_order", ["C", "F"])
+@pytest.mark.parametrize(
+    "quantization,quantization_scheme",
+    [("int8", "per_dimension"),
+     ("int8", "uniform"),
+     ("int8", "direct_unsigned"),
+     ("int8", "direct_signed"),
+     ("bfloat16", "direct_signed")])
+@pytest.mark.parametrize("quantization_residual", [True, False])
+def test_approx_nn_quantization(numpy_precision, numpy_order,
+                                quantization, quantization_scheme,
+                                quantization_residual):
+    n_samples = 32
+    n_features = 5
+    n_queries = 7
+    base_values = ([25, 70, 115, 160]
+                   if quantization_scheme == "direct_unsigned"
+                   else [-75, -30, 15, 60])
+
+    x_train = np.empty((n_samples, n_features), dtype=numpy_precision,
+                       order=numpy_order)
+    for sample in range(n_samples):
+        cluster = sample % 4
+        for feature in range(n_features):
+            x_train[sample, feature] = (
+                base_values[cluster] + 3 * feature + (sample // 4) * 0.37
+                + (feature + 1) * (sample + 1) * 0.003)
+
+    x_test = np.empty((n_queries, n_features), dtype=numpy_precision,
+                      order=numpy_order)
+    for query in range(n_queries):
+        source = (query * 5 + 1) % n_samples
+        for feature in range(n_features):
+            x_test[query, feature] = (
+                x_train[source, feature]
+                + (query + 1) * (feature + 2) * 0.007)
+
+    ann = approximate_neighbors(
+        n_neighbors=4,
+        algorithm="ivfsq",
+        n_list=4,
+        n_probe=4,
+        kmeans_iter=20,
+        seed=42,
+        quantization=quantization,
+        quantization_scheme=quantization_scheme,
+        quantization_residual=quantization_residual)
+    ann.train_and_add(x_train)
+    distances, indices = ann.kneighbors(x_test)
+
+    assert distances.shape == (n_queries, 4)
+    assert indices.shape == (n_queries, 4)
+    assert np.all(np.isfinite(distances))
+    assert np.all((indices >= 0) & (indices < n_samples))
+
+
+@pytest.mark.parametrize("numpy_precision", [np.float64, np.float32])
+@pytest.mark.parametrize("numpy_order", ["C", "F"])
 def test_approx_nn_train_add_separate(numpy_precision, numpy_order):
     """
     Test using train() and add() separately produces same centroids as train_and_add()
@@ -405,6 +462,20 @@ def test_approx_nn_error_exits(numpy_precision):
     # Invalid metric
     with pytest.raises(RuntimeError):
         ann = approximate_neighbors(metric="nonexistent")
+
+    with pytest.raises(RuntimeError):
+        ann = approximate_neighbors(quantization="none")
+
+    # Invalid quantization scheme
+    with pytest.raises(RuntimeError):
+        ann = approximate_neighbors(quantization_scheme="nonexistent")
+
+    # Check that quantization is ignored when ivfflat is selected.
+    ann = approximate_neighbors(algorithm="ivfflat", quantization="int8")
+    ann.train(x_train)
+
+    ann = approximate_neighbors(algorithm="ivfsq")
+    ann.train(x_train)
 
     # Invalid n_list (less than 1)
     with pytest.raises(RuntimeError):

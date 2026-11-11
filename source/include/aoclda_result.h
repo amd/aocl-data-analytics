@@ -68,6 +68,12 @@ enum da_result_ {
     da_kernel_pca_gamma, ///< The resolved gamma parameter used in the Kernel PCA computation.
     da_kernel_pca_X_fit, ///< Training data matrix used to fit the Kernel PCA model.
 
+    da_nmf_w = 251, ///< Matrix W (sample-coefficient matrix) computed by the NMF API.
+    da_nmf_h,       ///< Matrix H (component matrix) computed by the NMF API.
+    da_nmf_n_iter,  ///< Number of iterations actually run by the NMF solver.
+    da_nmf_reconstruction_err, ///< Frobenius-norm reconstruction error of the NMF.
+    da_nmf_n_components,       ///< Number of components computed by the NMF API.
+
     // Nonlinear Optimization 301..400
     // Random Forests 401..500
     // Clustering 501...600

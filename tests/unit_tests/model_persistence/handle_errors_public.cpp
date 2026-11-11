@@ -218,11 +218,11 @@ TEST_F(HandleSerializationErrorTest, LoadCorruptedFileMetadataValidation) {
     //   Bytes 67+:    aoclda_version string content
     // Valid values
     const std::string_view valid_magic = "AOCLDA_STORED_MODEL";
-    constexpr int64_t valid_lib_version = 50301; // model_persistence_min_version
+    constexpr int64_t valid_lib_version = 60000; // model_persistence_min_version
     constexpr int64_t valid_int_size = 4;
     constexpr int64_t valid_algorithm = static_cast<int64_t>(da_handle_pca);
     constexpr int64_t valid_precision = 8; // sizeof(double)
-    const std::string valid_aoclda_version = "5.3.1";
+    const std::string valid_aoclda_version = "6.0.0";
 
     // Build metadata buffer with configurable fields
     auto build_metadata = [&valid_aoclda_version](std::string_view magic,

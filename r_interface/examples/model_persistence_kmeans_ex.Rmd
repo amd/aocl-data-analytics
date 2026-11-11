@@ -1,0 +1,88 @@
+---
+# Copyright (C) 2026 Advanced Micro Devices, Inc. All rights reserved.
+#
+# Redistribution and use in source and binary forms, with or without modification,
+# are permitted provided that the following conditions are met:
+# 1. Redistributions of source code must retain the above copyright notice,
+#    this list of conditions and the following disclaimer.
+# 2. Redistributions in binary form must reproduce the above copyright notice,
+#    this list of conditions and the following disclaimer in the documentation
+#    and/or other materials provided with the distribution.
+# 3. Neither the name of the copyright holder nor the names of its contributors
+#    may be used to endorse or promote products derived from this software without
+#    specific prior written permission.
+#
+# THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS "AS IS" AND
+# ANY EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED TO, THE IMPLIED
+# WARRANTIES OF MERCHANTABILITY AND FITNESS FOR A PARTICULAR PURPOSE ARE DISCLAIMED.
+# IN NO EVENT SHALL THE COPYRIGHT HOLDER OR CONTRIBUTORS BE LIABLE FOR ANY DIRECT,
+# INDIRECT, INCIDENTAL, SPECIAL, EXEMPLARY, OR CONSEQUENTIAL DAMAGES (INCLUDING,
+# BUT NOT LIMITED TO, PROCUREMENT OF SUBSTITUTE GOODS OR SERVICES; LOSS OF USE, DATA,
+# OR PROFITS; OR BUSINESS INTERRUPTION) HOWEVER CAUSED AND ON ANY THEORY OF LIABILITY,
+# WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE)
+# ARISING IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE
+# POSSIBILITY OF SUCH DAMAGE.
+
+title: "Model Persistence — k-Means"
+output: html_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+## Overview
+
+This example demonstrates saving and loading a trained k-means model using `save_model` / `load_model` with the `aoclda` package.
+
+```{r library}
+library(aoclda)
+```
+
+## Train
+
+```{r train}
+set.seed(42)
+X <- matrix(rnorm(5000), nrow = 1000, ncol = 5)
+
+km <- kmeans$new(n_clusters = 3, seed = 42)
+km$fit(X)
+
+labels_before <- km$predict(X[1:10, , drop = FALSE])
+centers_before <- km$cluster_centres
+
+cat(sprintf(
+    "Cluster centers shape: %d x %d\n",
+    nrow(centers_before), ncol(centers_before)
+))
+cat(sprintf("First 10 predictions: %s\n", paste(labels_before, collapse = " ")))
+```
+
+## Save and Load
+
+```{r persistence}
+model_path <- tempfile(fileext = ".rds")
+save_model(km, model_path)
+rm(km)
+
+print_model_metadata(model_path)
+
+km_loaded <- load_model(model_path)
+```
+
+## Predict After Load
+
+```{r after}
+labels_after <- km_loaded$predict(X[1:10, , drop = FALSE])
+centers_after <- km_loaded$cluster_centres
+
+cat(sprintf("First 10 predictions after load: %s\n", paste(labels_after, collapse = " ")))
+
+labels_match <- identical(as.integer(labels_before), as.integer(labels_after))
+centers_match <- isTRUE(all.equal(centers_before, centers_after))
+
+cat(sprintf("\nLabels match: %s\n", labels_match))
+cat(sprintf("Centers match: %s\n", centers_match))
+
+file.remove(model_path)
+```

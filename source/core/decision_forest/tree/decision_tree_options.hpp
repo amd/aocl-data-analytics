@@ -114,25 +114,6 @@ inline da_status register_decision_tree_options(da_options::OptionRegistry &opts
             0.0, lbound_t::greaterequal, rmax, ubound_t::p_inf, (T)0.0));
         status = opts.register_opt(oT);
 
-        os = std::make_shared<OptionString>(OptionString(
-            "detect categorical data",
-            "Check if the data is categorical, encoded in [0, n_categories-1].",
-            {{"yes", 1}, {"no", 0}}, "no"));
-        status = opts.register_opt(os);
-
-        oi = std::make_shared<OptionNumeric<da_int>>(OptionNumeric<da_int>(
-            "maximum categories",
-            "Number of distinct values required for each feature for it to be considered "
-            "categorical.",
-            2, lbound_t::greaterequal, max_da_int, ubound_t::p_inf, 50));
-        status = opts.register_opt(oi);
-
-        oT = std::make_shared<OptionNumeric<T>>(OptionNumeric<T>(
-            "category tolerance",
-            "How far data can be from an integer to be considered not categorical.", 0.0,
-            lbound_t::greaterequal, (T)1.0, ubound_t::lessthan, (T)1.0e-05));
-        status = opts.register_opt(oT);
-
         os = std::make_shared<OptionString>(
             OptionString("category split strategy",
                          "Strategy to split categorical features. For a given "
@@ -156,6 +137,8 @@ inline da_status register_decision_tree_options(da_options::OptionRegistry &opts
             "maximum bins", "Maximum number of bins in histograms.", 2,
             lbound_t::greaterequal, 65535, ubound_t::lessequal, 256));
         status = opts.register_opt(oi);
+
+        opts.set_destructive("storage order", false);
 
     } catch (std::bad_alloc &) {
         return da_error(&err, da_status_memory_error, // LCOV_EXCL_LINE

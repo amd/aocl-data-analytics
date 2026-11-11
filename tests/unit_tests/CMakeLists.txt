@@ -50,6 +50,20 @@ list(FILTER AVAILABLE_ARCH_DEFS INCLUDE REGEX "_AVAILABLE")
 message(DEBUG "Available arch defs: ${AVAILABLE_ARCH_DEFS}")
 
 include(GoogleTest)
+include(CheckCXXSourceRuns)
+
+# Clang can compile _Float16 even when its selected GCC toolchain does not
+# provide the conversion helpers required to link code using the type.
+check_cxx_source_runs([=[
+#include <iostream>
+#include <typeinfo>
+int main() {
+  _Float16 a{1};
+  std::cout << typeid(a).name() << '\n';
+  return 0;
+  }
+]=] HAVE_FLOAT16_RT)
+
 include_directories(
   ${CMAKE_SOURCE_DIR}/source/include
   ${CMAKE_SOURCE_DIR}/external/Lbfgsb.3.0
@@ -80,39 +94,47 @@ set(INTERNAL_INC_DIRS
   ${CMAKE_SOURCE_DIR}/source/core/train_test_split
   ${CMAKE_SOURCE_DIR}/source/core/approximate_neighbors
   ${CMAKE_SOURCE_DIR}/source/core/dimension_reduction
+  ${CMAKE_SOURCE_DIR}/source/core/approximate_neighbors/quantization
 )
 
 set(DATA_PATH "${CMAKE_CURRENT_SOURCE_DIR}/../data/")
+
+function(target_link_aocl_da target)
+  target_link_libraries(${target} PRIVATE aocl-da)
+  if(BUILD_SHARED_LIBS AND NOT "${ARGN}" STREQUAL "")
+    target_link_libraries(${target} PRIVATE ${ARGN})
+  endif()
+endfunction()
 
 # ##############################################################################
 # ########## Basic stats #############
 # ##############################################################################
 add_executable(basic_stats_public basic_statistics/basic_stats_public.cpp)
-target_link_libraries(basic_stats_public PRIVATE ${BLAS})
+target_link_aocl_da(basic_stats_public ${BLAS})
 
 # ##############################################################################
 # ########## Train Test Split #############
 # ##############################################################################
 add_executable(train_test_split_internal train_test_split/train_test_split_internal.cpp)
-target_link_libraries(train_test_split_internal PRIVATE ${BLAS})
+target_link_aocl_da(train_test_split_internal ${BLAS})
 
 add_executable(train_test_split_public
   train_test_split/train_test_split_public.cpp)
 target_compile_definitions(train_test_split_public PRIVATE DATA_DIR="${DATA_PATH}")
-target_link_libraries(train_test_split_public PRIVATE ${BLAS})
+target_link_aocl_da(train_test_split_public ${BLAS})
 
 add_executable(shuffle_indices_public
   train_test_split/shuffle_indices_public.cpp)
-target_link_libraries(shuffle_indices_public PRIVATE ${BLAS})
+target_link_aocl_da(shuffle_indices_public ${BLAS})
 
 # ##############################################################################
 # ############ Metrics ###############
 # ##############################################################################
 add_executable(metrics_public metrics/metric_public.cpp)
-target_link_libraries(metrics_public PRIVATE ${BLAS})
+target_link_aocl_da(metrics_public ${BLAS})
 add_executable(euclidean_distance_internal
   metrics/euclidean_distance_internal.cpp)
-target_link_libraries(euclidean_distance_internal PRIVATE ${BLAS})
+target_link_aocl_da(euclidean_distance_internal ${BLAS})
 
 # ##############################################################################
 # ############## CSV #################
@@ -149,15 +171,15 @@ target_compile_definitions(linreg_elnet_public PRIVATE DATA_DIR="${DATA_PATH}")
 # ##############################################################################
 add_executable(decision_tree_public decision_trees/decision_tree_public.cpp)
 target_compile_definitions(decision_tree_public PRIVATE DATA_DIR="${DATA_PATH}")
-target_link_libraries(decision_tree_public PRIVATE ${BLAS})
+target_link_aocl_da(decision_tree_public ${BLAS})
 
 add_executable(decision_tree_internal decision_trees/decision_tree_internal.cpp)
 target_compile_definitions(decision_tree_internal PRIVATE DATA_DIR="${DATA_PATH}")
-target_link_libraries(decision_tree_internal PRIVATE ${BLAS})
+target_link_aocl_da(decision_tree_internal ${BLAS})
 
 add_executable(decision_forest_public decision_forests/decision_forest_public.cpp)
 target_compile_definitions(decision_forest_public PRIVATE DATA_DIR="${DATA_PATH}")
-target_link_libraries(decision_forest_public PRIVATE ${BLAS})
+target_link_aocl_da(decision_forest_public ${BLAS})
 add_executable(decision_forest_internal decision_forests/decision_forest_internal.cpp)
 target_compile_definitions(decision_forest_internal PRIVATE DATA_DIR="${DATA_PATH}")
 
@@ -177,34 +199,28 @@ add_executable(parallel_public da_utilities/parallel_public.cpp)
 add_executable(doc_internal da_utilities/doc_internal.cpp)
 
 add_executable(utilities_public da_utilities/utilities_public.cpp)
-target_link_libraries(utilities_public PRIVATE aocl-da)
+target_link_aocl_da(utilities_public)
 
 add_executable(utilities_internal da_utilities/utilities_internal.cpp)
 target_compile_definitions(utilities_internal PRIVATE INT_LIB="${INT_LIB}")
-target_link_libraries(utilities_internal PRIVATE aocl-da)
+target_link_aocl_da(utilities_internal)
 
 add_executable(printf_debug_internal da_utilities/printf_debug_internal.cpp)
-target_link_libraries(printf_debug_internal PRIVATE aocl-da)
+target_link_aocl_da(printf_debug_internal)
 
 add_executable(da_vector_internal da_utilities/da_vector_internal.cpp)
 
 add_executable(da_cache_internal da_utilities/da_cache_internal.cpp)
-target_link_libraries(da_cache_internal PRIVATE aocl-da)
+target_link_aocl_da(da_cache_internal)
 
 add_executable(da_syrk_internal da_utilities/da_syrk_internal.cpp)
-target_link_libraries(da_syrk_internal PRIVATE aocl-da ${BLAS})
+target_link_aocl_da(da_syrk_internal ${BLAS})
 
 # ##############################################################################
 # ############ FP16 ##################
 # ##############################################################################
 add_executable(fp16_syrk_internal fp16/fp16_syrk_internal.cpp)
-target_link_libraries(fp16_syrk_internal PRIVATE aocl-da ${BLAS})
-# Static aocl-da propagates its DLP dependency (whole-archived) transitively,
-# so DLP must NOT be repeated here. A shared aocl-da does not propagate its PRIVATE DLP
-# dependency, so link DLP explicitly in that case.
-if(NOT WIN32 AND BUILD_SHARED_LIBS)
-  target_link_libraries(fp16_syrk_internal PRIVATE ${DLP})
-endif()
+target_link_aocl_da(fp16_syrk_internal ${DLP} ${BLAS})
 
 # C compatibility test - compile with C compiler and link with C++ compiler
 set_source_files_properties(da_utilities/c_compatibility_nog_public.c
@@ -212,7 +228,7 @@ set_source_files_properties(da_utilities/c_compatibility_nog_public.c
 add_executable(c_compatibility_nog_public
   da_utilities/c_compatibility_nog_public.c)
 set_target_properties(c_compatibility_nog_public PROPERTIES LINKER_LANGUAGE CXX)
-target_link_libraries(c_compatibility_nog_public PRIVATE aocl-da)
+target_link_aocl_da(c_compatibility_nog_public)
 
 add_executable(miscellaneous_internal da_utilities/miscellaneous_internal.cpp)
 target_compile_definitions(miscellaneous_internal PRIVATE ${AOCLDA_DEFS} ${AVAILABLE_ARCH_DEFS})
@@ -241,10 +257,10 @@ add_executable(nlls_public optimization/nlls_public.cpp)
 add_executable(nlls_internal optimization/nlls_internal.cpp)
 
 add_executable(lbfgsb_rc_internal optimization/lbfgsb_rc_internal.cpp)
-target_link_libraries(lbfgsb_rc_internal PRIVATE aocl-da)
+target_link_aocl_da(lbfgsb_rc_internal)
 
 add_executable(lbfgsb_fcomm_internal optimization/lbfgsb_fcomm_internal.cpp)
-target_link_libraries(lbfgsb_fcomm_internal PRIVATE aocl-da)
+target_link_aocl_da(lbfgsb_fcomm_internal)
 
 add_executable(coord_internal optimization/coord_internal.cpp)
 
@@ -252,13 +268,19 @@ add_executable(coord_internal optimization/coord_internal.cpp)
 # ############# PCA ##################
 # ##############################################################################
 add_executable(pca_public factorization/pca_public.cpp)
-target_link_libraries(pca_public PRIVATE ${BLAS})
+target_link_aocl_da(pca_public ${BLAS})
 
 # ##############################################################################
 # ######## Kernel PCA #############
 # ##############################################################################
 add_executable(kernel_pca_public factorization/kernel_pca_public.cpp)
-target_link_libraries(kernel_pca_public PRIVATE ${BLAS})
+target_link_aocl_da(kernel_pca_public ${BLAS})
+
+# ##############################################################################
+# ############# NMF ##################
+# ##############################################################################
+add_executable(nmf_public factorization/nmf_public.cpp)
+target_link_libraries(nmf_public PRIVATE ${BLAS})
 
 # ##############################################################################
 # Data management ###########
@@ -275,13 +297,13 @@ add_executable(interval_set_internal data_management/interval_set_internal.cpp)
 # ############# nearest neighbors ##################
 # ##############################################################################
 add_executable(nearest_neighbors_public nearest_neighbors/nearest_neighbors_public.cpp)
-target_link_libraries(nearest_neighbors_public PRIVATE aocl-da ${BLAS})
+target_link_aocl_da(nearest_neighbors_public ${BLAS})
 target_compile_definitions(nearest_neighbors_public PRIVATE DATA_DIR="${DATA_PATH}")
 add_executable(trees_internal nearest_neighbors/trees_internal.cpp)
 add_executable(radius_neighbors_internal
   nearest_neighbors/radius_neighbors_internal.cpp)
 add_executable(k_neighbors_internal nearest_neighbors/k_neighbors_internal.cpp)
-target_link_libraries(radius_neighbors_internal PRIVATE ${BLAS})
+target_link_aocl_da(radius_neighbors_internal ${BLAS})
 
 # ##############################################################################
 # ######### Kernel function ###########
@@ -298,6 +320,10 @@ add_executable(kernel_functions_internal
 add_executable(ktl2 kernel_functions/ktl2.cpp)
 add_executable(ktl2_fallback kernel_functions/ktl2.cpp)
 target_compile_definitions(ktl2_fallback PRIVATE DA_KT_TEST_FALLBACK)
+if(HAVE_FLOAT16_RT)
+  target_compile_definitions(ktl2 PRIVATE HAVE_FLOAT16_RT)
+  target_compile_definitions(ktl2_fallback PRIVATE HAVE_FLOAT16_RT)
+endif()
 
 # ktl2 instantiates the AOCC vectorised kt_exp_p() (kt_l2_clang.hpp) directly in
 # the test object, so it calls amd_vr* symbols itself and must link amdlibm.
@@ -312,24 +338,31 @@ endif()
 # ############## SVM #################
 # ##############################################################################
 add_executable(svm_internal svm/svm_internal.cpp)
-target_link_libraries(svm_internal PRIVATE ${BLAS})
+target_link_aocl_da(svm_internal ${BLAS})
 
 add_executable(svm_public svm/svm_public.cpp)
 target_compile_definitions(svm_public PRIVATE DATA_DIR="${DATA_PATH}")
-target_link_libraries(svm_public PRIVATE ${BLAS})
+target_link_aocl_da(svm_public ${BLAS})
 
 # ##############################################################################
 # ############## Interpolation #################
 # ##############################################################################
 add_executable(cubic_spline_public interpolation/cubic_spline_public.cpp)
 target_compile_definitions(cubic_spline_public PRIVATE DATA_DIR="${DATA_PATH}")
-target_link_libraries(cubic_spline_public PRIVATE aocl-da)
+target_link_aocl_da(cubic_spline_public)
 
 # ############## ANN #################
 # ##############################################################################
 add_executable(ann_public approximate_neighbors/ann_public.cpp)
-target_link_libraries(ann_public PRIVATE aocl-da ${BLAS})
+target_link_aocl_da(ann_public ${BLAS})
 target_compile_definitions(ann_public PRIVATE DATA_DIR="${DATA_PATH}")
+
+add_executable(ann_quantized_public approximate_neighbors/ann_quantized_public.cpp)
+target_link_aocl_da(ann_quantized_public ${DLP} ${BLAS} ${UTILS})
+target_compile_definitions(ann_quantized_public PRIVATE DATA_DIR="${DATA_PATH}")
+
+add_executable(quantization_internal approximate_neighbors/quantization_internal.cpp)
+target_link_aocl_da(quantization_internal ${DLP} ${BLAS})
 
 # ##############################################################################
 # ############## Model Persistence #################
@@ -345,123 +378,127 @@ target_compile_definitions(serialization_kernel_errors_internal PRIVATE TEST_OUT
 
 add_executable(ann_persistence_public model_persistence/algorithms/approximate_neighbors_persistence_public.cpp)
 target_compile_definitions(ann_persistence_public PRIVATE TEST_OUTPUT_DIR="${TEST_OUTPUT_DIR}")
-target_link_libraries(ann_persistence_public PRIVATE aocl-da ${BLAS})
+target_link_aocl_da(ann_persistence_public ${DLP} ${BLAS})
 
 add_executable(dforest_persistence_public model_persistence/algorithms/decision_forest_persistence_public.cpp)
 target_compile_definitions(dforest_persistence_public PRIVATE TEST_OUTPUT_DIR="${TEST_OUTPUT_DIR}")
-target_link_libraries(dforest_persistence_public PRIVATE aocl-da ${BLAS})
+target_link_aocl_da(dforest_persistence_public ${BLAS})
 
 add_executable(dtree_persistence_public model_persistence/algorithms/decision_tree_persistence_public.cpp)
 target_compile_definitions(dtree_persistence_public PRIVATE TEST_OUTPUT_DIR="${TEST_OUTPUT_DIR}")
-target_link_libraries(dtree_persistence_public PRIVATE aocl-da ${BLAS})
+target_link_aocl_da(dtree_persistence_public ${BLAS})
 
 add_executable(kmeans_persistence_public model_persistence/algorithms/kmeans_persistence_public.cpp)
 target_compile_definitions(kmeans_persistence_public PRIVATE TEST_OUTPUT_DIR="${TEST_OUTPUT_DIR}")
-target_link_libraries(kmeans_persistence_public PRIVATE aocl-da ${BLAS})
+target_link_aocl_da(kmeans_persistence_public ${BLAS})
 
 add_executable(linmod_persistence_public model_persistence/algorithms/lin_mod_persistence_public.cpp)
 target_compile_definitions(linmod_persistence_public PRIVATE TEST_OUTPUT_DIR="${TEST_OUTPUT_DIR}")
-target_link_libraries(linmod_persistence_public PRIVATE aocl-da ${BLAS})
+target_link_aocl_da(linmod_persistence_public ${BLAS})
 
 add_executable(pca_persistence_public model_persistence/algorithms/pca_persistence_public.cpp)
 target_compile_definitions(pca_persistence_public PRIVATE TEST_OUTPUT_DIR="${TEST_OUTPUT_DIR}")
-target_link_libraries(pca_persistence_public PRIVATE aocl-da ${BLAS})
+target_link_aocl_da(pca_persistence_public ${BLAS})
 
 add_executable(kernel_pca_persistence_public model_persistence/algorithms/kernel_pca_persistence_public.cpp)
 target_compile_definitions(kernel_pca_persistence_public PRIVATE TEST_OUTPUT_DIR="${TEST_OUTPUT_DIR}")
-target_link_libraries(kernel_pca_persistence_public PRIVATE aocl-da ${BLAS})
+target_link_aocl_da(kernel_pca_persistence_public ${BLAS})
 
 add_executable(knn_class_persistence_public model_persistence/algorithms/knn_class_persistence_public.cpp)
 target_compile_definitions(knn_class_persistence_public PRIVATE TEST_OUTPUT_DIR="${TEST_OUTPUT_DIR}")
-target_link_libraries(knn_class_persistence_public PRIVATE aocl-da ${BLAS})
+target_link_aocl_da(knn_class_persistence_public ${BLAS})
 
 add_executable(knn_reg_persistence_public model_persistence/algorithms/knn_reg_persistence_public.cpp)
 target_compile_definitions(knn_reg_persistence_public PRIVATE TEST_OUTPUT_DIR="${TEST_OUTPUT_DIR}")
-target_link_libraries(knn_reg_persistence_public PRIVATE aocl-da ${BLAS})
+target_link_aocl_da(knn_reg_persistence_public ${BLAS})
 
 add_executable(radius_nn_persistence_public model_persistence/algorithms/radius_neighbors_persistence_public.cpp)
 target_compile_definitions(radius_nn_persistence_public PRIVATE TEST_OUTPUT_DIR="${TEST_OUTPUT_DIR}")
-target_link_libraries(radius_nn_persistence_public PRIVATE aocl-da ${BLAS})
+target_link_aocl_da(radius_nn_persistence_public ${BLAS})
 
 add_executable(svm_persistence_public model_persistence/algorithms/svm_persistence_public.cpp)
 target_compile_definitions(svm_persistence_public PRIVATE TEST_OUTPUT_DIR="${TEST_OUTPUT_DIR}")
-target_link_libraries(svm_persistence_public PRIVATE aocl-da ${BLAS})
+target_link_aocl_da(svm_persistence_public ${BLAS})
+
+add_executable(nmf_persistence_public model_persistence/algorithms/nmf_persistence_public.cpp)
+target_compile_definitions(nmf_persistence_public PRIVATE TEST_OUTPUT_DIR="${TEST_OUTPUT_DIR}")
+target_link_libraries(nmf_persistence_public PRIVATE aocl-da ${BLAS})
 
 add_executable(handle_persistence_public model_persistence/handle_errors_public.cpp)
 target_compile_definitions(handle_persistence_public PRIVATE TEST_OUTPUT_DIR="${TEST_OUTPUT_DIR}")
-target_link_libraries(handle_persistence_public PRIVATE aocl-da ${BLAS})
+target_link_aocl_da(handle_persistence_public ${BLAS})
 
 # ##############################################################################
 # ############## C API tests #################
 # ##############################################################################
 add_executable(ann_capi_public c_tests/ann_capi_public.cpp)
-target_link_libraries(ann_capi_public PRIVATE aocl-da ${BLAS})
+target_link_aocl_da(ann_capi_public ${BLAS})
 
 add_executable(basic_stats_capi_public c_tests/basic_stats_capi_public.cpp)
-target_link_libraries(basic_stats_capi_public PRIVATE aocl-da ${BLAS})
+target_link_aocl_da(basic_stats_capi_public ${BLAS})
 
 add_executable(csv_capi_public c_tests/csv_capi_public.cpp)
 target_compile_definitions(csv_capi_public PRIVATE DATA_DIR="${DATA_PATH}")
-target_link_libraries(csv_capi_public PRIVATE aocl-da ${BLAS})
+target_link_aocl_da(csv_capi_public ${BLAS})
 
 add_executable(datastore_capi_public c_tests/datastore_capi_public.cpp)
 target_compile_definitions(datastore_capi_public PRIVATE DATA_DIR="${DATA_PATH}")
-target_link_libraries(datastore_capi_public PRIVATE aocl-da ${BLAS})
+target_link_aocl_da(datastore_capi_public ${BLAS})
 
 add_executable(dbscan_capi_public c_tests/dbscan_capi_public.cpp)
-target_link_libraries(dbscan_capi_public PRIVATE aocl-da ${BLAS})
+target_link_aocl_da(dbscan_capi_public ${BLAS})
 
 add_executable(decision_forest_capi_public c_tests/decision_forest_capi_public.cpp)
-target_link_libraries(decision_forest_capi_public PRIVATE aocl-da ${BLAS})
+target_link_aocl_da(decision_forest_capi_public ${BLAS})
 
 add_executable(decision_tree_capi_public c_tests/decision_tree_capi_public.cpp)
-target_link_libraries(decision_tree_capi_public PRIVATE aocl-da ${BLAS})
+target_link_aocl_da(decision_tree_capi_public ${BLAS})
 
 add_executable(handle_capi_public c_tests/handle_capi_public.cpp)
 target_compile_definitions(handle_capi_public PRIVATE TEST_OUTPUT_DIR="${TEST_OUTPUT_DIR}")
-target_link_libraries(handle_capi_public PRIVATE aocl-da ${BLAS})
+target_link_aocl_da(handle_capi_public ${BLAS})
 
 add_executable(interpolation_capi_public c_tests/interpolation_capi_public.cpp)
-target_link_libraries(interpolation_capi_public PRIVATE aocl-da ${BLAS})
+target_link_aocl_da(interpolation_capi_public ${BLAS})
 
 add_executable(kernel_functions_capi_public c_tests/kernel_functions_capi_public.cpp)
-target_link_libraries(kernel_functions_capi_public PRIVATE aocl-da ${BLAS})
+target_link_aocl_da(kernel_functions_capi_public ${BLAS})
 
 add_executable(kmeans_capi_public c_tests/kmeans_capi_public.cpp)
-target_link_libraries(kmeans_capi_public PRIVATE aocl-da ${BLAS})
+target_link_aocl_da(kmeans_capi_public ${BLAS})
 
 add_executable(linmod_capi_public c_tests/linmod_capi_public.cpp)
-target_link_libraries(linmod_capi_public PRIVATE aocl-da ${BLAS})
+target_link_aocl_da(linmod_capi_public ${BLAS})
 
 add_executable(metrics_capi_public c_tests/metrics_capi_public.cpp)
-target_link_libraries(metrics_capi_public PRIVATE aocl-da ${BLAS})
+target_link_aocl_da(metrics_capi_public ${BLAS})
 
 add_executable(miscellaneous_capi_public c_tests/miscellaneous_capi_public.cpp)
-target_link_libraries(miscellaneous_capi_public PRIVATE aocl-da ${BLAS})
+target_link_aocl_da(miscellaneous_capi_public ${BLAS})
 
 add_executable(nlls_capi_public c_tests/nlls_capi_public.cpp)
-target_link_libraries(nlls_capi_public PRIVATE aocl-da ${BLAS})
+target_link_aocl_da(nlls_capi_public ${BLAS})
 
 add_executable(nn_capi_public c_tests/nn_capi_public.cpp)
-target_link_libraries(nn_capi_public PRIVATE aocl-da ${BLAS})
+target_link_aocl_da(nn_capi_public ${BLAS})
 
 add_executable(options_capi_public c_tests/options_capi_public.cpp)
-target_link_libraries(options_capi_public PRIVATE aocl-da ${BLAS})
+target_link_aocl_da(options_capi_public ${BLAS})
 
 add_executable(pca_capi_public c_tests/pca_capi_public.cpp)
-target_link_libraries(pca_capi_public PRIVATE aocl-da ${BLAS})
+target_link_aocl_da(pca_capi_public ${BLAS})
 
 add_executable(result_capi_public c_tests/result_capi_public.cpp)
-target_link_libraries(result_capi_public PRIVATE aocl-da ${BLAS})
+target_link_aocl_da(result_capi_public ${BLAS})
 
 add_executable(svm_capi_public c_tests/svm_capi_public.cpp)
-target_link_libraries(svm_capi_public PRIVATE aocl-da ${BLAS})
+target_link_aocl_da(svm_capi_public ${BLAS})
 
 add_executable(tsne_capi_public c_tests/tsne_capi_public.cpp)
-target_link_libraries(tsne_capi_public PRIVATE aocl-da ${BLAS})
+target_link_aocl_da(tsne_capi_public ${BLAS})
 
 add_executable(utils_capi_public c_tests/utils_capi_public.cpp)
-target_link_libraries(utils_capi_public PRIVATE aocl-da ${BLAS})
+target_link_aocl_da(utils_capi_public ${BLAS})
 
 set(GTEST_INTERNAL
   csv_internal
@@ -485,6 +522,7 @@ set(GTEST_INTERNAL
   ktl2_fallback
   miscellaneous_internal
   da_vector_internal
+  quantization_internal
   da_cache_internal
   radius_neighbors_internal
   k_neighbors_internal
@@ -527,6 +565,7 @@ set(GTEST_PUBLIC
   svm_public
   cubic_spline_public
   ann_public
+  ann_quantized_public
   ann_persistence_public
   dforest_persistence_public
   dtree_persistence_public
@@ -538,6 +577,7 @@ set(GTEST_PUBLIC
   knn_reg_persistence_public
   radius_nn_persistence_public
   svm_persistence_public
+  nmf_persistence_public
   handle_persistence_public
   ann_capi_public
   basic_stats_capi_public
@@ -560,7 +600,8 @@ set(GTEST_PUBLIC
   result_capi_public
   svm_capi_public
   tsne_capi_public
-  utils_capi_public)
+  utils_capi_public
+  nmf_public)
 set(INDEP_PUBLIC c_compatibility_nog_public)
 set(PUBLIC_UTESTS ${GTEST_PUBLIC} ${INDEP_PUBLIC})
 

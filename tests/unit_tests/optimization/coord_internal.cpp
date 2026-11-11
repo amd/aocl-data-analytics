@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2024-2025 Advanced Micro Devices, Inc. All rights reserved.
+ * Copyright (C) 2024-2026 Advanced Micro Devices, Inc. All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without modification,
  * are permitted provided that the following conditions are met:
@@ -93,6 +93,45 @@ da_int stepfun_cycleend(da_int n, T *x, T *newxk, da_int k, T *f, void *usrdata,
     return 0;
 }
 
+TEST(Coord, SlowProgressUpdateObj) {
+    // Test to verify that f* is correctly copied to info array
+    da_errors::da_error_t err(da_errors::DA_RECORD);
+    da_options::OptionRegistry opts;
+    ASSERT_EQ(
+        da_dynamic_dispatch_ARCHITECTURE::register_optimization_options<T>(err, opts),
+        da_status_success);
+
+    // Make sure print level is 0 or 1
+    ASSERT_EQ(opts.set("print level", da_int(1)), da_status_success);
+    ASSERT_EQ(da_debug_set("coord.slow count max", "1"), da_status_success);
+
+    const da_int n = 2;
+    std::vector<T> x{2, 3}, l, u, info(100, 0);
+    da_int objective_calls = 0;
+    TEST_ARCH::stepfun_t<T> stepfun =
+        [&objective_calls](da_int n, T *x, T *newxk, da_int k, T *f,
+                           [[maybe_unused]] void *usrdata, [[maybe_unused]] da_int action,
+                           [[maybe_unused]] T kdiff) {
+            if (f) {
+                ++objective_calls;
+                *f = 0;
+                for (da_int i = 0; i < n; ++i)
+                    *f += x[i] * x[i];
+            } else {
+                *newxk = x[k];
+            }
+            return 0;
+        };
+    const da_status status = TEST_ARCH::coord::coord(
+        opts, n, x, l, u, info, stepfun, nullptr, nullptr, err, stepchk_dummy);
+
+    EXPECT_EQ(da_debug_set("coord.slow count max", ""), da_status_success);
+    EXPECT_EQ(status, da_status_numerical_difficulties);
+    EXPECT_EQ(info[da_linmod_info_t::linmod_info_optimcnt], 2);
+    EXPECT_EQ(objective_calls, 1);
+    EXPECT_EQ(info[da_linmod_info_t::linmod_info_objective], 13);
+}
+
 // Verify that the end-cycle logic is correct
 TEST(Coord, CycleEnd) {
     da_errors::da_error_t err(da_errors::DA_RECORD);
@@ -155,4 +194,38 @@ TEST(Coord, CycleEnd) {
     EXPECT_EQ(status, da_status_success) << "error from 2nd call to coord";
 
     EXPECT_LE(info[da_linmod_info_t::linmod_info_iter], 1);
+}
+
+// Verify the single-coordinate (n == 1) end-cycle logic.
+TEST(Coord, CycleEndSingleCoord) {
+    da_errors::da_error_t err(da_errors::DA_RECORD);
+    da_options::OptionRegistry opts;
+    da_status status;
+    status =
+        da_dynamic_dispatch_ARCHITECTURE::register_optimization_options<T>(err, opts);
+    EXPECT_EQ(status, da_status_success) << "error from register_optimization_options()";
+    const da_int n = 1;
+    std::vector<double> x(n, 2.0), l(0, 0.0), u(0, 0.0), info(100, 0.0);
+    da_int calls = 0; // must match cb calls type
+    void *usrdata = &calls;
+    TEST_ARCH::monit_t<T> monit = nullptr;
+    const T ftol = da_numeric::tolerance<T>::tol(10);
+
+    status = opts.set("print level", da_int(5));
+    EXPECT_EQ(status, da_status_success) << "error setting print level";
+    status = opts.set("coord iteration limit", da_int(102));
+    EXPECT_EQ(status, da_status_success) << "error setting coord iteration limit";
+    opts.print_options();
+    status = TEST_ARCH::coord::coord(opts, n, x, l, u, info, stepfun_cycleend, monit,
+                                     usrdata, err, stepchk_dummy);
+    EXPECT_EQ(status, da_status_success) << "error from coord";
+
+    // Optimality check must have run; before the fix a single-coordinate
+    // problem was flagged as search-space exhausted and never reached OPTIMCHK.
+    EXPECT_GT(info[da_linmod_info_t::linmod_info_optimcnt], T(0));
+    // Converged at the solution x = 1 through an optimality stop, well within
+    // the iteration limit.
+    EXPECT_NEAR(x[0], T(1), T(1.0e-4));
+    EXPECT_LT(info[da_linmod_info_t::linmod_info_objective], ftol);
+    EXPECT_LT(info[da_linmod_info_t::linmod_info_iter], T(100));
 }

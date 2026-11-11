@@ -330,7 +330,7 @@ void decision_tree<T>::split_raw_onevall(const node<T> &current_node, da_int fea
         ws.cat_feat_table[cat * n_class + c]++;
     }
 
-    for (da_int cat = 0; cat < cat_feat[feat_idx]; cat++) {
+    for (da_int cat = 0; cat < feat_prop[feat_idx]; cat++) {
         da_int ns_left = 0, ns_right = 0;
         for (da_int c = 0; c < n_class; c++) {
             ws.count_left_classes[c] = ws.cat_feat_table[cat * n_class + c];
@@ -414,10 +414,10 @@ bool decision_tree<T>::compute_best_split_raw(const node<T> &nd, da_int feat_idx
     update_feature_values(nd.start_idx, nd.end_idx, feat_idx, ws, samp);
 
     if ((split_property)cat_split_strat == categorical_ordered ||
-        cat_feat[feat_idx] <= 0) {
+        feat_prop[feat_idx] <= 0) {
         /* continuous data: samp is sorted according to the values of feat_idx
          * column in X and all possible split threshold values are checked. */
-        if (cat_feat[feat_idx] != 1) {
+        if (feat_prop[feat_idx] != 1) {
             da_int node_obs = nd.end_idx - nd.start_idx + 1;
             multi_range_intro_sort(samp, ws.feature_values, nd.start_idx, node_obs,
                                    (da_int)(2 * std::log2(node_obs) + 2));

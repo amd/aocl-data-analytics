@@ -33,6 +33,7 @@
 #include "common/histogram.hpp"
 #include "common/scoring.hpp"
 #include "common/tree_options_types.hpp"
+#include "da_kernel_utils.hpp"
 #include "da_omp.hpp"
 #include "da_utils.hpp"
 #include "macros.h"
@@ -40,6 +41,7 @@
 #include "options.hpp"
 
 #include <deque>
+#include <queue>
 #include <random>
 
 namespace ARCH {
@@ -83,7 +85,14 @@ template <typename T> class node {
     //                 the node and all its children. Only used if the strategy is 'depth first'
     da_int const_feat_idx = std::numeric_limits<da_int>::max();
     da_int children_const_idx = std::numeric_limits<da_int>::max();
-    void dummy();
+};
+
+template <typename T> struct compact_node {
+    // feature_idx: feature index of the split. node is a leaf if < 0
+    int32_t feature_idx;
+    // next_idx: index of the next node in the compact tree or value of the class if node is a leaf.
+    int32_t next_idx;
+    T threshold;
 
     da_status serialize(da_model_persistence::serialization_buffer &buffer);
 };
@@ -146,6 +155,9 @@ template <typename T> struct split_workspace {
 template <class T>
 using score_fun_t = typename std::function<T(da_int, da_int, std::vector<da_int> &)>;
 
+// Forward declaration so compact_tree can refer to decision_tree.
+template <typename T> class decision_tree;
+
 template <typename T> class decision_tree : public basic_handle<T> {
 
     bool init_done = false;
@@ -175,6 +187,19 @@ template <typename T> class decision_tree : public basic_handle<T> {
     // Utility pointer to column major allocated copy of user's data
     T *X_temp = nullptr;
 
+    // Histogram: data is quantized into max_bin categories
+    // X_binned: class containing the binned X and auxialliary routines
+    // internal_bins: true if the bins are computed inside the tree
+    bool internal_bins = false;
+    bins<T> *X_binned = nullptr;
+
+    // categorical features info
+    // feat_prop(n_features): feat_prop[i] is the type of the feature i -1 if continuous, maximum number of category if categorical
+    // max_cat: The maximum number of different categories if categorical variables are present in X
+    bool has_onevall_features = false;
+    std::vector<da_int> feat_prop;
+    da_int max_cat = 0;
+
     // Tree structure
     // tree (vector): contains all the nodes, each node stores the indices of its children
     // class_props (vector): contains the proportions in each class for each node
@@ -184,7 +209,13 @@ template <typename T> class decision_tree : public basic_handle<T> {
     std::vector<T> class_props;
     std::deque<da_int> nodes_to_treat;
 
-    // All memory to compute scores
+    // Compact, inference-only representation of the tree
+    std::vector<compact_node<T>> compact_tree;
+    std::vector<uint8_t> feat_is_onevall;
+    std::vector<int32_t> f_idx_cont, next_idx_cont;
+    std::vector<float> threshold_cont;
+
+    // All working memory to train the main tree
     // samples_idx: size n_obs. used to store the indices covered by a given node.
     //              after a node is inserted in a tree, samples_idx[start_idx:end_idx] contains
     //              the indices of samples covered by a node and its children
@@ -195,27 +226,14 @@ template <typename T> class decision_tree : public basic_handle<T> {
     //                of samples
     // bootstrap_sample_frequency: size n_samples. Used to store the frequency of each sample if bootstrap
     //                             is selected.
+    // features_idx: size n_features. Vector containing all the indices of the features.
+    //               primarily used to pick a random subselection of indices to consider
+    //               for splitting a node
     std::vector<da_int> samples_idx;
     da_int *samples_subset = nullptr;
     std::vector<da_int> count_classes;
     std::vector<da_int> bootstrap_sample_frequency;
-
-    // Used when splits are computed on raw data (no histograms)
-    // max_cat: The maximum number of different categories if categorical variables are present in X
-    std::vector<da_int> cat_feat;
-    da_int max_cat = 0;
-
-    // Histogram: data is quantized into max_bin categories
-    // X_binned: class containing the binned X and auxialliary routines
-    // internal_bins: true if the bins are computed inside the tree
-    bool internal_bins = false;
-    bins<T> *X_binned = nullptr;
-
-    // features_idx: size n_features. Vector containing all the indices of the features.
-    //               primarily used to pick a random subselection of indices to consider
-    //               for splitting a node
     std::vector<da_int> features_idx;
-
     // thread_workspace(n_thrads_split): per-thread workspaces for parallel feature evaluation
     //        When executed in serial, thread_workspaces[0] is used.
     // selected_features (n_features): pre-selected features for parallel split evaluation
@@ -236,10 +254,8 @@ template <typename T> class decision_tree : public basic_handle<T> {
     da_int max_depth, min_node_sample, method, nfeat_split, seed;
     T min_split_score, feat_thresh, min_improvement;
     bool bootstrap = false;
-    da_int check_cat_data = 0, opt_max_cat;
     da_int use_hist = false;
     da_int usr_max_bins;
-    T cat_tol;
     da_int cat_split_strat;
     da_int max_threads = 0;
 
@@ -254,25 +270,31 @@ template <typename T> class decision_tree : public basic_handle<T> {
     // Values will NOT be checked
     decision_tree(bins<T> *X_binned, da_int max_depth, da_int min_node_sample,
                   da_int method, da_int nfeat_split, da_int seed, T min_split_score,
-                  T feat_thresh, T min_improvement, bool bootstrap, da_int check_cat_data,
-                  da_int opt_max_cat, da_int use_hist, da_int usr_max_bins, T cat_tol,
-                  da_int cat_split_strat, da_int max_threads);
+                  T feat_thresh, T min_improvement, bool bootstrap, da_int use_hist,
+                  da_int usr_max_bins, da_int cat_split_strat, da_int max_threads,
+                  da_order order);
     ~decision_tree();
+    // manual options setters
+    void set_storage_order(da_order order) { this->order = order; }
 
     // Memory management
     da_status read_options();
+
+    da_status read_storage_order();
     da_status init_working_memory();
     da_status init_working_memory_raw();
     da_status init_working_memory_hist();
     da_status resize_tree(size_t new_size);
     void clear_working_memory();
+    void clear_training_tree();
     void refresh() override;
 
     // Public training
     da_status set_training_data(da_int n_samples, da_int n_features, const T *X,
                                 da_int ldx, const da_int *y, da_int n_class = 0,
                                 da_int n_obs = 0, da_int *samples_subset = nullptr,
-                                const da_int *usr_cat_feat = nullptr);
+                                const da_int *usr_cat_feat = nullptr,
+                                bool internal_tree = false);
     da_status fit();
 
     // Scoring utilities
@@ -337,16 +359,60 @@ template <typename T> class decision_tree : public basic_handle<T> {
     da_status split_node_and_add_children(da_int node_idx, split<T> &best_split);
     da_status add_node(da_int parent_idx, bool is_left, T score, da_int split_idx);
     da_int get_next_node_idx();
+    //compact tree building
+    da_status build_compact_tree();
+    da_status build_compact_tree_depth_first();
 
     // Inference
+    // Heuristic: choose BFS over the per-sample / SIMD traversal
+    da_status compact_traverse(da_int nsamp, da_int n_features, const T *X_test,
+                               da_int ldx, da_int *y_pred, bool validate_input = true);
+    da_status compact_traverse(da_int nsamp, da_int n_features, const T *X_test,
+                               da_int ldx, T *y_proba, da_int n_class, da_int ldy,
+                               bool validate_input = true);
+    template <da_order ORDER, bool HAS_CAT_FEAT>
+    da_status compact_traverse_sequential(da_int nsamp, const T *X_test, da_int ldx,
+                                          da_int *y_pred);
+    template <da_order ORDER, bool HAS_CAT_FEAT>
+    da_status compact_traverse_sequential(da_int nsamp, const T *X_test, da_int ldx_test,
+                                          T *y_proba, da_int n_class, da_int ldy);
+    da_status compact_traverse_sequential_vectorized(da_int nsamp, const T *X_test,
+                                                     da_int ldx, da_int *y_pred,
+                                                     vectorization_type isa);
+    da_status compact_traverse_sequential_vectorized(da_int nsamp, const T *X_test,
+                                                     da_int ldx, T *y_proba,
+                                                     da_int n_class, da_int ldy,
+                                                     vectorization_type isa);
+#ifdef __AVX512F__
+    template <bool LEAF_RET>
+    da_status compact_traverse_sequential_avx512(const T *X_block, da_int ldx,
+                                                 da_int *y_pred);
+#endif
+    template <bool LEAF_RET>
+    da_status compact_traverse_sequential_avx2(const T *X_block, da_int ldx,
+                                               da_int *y_pred);
+    template <da_order ORDER, bool HAS_CAT_FEAT>
+    da_status compact_traverse_BFS(da_int nsamp, const T *X_test, da_int ldx,
+                                   da_int *y_pred);
+    template <da_order ORDER, bool HAS_CAT_FEAT>
+    da_status compact_traverse_BFS(da_int nsamp, const T *X_test, da_int ldx, T *y_proba,
+                                   da_int n_class, da_int ldy);
+
     da_status predict(da_int nsamp, da_int n_features, const T *X_test, da_int ldx,
-                      da_int *y_pred, da_int mode = 0);
-    da_status predict_proba(da_int nsamp, da_int n_features, const T *X_test, da_int ldx,
-                            T *y_pred, da_int n_class, da_int ldy, da_int mode = 0);
-    da_status predict_log_proba(da_int nsamp, da_int n_features, const T *X_test,
-                                da_int ldx, T *y_pred, da_int n_class, da_int ldy);
+                      da_int *y_pred);
     da_status score(da_int nsamp, da_int nfeat, const T *X_test, da_int ldx,
                     const da_int *y_test, T *accuracy);
+    da_status predict_proba(da_int nsamp, da_int n_features, const T *X_test, da_int ldx,
+                            T *y_proba, da_int n_class, da_int ldy);
+    da_status predict_log_proba(da_int nsamp, da_int n_features, const T *X_test,
+                                da_int ldx, T *y_log_proba, da_int n_class, da_int ldy);
+    da_status score_training_tree(da_int nsamp, da_int nfeat, const T *X_test, da_int ldx,
+                                  const da_int *y_test, T *accuracy);
+    da_status predict_training_tree(da_int nsamp, da_int n_features, const T *X_test,
+                                    da_int ldx, da_int *y_pred);
+    da_status predict_proba_training_tree(da_int nsamp, da_int n_features,
+                                          const T *X_test, da_int ldx, T *y_proba,
+                                          da_int n_class, da_int ldy);
 
     da_status get_result(da_result query, da_int *dim, T *result) override;
     da_status get_result(da_result query, da_int *dim, da_int *result) override;

@@ -78,6 +78,14 @@ template <typename T> void test_functionality(const ANNParamType<T> &param) {
               da_status_success);
     EXPECT_EQ(da_options_set(handle, "train fraction", param.train_fraction),
               da_status_success);
+    EXPECT_EQ(da_options_set_string(handle, "quantization", param.quantization.c_str()),
+              da_status_success);
+    EXPECT_EQ(da_options_set_string(handle, "quantization_scheme",
+                                    param.quantization_scheme.c_str()),
+              da_status_success);
+    EXPECT_EQ(da_options_set_string(handle, "quantization_residual",
+                                    param.quantization_residual.c_str()),
+              da_status_success);
     EXPECT_EQ(da_approx_nn_set_training_data(handle, param.n_samples, param.n_features,
                                              param.X_train.data(), param.ldx_train),
               da_status_success);
@@ -269,80 +277,6 @@ template <typename T> std::vector<ANNParamType<T>> getRecallParams() {
     std::vector<ANNParamType<T>> params;
     GetANNRecallData(params);
     return params;
-}
-
-// Larger tests to check recall is satisfactory
-// Recall = proportion of true nearest neighbors found by approximate search
-template <typename T> void test_ann_recall(const ANNParamType<T> &param) {
-
-    // Create handle and set options
-    da_handle ann_handle = nullptr;
-
-    EXPECT_EQ(da_handle_init<T>(&ann_handle, da_handle_approx_nn), da_status_success);
-    EXPECT_EQ(da_options_set_string(ann_handle, "metric", param.metric.c_str()),
-              da_status_success);
-    EXPECT_EQ(da_options_set_string(ann_handle, "storage order", param.order.c_str()),
-              da_status_success);
-    EXPECT_EQ(da_options_set_string(ann_handle, "algorithm", param.algorithm.c_str()),
-              da_status_success);
-    EXPECT_EQ(da_options_set_int(ann_handle, "number of neighbors", param.k),
-              da_status_success);
-    EXPECT_EQ(da_options_set_int(ann_handle, "n_list", param.nlist), da_status_success);
-    EXPECT_EQ(da_options_set_int(ann_handle, "n_probe", param.nprobe), da_status_success);
-    EXPECT_EQ(da_options_set_int(ann_handle, "seed", param.seed), da_status_success);
-    EXPECT_EQ(da_options_set_int(ann_handle, "k-means_iter", param.kmeans_iter),
-              da_status_success);
-    EXPECT_EQ(da_options_set(ann_handle, "train fraction", param.train_fraction),
-              da_status_success);
-
-    da_order order = (param.order == "column-major") ? column_major : row_major;
-
-    // Get the training data
-    std::string input_data_fname =
-        std::string(DATA_DIR) + "/ann_data/" + param.csvname + "_data.csv";
-    std::vector<T> X_train;
-    da_int nsamples_train, nfeat;
-    ASSERT_TRUE(
-        da_test::read_csv_data(input_data_fname, X_train, nsamples_train, nfeat, order))
-        << "Failed to read training data: " << input_data_fname;
-    da_int ldx_train = (order == column_major) ? nsamples_train : nfeat;
-
-    // Create the model
-    EXPECT_EQ(da_approx_nn_set_training_data(ann_handle, nsamples_train, nfeat,
-                                             X_train.data(), ldx_train),
-              da_status_success);
-    // Train and add to the model
-    EXPECT_EQ(da_approx_nn_train_and_add<T>(ann_handle), da_status_success);
-
-    // Get the test data
-    input_data_fname = std::string(DATA_DIR) + "/ann_data/" + param.csvname + "_test.csv";
-    std::vector<T> X_test;
-    da_int nsamples_test;
-    ASSERT_TRUE(
-        da_test::read_csv_data(input_data_fname, X_test, nsamples_test, nfeat, order))
-        << "Failed to read test data: " << input_data_fname;
-    da_int ldx_test = (order == column_major) ? nsamples_test : nfeat;
-
-    // Check that the recall is good enough
-    da_int k_neigh = param.k;
-
-    std::vector<da_int> computed_indices(k_neigh * nsamples_test);
-
-    T recall;
-    EXPECT_EQ(da_approx_nn_kneighbors<T>(ann_handle, nsamples_test, nfeat, X_test.data(),
-                                         ldx_test, computed_indices.data(), nullptr,
-                                         k_neigh, false),
-              da_status_success);
-
-    // Compute recall based on inputs and computed_indices
-    recall =
-        compute_recall(param, nfeat, computed_indices.data(), X_train.data(),
-                       nsamples_train, ldx_train, X_test.data(), nsamples_test, ldx_test);
-
-    EXPECT_GT(recall, param.target_recall);
-    std::cout << "Recall on the test data: " << recall << std::endl;
-
-    da_handle_destroy(&ann_handle);
 }
 
 class DoubleRecallTest : public testing::TestWithParam<ANNParamType<double>> {};
@@ -639,6 +573,53 @@ TYPED_TEST(ANNTest, ErrorExits) {
 
     da_handle_destroy(&handle);
 
+    // Quantization options are locked after training an ivfsq index
+    EXPECT_EQ(da_handle_init<TypeParam>(&handle, da_handle_approx_nn), da_status_success);
+    EXPECT_EQ(da_options_set_string(handle, "algorithm", "ivfsq"), da_status_success);
+    EXPECT_EQ(da_options_set_string(handle, "quantization", "int8"), da_status_success);
+    EXPECT_EQ(da_options_set_string(handle, "storage order", params[0].order.c_str()),
+              da_status_success);
+    EXPECT_EQ(da_options_set_int(handle, "n_list", params[0].nlist), da_status_success);
+    EXPECT_EQ(
+        da_approx_nn_set_training_data(handle, params[0].n_samples, params[0].n_features,
+                                       params[0].X_train.data(), params[0].ldx_train),
+        da_status_success);
+    EXPECT_EQ(da_approx_nn_train_and_add<TypeParam>(handle), da_status_success);
+
+    EXPECT_EQ(da_options_set_string(handle, "quantization", "int4"), da_status_success);
+    EXPECT_EQ(da_approx_nn_add(handle, params[0].n_samples, params[0].n_features,
+                               params[0].X_train.data(), params[0].ldx_train),
+              da_status_option_locked);
+    EXPECT_EQ(da_approx_nn_kneighbors(handle, params[0].n_queries, params[0].n_features,
+                                      params[0].X_test.data(), params[0].ldx_test,
+                                      ind_arr.data(), null_arr, params[0].k, false),
+              da_status_option_locked);
+    EXPECT_EQ(da_options_set_string(handle, "quantization", "int8"), da_status_success);
+
+    EXPECT_EQ(da_options_set_string(handle, "quantization_scheme", "uniform"),
+              da_status_success);
+    EXPECT_EQ(da_approx_nn_add(handle, params[0].n_samples, params[0].n_features,
+                               params[0].X_train.data(), params[0].ldx_train),
+              da_status_option_locked);
+    EXPECT_EQ(da_approx_nn_kneighbors(handle, params[0].n_queries, params[0].n_features,
+                                      params[0].X_test.data(), params[0].ldx_test,
+                                      ind_arr.data(), null_arr, params[0].k, false),
+              da_status_option_locked);
+    EXPECT_EQ(da_options_set_string(handle, "quantization_scheme", "per_dimension"),
+              da_status_success);
+
+    EXPECT_EQ(da_options_set_string(handle, "quantization_residual", "no"),
+              da_status_success);
+    EXPECT_EQ(da_approx_nn_add(handle, params[0].n_samples, params[0].n_features,
+                               params[0].X_train.data(), params[0].ldx_train),
+              da_status_option_locked);
+    EXPECT_EQ(da_approx_nn_kneighbors(handle, params[0].n_queries, params[0].n_features,
+                                      params[0].X_test.data(), params[0].ldx_test,
+                                      ind_arr.data(), null_arr, params[0].k, false),
+              da_status_option_locked);
+
+    da_handle_destroy(&handle);
+
     // Incompatible options
     EXPECT_EQ(da_handle_init<TypeParam>(&handle, da_handle_approx_nn), da_status_success);
     EXPECT_EQ(da_options_set_string(handle, "metric", "fake metric"),
@@ -654,8 +635,49 @@ TYPED_TEST(ANNTest, ErrorExits) {
               da_status_option_invalid_value);
     EXPECT_EQ(da_options_set(handle, "train fraction", (TypeParam)1.5),
               da_status_option_invalid_value);
+    EXPECT_EQ(da_options_set_string(handle, "quantization", "none"),
+              da_status_option_invalid_value);
+    EXPECT_EQ(da_options_set_string(handle, "quantization_scheme", "fake"),
+              da_status_option_invalid_value);
+    EXPECT_EQ(da_options_set_string(handle, "quantization_residual", "fake"),
+              da_status_option_invalid_value);
 
     da_handle_destroy(&handle);
+}
+
+TYPED_TEST(ANNTest, AlgorithmQuantizationCompatibility) {
+    std::vector<ANNParamType<TypeParam>> params;
+    ColSqEuclidean(params);
+    const auto &param = params[0];
+
+    const auto train_with = [&](const char *algorithm, const char *quantization) {
+        da_handle handle = nullptr;
+        EXPECT_EQ(da_handle_init<TypeParam>(&handle, da_handle_approx_nn),
+                  da_status_success);
+        EXPECT_EQ(da_options_set_string(handle, "algorithm", algorithm),
+                  da_status_success);
+        if (quantization != nullptr) {
+            EXPECT_EQ(da_options_set_string(handle, "quantization", quantization),
+                      da_status_success);
+        }
+        EXPECT_EQ(da_options_set_string(handle, "storage order", param.order.c_str()),
+                  da_status_success);
+        EXPECT_EQ(da_options_set_int(handle, "n_list", param.nlist), da_status_success);
+        EXPECT_EQ(da_approx_nn_set_training_data(handle, param.n_samples,
+                                                 param.n_features, param.X_train.data(),
+                                                 param.ldx_train),
+                  da_status_success);
+        const da_status status = da_approx_nn_train<TypeParam>(handle);
+        da_handle_destroy(&handle);
+        return status;
+    };
+
+    EXPECT_EQ(train_with("ivfflat", nullptr), da_status_success);
+    EXPECT_EQ(train_with("ivfsq", "int8"), da_status_success);
+    EXPECT_EQ(train_with("ivfsq", nullptr), da_status_success);
+    EXPECT_EQ(train_with("auto", nullptr), da_status_success);
+    EXPECT_EQ(train_with("auto", "int8"), da_status_success);
+    EXPECT_EQ(train_with("ivfflat", "int8"), da_status_success);
 }
 
 TYPED_TEST(ANNTest, MultipleCalls) {
@@ -862,6 +884,14 @@ template <typename T> void test_ivf_blocking_properties(const ANNParamType<T> &p
     EXPECT_EQ(da_options_set_int(handle, "seed", param.seed), da_status_success);
     EXPECT_EQ(da_options_set_int(handle, "k-means_iter", param.kmeans_iter),
               da_status_success);
+    EXPECT_EQ(da_options_set_string(handle, "quantization", param.quantization.c_str()),
+              da_status_success);
+    EXPECT_EQ(da_options_set_string(handle, "quantization_scheme",
+                                    param.quantization_scheme.c_str()),
+              da_status_success);
+    EXPECT_EQ(da_options_set_string(handle, "quantization_residual",
+                                    param.quantization_residual.c_str()),
+              da_status_success);
 
     EXPECT_EQ(da_approx_nn_set_training_data(handle, param.n_samples, param.n_features,
                                              param.X_train.data(), param.ldx_train),
@@ -961,13 +991,29 @@ template <typename T> void test_ivf_blocking_properties(const ANNParamType<T> &p
         ivf_dist_row = ivf_dist;
     }
 
-    // Per-query: exact recall (n_probe == n_list → all candidates examined)
-    // Each result must match the ground truth at the same position.
-    for (da_int q = 0; q < nq; q++)
-        for (da_int j = 0; j < k; j++)
-            EXPECT_EQ(ivf_ind_row[q * k + j], true_ind[q * k + j])
-                << "query " << q << " position " << j << " mismatch in "
-                << param.test_name;
+    if (param.algorithm != "ivfsq") {
+        // Per-query: exact recall (n_probe == n_list → all candidates examined)
+        // Each result must match the ground truth at the same position.
+        for (da_int q = 0; q < nq; q++)
+            for (da_int j = 0; j < k; j++)
+                EXPECT_EQ(ivf_ind_row[q * k + j], true_ind[q * k + j])
+                    << "query " << q << " position " << j << " mismatch in "
+                    << param.test_name;
+    } else {
+        // Quantization perturbs distances, so even an exhaustive (n_probe == n_list)
+        // search can occasionally reorder close candidates; check recall against the
+        // ground truth set instead of requiring an exact positional match.
+        da_int match_count = 0;
+        for (da_int q = 0; q < nq; q++) {
+            std::unordered_set<da_int> true_set(true_ind.begin() + q * k,
+                                                true_ind.begin() + (q + 1) * k);
+            for (da_int j = 0; j < k; j++)
+                if (true_set.count(ivf_ind_row[q * k + j]) == 1)
+                    match_count++;
+        }
+        T recall = static_cast<T>(match_count) / static_cast<T>(nq * k);
+        EXPECT_GT(recall, T(0.9)) << "quantized recall too low in " << param.test_name;
+    }
 
     // Distance ordering: non-decreasing for sqeuclidean/euclidean/cosine (smaller = closer),
     // non-increasing for inner product (larger = closer).

@@ -95,6 +95,8 @@ template <typename T> class decision_forest : public basic_handle<T> {
     void compute_thread_distribution(da_int n_tree, da_int &n_forest_threads,
                                      std::vector<da_int> &n_tree_threads);
     da_status forest_serialization(da_model_persistence::serialization_buffer &buffer);
+    // Read the storage order option for inference
+    da_status read_storage_order();
 
   public:
     decision_forest(da_errors::da_error_t &err);
@@ -103,11 +105,12 @@ template <typename T> class decision_forest : public basic_handle<T> {
                                 da_int ldx, const da_int *y, da_int n_class = 0,
                                 const da_int *usr_cat_feat = nullptr);
     da_status fit();
-    void parallel_count_classes(const T *X_test, da_int ldx_test, const da_int &n_blocks,
-                                const da_int &block_size, const da_int &block_rem,
-                                const da_int &n_threads,
-                                std::vector<da_int> &count_classes,
-                                std::vector<da_int> &y_pred_tree);
+    void parallel_sum_proba(const T *X_test, da_int ldx_test, da_int nsamp,
+                            const da_int &n_threads, std::vector<T> &sum_proba,
+                            std::vector<T> &thread_proba, std::vector<T> &y_proba_tree);
+    da_status transpose_input_if_needed(da_int nsamp, const T *X_test, da_int ldx_test,
+                                        std::vector<T> &X_row, const T *&X_eval,
+                                        da_int &ldx_eval);
     da_status predict(da_int nn_samples, da_int n_features, const T *X, da_int ldx,
                       da_int *y_pred);
     da_status predict_proba(da_int nsamp, da_int nfeat, const T *X_test, da_int ldx_test,

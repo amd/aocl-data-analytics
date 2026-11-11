@@ -48,6 +48,7 @@ extern "C" {
 #include "aoclda_miscellaneous.h"
 #include "aoclda_nearest_neighbors.h"
 #include "aoclda_nlls.h"
+#include "aoclda_nmf.h"
 #include "aoclda_options.h"
 #include "aoclda_pca.h"
 #include "aoclda_result.h"

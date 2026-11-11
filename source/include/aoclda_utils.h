@@ -126,6 +126,24 @@ da_status da_switch_order_in_place_s(da_order order_X_in, da_int n_rows, da_int 
  */
 da_status da_get_arch_info(da_int *len, char *arch, char *ns);
 
+/** hidden doc {
+ * \brief Query whether half precision (FP16) mixed precision is available.
+ *
+ * Reports whether the library can actually run its _Float16 mixed-precision code
+ * paths on this system. This is true only when the dispatched architecture object
+ * was compiled with AVX-512-FP16 support AND the running CPU advertises the
+ * AVX-512-FP16 feature via CPUID. It is independent of the Zen generation label,
+ * so it reports correctly on capable non-AMD hardware as well.
+ *
+ * Note: This function is targeted to debugging and testing the library.
+ *
+ * \param[out] available set to 1 if FP16 mixed precision is available, 0 otherwise.
+ * \return \ref da_status. The function returns:
+ * - \ref da_status_success - operation completed successfully.
+ * - \ref da_status_invalid_pointer - \p available was NULL.
+ */
+da_status da_check_fp16_available(da_int *available);
+
 /** \{
  * \brief Splits input matrix into train and test matrices.
  *

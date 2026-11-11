@@ -25,9 +25,21 @@
  *
  */
 
-#include "approximate_neighbors.hpp"
+#include "scalar_quantizer.hpp"
+#include <cstring>
+#if defined(__clang__)
+#pragma clang diagnostic push
+#pragma clang diagnostic ignored "-Wunknown-warning-option"
+#pragma clang diagnostic ignored "-Wpass-failed"
+#elif defined(__GNUC__)
+#pragma GCC diagnostic push
+#pragma GCC diagnostic ignored "-Wpragmas"
+#pragma GCC diagnostic ignored "-Wopenmp-simd"
+#endif
+
 #include "aoclda.h"
 #include "aoclda_types.h"
+#include "approximate_neighbors.hpp"
 #include "approximate_neighbors_options.hpp"
 #include "binary_tree.hpp"
 #include "context.hpp"
@@ -91,20 +103,9 @@ da_status approximate_neighbors<T>::get_result(da_result query, da_int *dim, T *
                            "least size: " +
                                std::to_string(n_list * n_features) + ".");
         }
-
-        if (this->order == column_major) {
-            for (da_int i = 0; i < n_list; i++) {
-                for (da_int j = 0; j < n_features; j++) {
-                    result[i + j * ld_centroids] = centroids[i + j * ld_centroids];
-                }
-            }
-        } else {
-            for (da_int j = 0; j < n_features; j++) {
-                for (da_int i = 0; i < n_list; i++) {
-                    result[j + i * ld_centroids] = centroids[j + i * ld_centroids];
-                }
-            }
-        }
+        da_utils::copy_array_convert_precision(
+            this->order, this->n_list, this->n_features, centroids.data(),
+            this->ld_centroids, result, this->ld_centroids);
         break;
     default:
         return da_warn(this->err, da_status_unknown_query,
@@ -153,7 +154,8 @@ template <typename T> da_status approximate_neighbors<T>::check_options_update()
     // To be called before kneighbors computation or add is performed to check for
     // any relevant options updates.
     bool opt_pass = true;
-    da_int local_algo, local_metric, local_n_list;
+    da_int local_algo, local_metric, local_n_list, local_quantization,
+        local_quantization_scheme, local_quantization_residual;
     std::string opt_val;
     // nprobe is free to change between queries
     opt_pass &= this->opts.get("n_probe", n_probe) == da_status_success;
@@ -179,6 +181,31 @@ template <typename T> da_status approximate_neighbors<T>::check_options_update()
     if (local_metric != this->metric) {
         return da_error_bypass(this->err, da_status_option_locked,
                                "metric cannot be changed after calling train().");
+    }
+    // Only read quantization options if the selected algorithm needs them.
+    if (this->algo == approx_nn_algorithm::ivfsq) {
+        opt_pass &= this->opts.get("quantization", opt_val, local_quantization) ==
+                    da_status_success;
+        if (scalar_quantizer::code_kind(local_quantization) != this->sq.get_code_kind()) {
+            return da_error_bypass(
+                this->err, da_status_option_locked,
+                "quantization cannot be changed after calling train().");
+        }
+        opt_pass &= this->opts.get("quantization_scheme", opt_val,
+                                   local_quantization_scheme) == da_status_success;
+        if (scalar_quantizer::scheme(local_quantization_scheme) !=
+            this->sq.get_scheme()) {
+            return da_error_bypass(
+                this->err, da_status_option_locked,
+                "quantization_scheme cannot be changed after calling train().");
+        }
+        opt_pass &= this->opts.get("quantization_residual", opt_val,
+                                   local_quantization_residual) == da_status_success;
+        if ((local_quantization_residual != 0) != this->quantize_residual) {
+            return da_error_bypass(
+                this->err, da_status_option_locked,
+                "quantization_residual cannot be changed after calling train().");
+        }
     }
 
     return da_status_success;
@@ -235,6 +262,13 @@ template <typename T> da_status approximate_neighbors<T>::read_training_options(
     bool opt_pass = true;
     std::string opt_val;
     da_int iorder, imetric;
+    da_int iquantization = scalar_quantizer::none;
+    da_int iquantization_scheme = scalar_quantizer::per_dimension;
+    da_int iquantization_residual = 0;
+
+    if (this->opts.get("algorithm", opt_val, algo) != da_status_success)
+        return da_error_bypass(this->err, da_status_internal_error, // LCOV_EXCL_LINE
+                               "Unexpected error while reading algorithm.");
 
     // Integer options - don't need n_probe or n_neighbors until search time
     opt_pass &= this->opts.get("n_list", n_list) == da_status_success;
@@ -245,13 +279,17 @@ template <typename T> da_status approximate_neighbors<T>::read_training_options(
     opt_pass &= this->opts.get("train fraction", train_fraction) == da_status_success;
 
     // string options
-    opt_pass &= this->opts.get("algorithm", opt_val, algo) == da_status_success;
-    this->internal_algo = (this->algo == approx_nn_algorithm::automatic)
-                              ? static_cast<da_int>(approx_nn_algorithm::ivfflat)
-                              : this->algo;
-
     opt_pass &= this->opts.get("metric", opt_val, imetric) == da_status_success;
     opt_pass &= this->opts.get("storage order", opt_val, iorder) == da_status_success;
+    // Only read quantization options if the selected algorithm needs them.
+    if (this->algo == approx_nn_algorithm::ivfsq) {
+        opt_pass &=
+            this->opts.get("quantization", opt_val, iquantization) == da_status_success;
+        opt_pass &= this->opts.get("quantization_scheme", opt_val,
+                                   iquantization_scheme) == da_status_success;
+        opt_pass &= this->opts.get("quantization_residual", opt_val,
+                                   iquantization_residual) == da_status_success;
+    }
 
     if (!opt_pass)
         return da_error_bypass(this->err, da_status_internal_error, // LCOV_EXCL_LINE
@@ -264,11 +302,31 @@ template <typename T> da_status approximate_neighbors<T>::read_training_options(
                 " must be at least as large as n_list = " + std::to_string(n_list));
     }
 
+    const auto quantization = scalar_quantizer::code_kind(iquantization);
+    this->internal_algo = approx_nn_algorithm::ivfflat;
+
+    // If we select bfloat, just force the scheme to be direct_signed
+    if (quantization == scalar_quantizer::bfloat16 &&
+        scalar_quantizer::scheme(iquantization_scheme) !=
+            scalar_quantizer::direct_signed) {
+        if (this->opts.set("quantization_scheme", std::string("direct_signed"),
+                           da_options::solver) != da_status_success) {
+            return da_error_bypass(
+                this->err, da_status_internal_error,
+                "Unexpected error while updating quantization_scheme.");
+        }
+        iquantization_scheme = static_cast<int>(scalar_quantizer::direct_signed);
+    }
+
     this->order = da_order(iorder);
     this->metric = approx_nn_metric(imetric);
     this->internal_metric = (this->metric == approx_nn_metric::euclidean)
                                 ? approx_nn_metric::sqeuclidean
                                 : this->metric;
+
+    this->quantize_residual = (iquantization_residual != 0);
+    this->sq = scalar_quantizer::scalar_quantizer<T>(
+        scalar_quantizer::scheme(iquantization_scheme), quantization);
 
     return da_status_success;
 }
@@ -341,6 +399,27 @@ template <typename T> da_status approximate_neighbors<T>::train_ivfflat() {
     da_status status = da_status_success;
 
     this->ld_centroids = (this->order == column_major) ? this->n_list : n_features;
+
+    // Select and default-construct the typed variant alternative. The list vector is
+    // still empty here; its allocation is handled with the other allocations below.
+    switch (this->sq.get_code_kind()) {
+    case scalar_quantizer::none:
+        this->indexed_storage = dense_indexed_lists<T>{};
+        break;
+    case scalar_quantizer::int8:
+        this->indexed_storage = dense_indexed_lists<int8_t>{};
+        break;
+    case scalar_quantizer::bfloat16:
+        this->indexed_storage = dense_indexed_lists<da_bf16::storage_type>{};
+        break;
+    case scalar_quantizer::int4:
+        this->indexed_storage = dense_indexed_lists<uint8_t>{};
+        break;
+    default:
+        return da_error(this->err, da_status_invalid_input,
+                        "No indexed storage supports the selected code format.");
+    }
+
     // We can now allocate memory for centroids, list_sizes and global_indices
     // as we have read n_list in read_training_options
     // Note use of assign and not resize as n_list may change between train calls
@@ -350,12 +429,14 @@ template <typename T> da_status approximate_neighbors<T>::train_ivfflat() {
         this->centroids.assign(
             static_cast<size_t>(n_list) * static_cast<size_t>(n_features), 0.0);
 
-        // Use resize + clear for nested containers
-        this->indexed_vectors.resize(n_list);
+        // visit passes the active typed storage to the lambda, so common operations
+        // do not need another format switch or std::get.
+        std::visit([&](auto &storage) { storage.lists.resize(n_list); },
+                   this->indexed_storage);
+
         this->list_norms.resize(n_list);
         this->global_indices.resize(n_list);
         for (da_int i = 0; i < n_list; i++) {
-            this->indexed_vectors[i].clear();
             this->list_norms[i].clear();
             this->global_indices[i].clear();
         }
@@ -397,23 +478,9 @@ template <typename T> da_status approximate_neighbors<T>::train_ivfflat() {
                                 "Memory allocation failed.");
             }
 
-            if (this->order == column_major) {
-                for (da_int j = 0; j < this->n_features; j++) {
-                    for (da_int i = 0; i < this->n_samples_train; i++) {
-                        X_train_work[i + j * ldx_train_work] =
-                            this->X_train[i + j * this->ldx_train];
-                    }
-                }
-            } else {
-                size_t row_bytes = static_cast<size_t>(this->n_features) * sizeof(T);
-                for (da_int i = 0; i < this->n_samples_train; i++) {
-                    memcpy(X_train_work.data() + static_cast<size_t>(i) *
-                                                     static_cast<size_t>(ldx_train_work),
-                           this->X_train + static_cast<size_t>(i) *
-                                               static_cast<size_t>(this->ldx_train),
-                           row_bytes);
-                }
-            }
+            da_utils::copy_array_convert_precision(
+                this->order, this->n_samples_train, this->n_features, this->X_train,
+                this->ldx_train, X_train_work.data(), ldx_train_work);
         }
 
         // Normalize training data in-place for cosine metric
@@ -486,6 +553,73 @@ template <typename T> da_status approximate_neighbors<T>::train_ivfflat() {
                                             this->centroid_norms.data());
     }
 
+    // Train the scalar quantizer so each target component is reconstructed as
+    // target[d] ~= bias[d] + scale[d] * code[d]. Normally target is x; with residual
+    // encoding it is x - centroid[label]. Reuse the k-means labels so the quantizer
+    // learns the values it will encode without recomputing full-precision assignments.
+    if (this->quantize_db()) {
+        const T *sq_train_ptr = train_ptr;
+        da_int sq_ld = ld_train;
+        std::vector<T> residuals;
+
+        if (this->quantize_residual) {
+            std::vector<da_int> train_labels;
+            try {
+                train_labels.resize(this->n_samples_train);
+                residuals.resize(static_cast<size_t>(this->n_samples_train) *
+                                 static_cast<size_t>(this->n_features));
+            } catch (std::bad_alloc const &) {
+                return da_error(this->err, da_status_memory_error, // LCOV_EXCL_LINE
+                                "Memory allocation failed.");
+            }
+
+            da_int labels_size = this->n_samples_train;
+            status = kmeans_model.get_result(da_result::da_kmeans_labels, &labels_size,
+                                             train_labels.data());
+            if (status != da_status_success)
+                return status;
+
+            da_int ld_res =
+                (this->order == column_major) ? this->n_samples_train : this->n_features;
+            if (this->order == column_major) {
+                for (da_int j = 0; j < this->n_features; j++) {
+                    for (da_int i = 0; i < this->n_samples_train; i++) {
+                        da_int c = train_labels[i];
+                        residuals[i + static_cast<size_t>(j) * ld_res] =
+                            train_ptr[i + static_cast<size_t>(j) * ld_train] -
+                            this->centroids[c +
+                                            static_cast<size_t>(j) * this->ld_centroids];
+                    }
+                }
+            } else {
+                for (da_int i = 0; i < this->n_samples_train; i++) {
+                    da_int c = train_labels[i];
+                    for (da_int j = 0; j < this->n_features; j++) {
+                        residuals[j + static_cast<size_t>(i) * ld_res] =
+                            train_ptr[j + static_cast<size_t>(i) * ld_train] -
+                            this->centroids[j +
+                                            static_cast<size_t>(c) * this->ld_centroids];
+                    }
+                }
+            }
+            sq_train_ptr = residuals.data();
+            sq_ld = ld_res;
+        }
+
+        status = this->sq.train(this->order, sq_train_ptr, this->n_samples_train,
+                                this->n_features, sq_ld);
+        if (status != da_status_success) {
+            return da_error(this->err, da_status_memory_error, // LCOV_EXCL_LINE
+                            "Memory allocation failed.");
+        }
+        for (da_int d = 0; d < this->n_features; d++) {
+            if (!std::isfinite(this->sq.scale()[d]) || !std::isfinite(this->sq.bias()[d]))
+                return da_error(this->err, da_status_numerical_difficulties,
+                                "Scalar quantizer training produced non-finite "
+                                "parameters.");
+        }
+    }
+
     return da_status_success;
 }
 
@@ -501,6 +635,12 @@ template <typename T> da_status approximate_neighbors<T>::train() {
     if (status != da_status_success) {
         return status;
     }
+
+    // Retraining replaces the centroids and indexed lists, so previously added
+    // samples no longer belong to the model being built.
+    this->model_trained = false;
+    this->data_is_added = false;
+    this->n_index = 0;
 
     this->internal_seed = this->seed;
     if (internal_seed == -1) {
@@ -570,8 +710,7 @@ da_status approximate_neighbors<T>::add_ivfflat(da_int n_samples_add, da_int n_f
     1. For cosine metric, normalize X_add upfront
     2. Compute distance from each row of X_add to each centroid
     3. Identify closest centroid for each row.
-    4. Iterate over indexed_vectors, adding the appropriate rows of X_add to
-    the appropriate list of indexed_vectors.
+    4. Store the assigned rows in the active native or quantized list representation.
     */
 
     // For cosine metric, normalize X_add before computing distances
@@ -691,9 +830,10 @@ da_status approximate_neighbors<T>::add_ivfflat(da_int n_samples_add, da_int n_f
                 const da_int this_blk_sz =
                     (blk == n_blocks - 1 && block_rem > 0) ? block_rem : blk_sz;
 
-                const T *X_blk = (this->order == column_major)
-                                     ? X_add_ptr + blk_start
-                                     : X_add_ptr + blk_start * ldx_add_ptr;
+                const T *X_blk =
+                    (this->order == column_major)
+                        ? X_add_ptr + blk_start
+                        : X_add_ptr + static_cast<size_t>(blk_start) * ldx_add_ptr;
 
                 if (this->internal_metric == approx_nn_metric::sqeuclidean) {
                     if (this->order == column_major) {
@@ -733,7 +873,7 @@ da_status approximate_neighbors<T>::add_ivfflat(da_int n_samples_add, da_int n_f
 
                 // Argmin: write to nearest_centroid[blk_start+i]
                 for (da_int i = 0; i < this_blk_sz; i++) {
-                    const T *row = &thread_dists[i * n_list];
+                    const T *row = &thread_dists[static_cast<size_t>(i) * n_list];
                     nearest_centroid[blk_start + i] = static_cast<da_int>(
                         std::distance(row, std::min_element(row, row + n_list)));
                 }
@@ -756,89 +896,208 @@ da_status approximate_neighbors<T>::add_ivfflat(da_int n_samples_add, da_int n_f
     // Reset n_threads for the next parallel region
     // n_threads is at most n_list
     n_threads = std::min(static_cast<da_int>(omp_get_max_threads()), this->n_list);
-    size_t row_bytes = static_cast<size_t>(this->n_features) * sizeof(T);
 
     bool is_euclidean = (this->internal_metric == approx_nn_metric::sqeuclidean);
+    da_status storage_status;
+    switch (this->sq.get_code_kind()) {
+    case scalar_quantizer::none: {
+        // if indexed_storage contains dense_indexed_lists<T>, get a pointer to it
+        // otherwise return nullptr, and so on for other variants
+        auto *storage = std::get_if<dense_indexed_lists<T>>(&this->indexed_storage);
+        if (!storage)
+            return da_error(this->err, da_status_internal_error,
+                            "Native indexed storage is not active.");
+        storage_status = this->store_unquantized_rows(
+            *storage, local_indices, X_add_ptr, ldx_add_ptr, n_threads, is_euclidean);
+        break;
+    }
+    case scalar_quantizer::int8: {
+        auto *storage = std::get_if<dense_indexed_lists<int8_t>>(&this->indexed_storage);
+        if (!storage)
+            return da_error(this->err, da_status_internal_error,
+                            "Int8 indexed storage is not active.");
+        storage_status = this->store_quantized_rows(*storage, local_indices, X_add_ptr,
+                                                    ldx_add_ptr, n_threads, is_euclidean);
+        break;
+    }
+    case scalar_quantizer::bfloat16: {
+        auto *storage = std::get_if<dense_indexed_lists<da_bf16::storage_type>>(
+            &this->indexed_storage);
+        if (!storage)
+            return da_error(this->err, da_status_internal_error,
+                            "bfloat16 indexed storage is not active.");
+        storage_status = this->store_quantized_rows(*storage, local_indices, X_add_ptr,
+                                                    ldx_add_ptr, n_threads, is_euclidean);
+        break;
+    }
+    case scalar_quantizer::int4: {
+        auto *storage = std::get_if<dense_indexed_lists<uint8_t>>(&this->indexed_storage);
+        if (!storage)
+            return da_error(this->err, da_status_internal_error,
+                            "Int4 indexed storage is not active.");
+        storage_status = this->store_quantized_rows(*storage, local_indices, X_add_ptr,
+                                                    ldx_add_ptr, n_threads, is_euclidean);
+        break;
+    }
+    default:
+        return da_error(this->err, da_status_invalid_input,
+                        "No indexed storage supports the selected code format.");
+    }
+    if (storage_status != da_status_success)
+        return storage_status;
 
-    // Resize indexed_vectors (and list_norms for euclidean) to accommodate new data
-    // old_list_sizes is initialized to 0 in train_ivfflat(), so the loop below
-    // works for both first call (old_size=0) and subsequent calls
+    this->n_index += n_samples_add;
+    this->data_is_added = true;
+    return da_status_success;
+}
+
+template <typename T>
+da_status approximate_neighbors<T>::store_unquantized_rows(
+    dense_indexed_lists<T> &storage,
+    const std::vector<da_vector::da_vector<da_int>> &local_indices, const T *X_add,
+    da_int ldx_add, [[maybe_unused]] da_int n_threads, bool is_euclidean) {
     try {
-        for (da_int i = 0; i < n_list; i++) {
-            this->indexed_vectors[i].resize(static_cast<size_t>(this->list_sizes[i]) *
-                                            static_cast<size_t>(n_features));
+        for (da_int list = 0; list < this->n_list; list++) {
+            storage.lists[list].resize(static_cast<size_t>(this->list_sizes[list]) *
+                                       static_cast<size_t>(this->n_features));
             if (is_euclidean)
-                this->list_norms[i].resize(this->list_sizes[i]);
+                this->list_norms[list].resize(this->list_sizes[list]);
         }
     } catch (std::bad_alloc const &) {
         return da_error(this->err, da_status_memory_error, // LCOV_EXCL_LINE
                         "Memory allocation failed.");
     }
 
-    // Read from X_add_ptr and write to indexed_vectors (always stored as row major)
-    // Leading dim of each indexed_vector[list_idx] is n_features
-    // old_list_sizes[i] is 0 on first call, so we iterate from 0 to list_sizes[i]
 #pragma omp parallel for num_threads(n_threads) schedule(dynamic) default(none)          \
-    shared(old_list_sizes, list_sizes, indexed_vectors, list_norms, local_indices,       \
-               X_add_ptr, n_list, n_features, ldx_add_ptr, row_bytes, is_euclidean)
-    for (da_int list_idx = 0; list_idx < n_list; list_idx++) {
-        da_int old_size = this->old_list_sizes[list_idx];
-        da_int new_size = this->list_sizes[list_idx];
-        T *list_ptr = this->indexed_vectors[list_idx].data();
-        da_int *indices_to_add = local_indices[list_idx].data();
+    shared(storage, local_indices, X_add, ldx_add, is_euclidean)
+    for (da_int list = 0; list < this->n_list; list++) {
+        const da_int old_size = this->old_list_sizes[list];
+        const da_int new_size = this->list_sizes[list];
+        const da_int *indices_to_add = local_indices[list].data();
+        const da_int src_stride = (this->order == column_major) ? ldx_add : 1;
+        T *destination = storage.lists[list].data();
+        T *norms = is_euclidean ? this->list_norms[list].data() : nullptr;
 
-        if (is_euclidean) {
-            // Norm computation done at same time for euclidean metrics
-            T *norms_ptr = this->list_norms[list_idx].data();
-            if (this->order == column_major) {
-                for (da_int i = old_size; i < new_size; i++) {
-                    da_int add_row_idx = indices_to_add[i - old_size];
-                    da_int row_idx = i * n_features;
-                    T norm = 0;
-                    for (da_int j = 0; j < n_features; j++) {
-                        T val = X_add_ptr[add_row_idx + j * ldx_add_ptr];
-                        list_ptr[row_idx + j] = val;
-                        norm += val * val;
-                    }
-                    norms_ptr[i] = norm;
-                }
-            } else {
-                for (da_int i = old_size; i < new_size; i++) {
-                    const T *src = X_add_ptr + ldx_add_ptr * indices_to_add[i - old_size];
-                    T *dst = list_ptr + i * n_features;
-                    T norm = 0;
-                    for (da_int j = 0; j < n_features; j++) {
-                        dst[j] = src[j];
-                        norm += src[j] * src[j];
-                    }
-                    norms_ptr[i] = norm;
-                }
+        for (da_int row = old_size; row < new_size; row++) {
+            da_int source_row = indices_to_add[row - old_size];
+            const T *source = (this->order == column_major)
+                                  ? X_add + source_row
+                                  : X_add + static_cast<size_t>(source_row) * ldx_add;
+            T *output = destination + static_cast<size_t>(row) * this->n_features;
+            T norm = T(0);
+            for (da_int feature = 0; feature < this->n_features; feature++) {
+                T value = source[static_cast<size_t>(feature) * src_stride];
+                output[feature] = value;
+                norm += value * value;
             }
-        } else {
-            if (this->order == column_major) {
-                for (da_int i = old_size; i < new_size; i++) {
-                    da_int add_row_idx = indices_to_add[i - old_size];
-                    da_int row_idx = i * n_features;
-                    for (da_int j = 0; j < n_features; j++) {
-                        list_ptr[row_idx + j] = X_add_ptr[add_row_idx + j * ldx_add_ptr];
-                    }
-                }
-            } else {
-                for (da_int i = old_size; i < new_size; i++) {
-                    da_int row_idx = indices_to_add[i - old_size];
-                    memcpy(list_ptr +
-                               static_cast<size_t>(i) * static_cast<size_t>(n_features),
-                           X_add_ptr + static_cast<size_t>(ldx_add_ptr) *
-                                           static_cast<size_t>(row_idx),
-                           row_bytes);
-                }
-            }
+            if (is_euclidean)
+                norms[row] = norm;
         }
     }
-
-    this->n_index += n_samples_add;
-    this->data_is_added = true;
     return da_status_success;
+}
+
+template <typename T>
+template <typename Q>
+da_status approximate_neighbors<T>::store_quantized_rows(
+    dense_indexed_lists<Q> &storage,
+    const std::vector<da_vector::da_vector<da_int>> &local_indices, const T *X_add,
+    da_int ldx_add, da_int n_threads, bool is_euclidean) {
+    // local_indices contains list assignments already computed in add_ivfflat from
+    // full-precision vector-to-centroid scores. The quantizer was trained in
+    // train_ivfflat(); here we only encode x, or x - centroid[list] in residual mode.
+    const da_int stored_row_width = [](da_int n_features) {
+        if constexpr (std::is_same_v<Q, uint8_t>)
+            return static_cast<da_int>(
+                scalar_quantizer::int4_packing::packed_size(n_features));
+        else
+            return n_features;
+    }(this->n_features);
+    std::vector<T> row_workspace;
+    try {
+        row_workspace.resize(static_cast<size_t>(n_threads) * this->n_features);
+        for (da_int list = 0; list < this->n_list; list++) {
+            storage.lists[list].resize(static_cast<size_t>(this->list_sizes[list]) *
+                                       static_cast<size_t>(stored_row_width));
+            if (is_euclidean)
+                this->list_norms[list].resize(this->list_sizes[list]);
+        }
+    } catch (std::bad_alloc const &) {
+        return da_error(this->err, da_status_memory_error, // LCOV_EXCL_LINE
+                        "Memory allocation failed.");
+    }
+
+#pragma omp parallel for num_threads(n_threads) schedule(dynamic) default(none)          \
+    shared(storage, local_indices, X_add, ldx_add, is_euclidean, row_workspace,          \
+               stored_row_width)
+    for (da_int list = 0; list < this->n_list; list++) {
+        const da_int old_size = this->old_list_sizes[list];
+        const da_int new_size = this->list_sizes[list];
+        const da_int *indices_to_add = local_indices[list].data();
+        const da_int src_stride = (this->order == column_major) ? ldx_add : 1;
+        const da_int centroid_stride =
+            (this->order == column_major) ? this->ld_centroids : 1;
+        const T *centroid =
+            (this->order == column_major)
+                ? this->centroids.data() + list
+                : this->centroids.data() + static_cast<size_t>(list) * this->ld_centroids;
+        Q *destination = storage.lists[list].data();
+        T *norms = is_euclidean ? this->list_norms[list].data() : nullptr;
+        T *encode_row = row_workspace.data() +
+                        static_cast<size_t>(omp_get_thread_num()) * this->n_features;
+
+        for (da_int row = old_size; row < new_size; row++) {
+            da_int source_row = indices_to_add[row - old_size];
+            const T *source = (this->order == column_major)
+                                  ? X_add + source_row
+                                  : X_add + static_cast<size_t>(source_row) * ldx_add;
+            for (da_int feature = 0; feature < this->n_features; feature++) {
+                encode_row[feature] = source[static_cast<size_t>(feature) * src_stride];
+                if (this->quantize_residual)
+                    encode_row[feature] -=
+                        centroid[static_cast<size_t>(feature) * centroid_stride];
+            }
+
+            Q *codes = destination + static_cast<size_t>(row) * stored_row_width;
+            this->sq.quantize(row_major, encode_row, 1, this->n_features,
+                              this->n_features, codes, stored_row_width);
+            if (is_euclidean)
+                norms[row] = this->reconstructed_squared_norm(
+                    codes, this->quantize_residual ? centroid : nullptr, centroid_stride);
+        }
+    }
+    return da_status_success;
+}
+
+// Return ||x_hat||^2 for the vector represented by the codes, where
+// x_hat = bias + scale * code (+ centroid for residual encoding). Fine Euclidean
+// search uses ||q - x_hat||^2, so using the original ||x||^2 would be inconsistent
+// with its approximate reconstructed dot product.
+template <typename T>
+template <typename Q>
+T approximate_neighbors<T>::reconstructed_squared_norm(const Q *codes, const T *centroid,
+                                                       da_int centroid_stride) {
+    const auto &scale = this->sq.scale();
+    const auto &bias = this->sq.bias();
+    T norm = T(0);
+    for (da_int feature = 0; feature < n_features; feature++) {
+        T code_value;
+        if constexpr (std::is_same_v<Q, uint8_t>) {
+            code_value =
+                static_cast<T>(scalar_quantizer::int4_packing::load(codes, feature));
+        } else {
+            code_value = static_cast<T>(codes[feature]);
+        }
+        if constexpr (std::is_same_v<Q, da_bf16::storage_type>) {
+            if (this->sq.get_code_kind() == scalar_quantizer::bfloat16)
+                code_value = static_cast<T>(da_bf16::to_float(codes[feature]));
+        }
+        T value = bias[feature] + scale[feature] * code_value;
+        if (centroid)
+            value += centroid[static_cast<size_t>(feature) * centroid_stride];
+        norm += value * value;
+    }
+    return norm;
 }
 
 template <typename T> da_status approximate_neighbors<T>::train_and_add() {
@@ -949,7 +1208,8 @@ void approximate_neighbors<T>::update_heaps_from_list_blk(
     for (da_int q = 0; q < q_count; q++) {
         auto &heap = heaps[queries_processed[q] - block_start];
         T max_dist = heap.GetMaxDist();
-        const T *list_blk_dists = fine_distances + q * this_list_blk_sz;
+        const T *list_blk_dists =
+            fine_distances + static_cast<size_t>(q) * this_list_blk_sz;
         for (da_int v = 0; v < this_list_blk_sz; v++) {
             if (list_blk_dists[v] < max_dist) {
                 heap.Insert(list_blk_global_idx[v], list_blk_dists[v]);
@@ -957,6 +1217,320 @@ void approximate_neighbors<T>::update_heaps_from_list_blk(
             }
         }
     }
+}
+
+// Scan one quantized IVF list. process_block() prepares the backend-specific query
+// representation once for the full query block. Here
+// Backend::gather_list_queries() packs the prepared rows that probe this list and
+// Backend::compute_products() forms their products with the encoded list vectors.
+//
+// A database vector x is encoded either directly or as a residual from this list's
+// centroid:
+//
+//   encoded_value = x                    without residual encoding
+//   encoded_value = x - centroid[j]      with residual encoding
+//
+// Scalar quantization represents each encoded component approximately as
+//
+//   encoded_value[d] = scale[d] * code[d] + bias[d].
+//
+// For a query q, Backend::compute_products() calculates the code-dependent part of the
+// dot
+// product:
+//
+//   code_product(q, code) = sum_d (q[d] * scale[d]) * code[d].
+//
+// process_block() separately calculates the code-independent bias contribution
+//
+//   bias_dot_product(q) = sum_d q[d] * bias[d].
+//
+// Their sum approximates dot(q, encoded_value). With residual encoding,
+// dot(q, centroid[j]) must also be included. Terms shared by every vector in this list
+// are collected once per query in distance_offsets. Each vector's internal distance is
+// then:
+//
+//   squared Euclidean: distance_offset - 2 * code_product + squared_norm(x)
+//   inner product/cosine: distance_offset - code_product
+//
+// Inner-product and cosine search use negative dot product internally, allowing all
+// metrics to share the same min-distance heap logic.
+template <typename T>
+template <typename Backend>
+bool approximate_neighbors<T>::process_list_quantized(
+    search_workspace<Backend> &ws, const search_params &p,
+    const dense_indexed_lists<typename Backend::stored_type> &storage, da_int j,
+    da_int block_start) {
+    static_assert(Backend::is_quantized);
+
+    da_int list_size = this->list_sizes[j];
+    const da_int *this_list_idx = this->global_indices[j].data();
+    const da_int *qpc_j = ws.qpc + static_cast<size_t>(j) * p.query_blk_sz;
+    const da_int q_count = ws.qpc_count[j];
+
+    if (list_size == 0 || q_count == 0)
+        return true;
+
+    const typename Backend::Q *this_list_codes = storage.lists[j].data();
+    const T *this_list_norms = p.is_euclidean ? this->list_norms[j].data() : nullptr;
+    const T dot_multiplier = p.is_euclidean ? T(2.0) : T(1.0);
+
+    Backend::gather_list_queries(*ws.quantized, qpc_j, block_start, q_count,
+                                 p.n_features);
+
+    // Compute the query/list terms that are shared by every vector in this list.
+    T *distance_offsets = ws.distance_offsets;
+    for (da_int query_idx = 0; query_idx < q_count; query_idx++) {
+        da_int block_query_idx = qpc_j[query_idx] - block_start;
+        T base_distance;
+        if (this->quantize_residual) {
+            T coarse_distance =
+                ws.coarse_dist[static_cast<size_t>(block_query_idx) * this->n_list + j];
+            base_distance = p.is_euclidean ? (coarse_distance - this->centroid_norms[j])
+                                           : coarse_distance;
+        } else {
+            base_distance = p.is_euclidean ? ws.qnorms[block_query_idx] : T(0.0);
+        }
+        distance_offsets[query_idx] =
+            base_distance - dot_multiplier * ws.bias_dot_products[block_query_idx];
+    }
+
+    // For each list block, compute fine distances.
+    // Perform per-query adjustments, and pass to heap updates
+    for (da_int t = 0; t < list_size; t += p.list_blk_sz) {
+        da_int this_list_blk_sz = std::min(p.list_blk_sz, list_size - t);
+        if (!Backend::compute_products(*ws.quantized,
+                                       this_list_codes +
+                                           Backend::stored_row_offset(t, p.n_features),
+                                       q_count, this_list_blk_sz, p.n_features))
+            return false;
+
+        for (da_int query_idx = 0; query_idx < q_count; query_idx++) {
+            const typename Backend::T *query_dot_products =
+                ws.quantized->dot_products.data() +
+                static_cast<size_t>(query_idx) * static_cast<size_t>(this_list_blk_sz);
+            T *fine_distances =
+                ws.fine_distances +
+                static_cast<size_t>(query_idx) * static_cast<size_t>(this_list_blk_sz);
+            T distance_offset = distance_offsets[query_idx];
+#pragma omp simd
+            for (da_int vector_idx = 0; vector_idx < this_list_blk_sz; vector_idx++) {
+                T distance =
+                    distance_offset -
+                    dot_multiplier * static_cast<T>(query_dot_products[vector_idx]);
+                if (p.is_euclidean) {
+                    distance += this_list_norms[t + vector_idx];
+                    distance = std::max(distance, T(0));
+                }
+                fine_distances[vector_idx] = distance;
+            }
+        }
+        update_heaps_from_list_blk(this_list_blk_sz, q_count, this_list_idx + t,
+                                   ws.fine_distances, block_start, qpc_j, ws.heaps);
+    }
+    return true;
+}
+
+// Process one IVF list for the current query block: gather the queries that probe it,
+// compute fine query-vector distances via blocked GEMM, and update the per-query heaps.
+template <typename T>
+template <typename Backend>
+bool approximate_neighbors<T>::process_list(
+    search_workspace<Backend> &ws, const search_params &p,
+    const dense_indexed_lists<typename Backend::stored_type> &storage, da_int j,
+    da_int block_start) {
+    if constexpr (Backend::is_quantized) {
+        return process_list_quantized<Backend>(ws, p, storage, j, block_start);
+    } else {
+
+        T *fine_distances = ws.fine_distances;
+        T *queries = ws.queries;
+        T *query_cos = ws.query_cos;
+        T *qnorms = ws.qnorms;
+        auto heaps = ws.heaps;
+
+        da_int list_size = this->list_sizes[j];
+        const T *this_list = storage.lists[j].data();
+        T *this_list_norms = this->list_norms[j].data();
+        const da_int *this_list_idx = this->global_indices[j].data();
+        const da_int *qpc_j = ws.qpc + static_cast<size_t>(j) * p.query_blk_sz;
+        const da_int q_count = ws.qpc_count[j];
+
+        if (list_size == 0 || q_count == 0)
+            return true;
+
+        // Gather queries
+        for (da_int k = 0; k < q_count; k++) {
+            const T *query_ptr =
+                p.is_cosine ? query_cos + static_cast<size_t>(qpc_j[k] - block_start) *
+                                              p.n_features
+                            : p.X_test_ptr + static_cast<size_t>(qpc_j[k]) * p.ldx_test;
+            memcpy(queries + static_cast<size_t>(k) * static_cast<size_t>(p.n_features),
+                   query_ptr, static_cast<size_t>(p.n_features) * sizeof(T));
+        }
+
+        // For each block in list vectors, calculate distances and update heaps
+        for (da_int t = 0; t < list_size; t += p.list_blk_sz) {
+            da_int this_list_blk_sz = std::min(p.list_blk_sz, list_size - t);
+            if (p.is_euclidean) {
+                ARCH::euclidean_gemm_distance(
+                    row_major, q_count, this_list_blk_sz, p.n_features, queries,
+                    p.n_features, this_list + static_cast<size_t>(t) * p.n_features,
+                    p.n_features, fine_distances, this_list_blk_sz, qnorms, 2,
+                    this_list_norms + t, 1, true, false);
+            } else {
+                da_blas::cblas_gemm(
+                    CblasRowMajor, CblasNoTrans, CblasTrans, q_count, this_list_blk_sz,
+                    p.n_features, static_cast<T>(-1.0), queries, p.n_features,
+                    this_list + static_cast<size_t>(t) * p.n_features, p.n_features,
+                    static_cast<T>(0.0), fine_distances, this_list_blk_sz);
+            }
+            update_heaps_from_list_blk(this_list_blk_sz, q_count, this_list_idx + t,
+                                       fine_distances, block_start, qpc_j, heaps);
+        }
+        return true;
+    }
+}
+
+// Process one query block: reset heaps, compute coarse query-centroid distances, select
+// the n_probe nearest centroids per query, scan the probed lists, then write results.
+template <typename T>
+template <typename Backend>
+bool approximate_neighbors<T>::process_block(
+    search_workspace<Backend> &ws, const search_params &p,
+    const dense_indexed_lists<typename Backend::stored_type> &storage, da_int i) {
+    da_int n_list = this->n_list;
+    da_int n_probe = this->n_probe;
+
+    da_int *heap_indices = ws.heap_indices;
+    T *heap_distances = ws.heap_distances;
+    auto heaps = ws.heaps;
+    T *query_cos = ws.query_cos;
+    T *qnorms = ws.qnorms;
+    T *coarse_dist = ws.coarse_dist;
+    da_int *cent_idx = ws.cent_idx;
+    T *cent_sel_dists = ws.cent_sel_dists;
+    da_int *qpc = ws.qpc;
+    da_int *qpc_count = ws.qpc_count;
+
+    da_int this_query_blk_sz;
+    if ((i == p.n_blocks - 1) && p.final_query_blk_sz > 0) {
+        this_query_blk_sz = p.final_query_blk_sz;
+    } else {
+        this_query_blk_sz = p.query_blk_sz;
+    }
+
+    da_int block_start = i * p.query_blk_sz;
+    da_int block_end = std::min((i + 1) * p.query_blk_sz, p.n_queries);
+
+    // Reset heaps for this block
+    da_std::fill(heap_indices,
+                 heap_indices + static_cast<size_t>(p.k_neigh) * p.query_blk_sz, -1);
+    da_std::fill(heap_distances,
+                 heap_distances + static_cast<size_t>(p.k_neigh) * p.query_blk_sz,
+                 std::numeric_limits<T>::infinity());
+    for (da_int ii = 0; ii < p.query_blk_sz; ii++) {
+        heaps[ii] = da_binary_tree::MaxHeap<T>(
+            p.k_neigh, heap_indices + static_cast<size_t>(ii) * p.k_neigh,
+            heap_distances + static_cast<size_t>(ii) * p.k_neigh);
+    }
+
+    const T *query_blk_ptr = p.X_test_ptr + static_cast<size_t>(block_start) * p.ldx_test;
+    if (p.is_cosine) {
+        for (da_int ii = 0; ii < this_query_blk_sz; ii++) {
+            memcpy(
+                query_cos + static_cast<size_t>(ii) * static_cast<size_t>(p.n_features),
+                query_blk_ptr + static_cast<size_t>(ii) * static_cast<size_t>(p.ldx_test),
+                static_cast<size_t>(p.n_features) * sizeof(T));
+        }
+        da_utils::normalize_rows_inplace(row_major, this_query_blk_sz, p.n_features,
+                                         query_cos, p.n_features,
+                                         static_cast<T *>(nullptr));
+        query_blk_ptr = query_cos;
+    }
+
+    // Coarse GEMM: query-to-centroid distances for this thread's block
+    da_std::fill(qpc_count, qpc_count + n_list, 0);
+
+    // Calculate coarse distance for queries
+    if (p.is_euclidean) {
+        ARCH::euclidean_gemm_distance(
+            row_major, this_query_blk_sz, n_list, p.n_features,
+            p.X_test_ptr + static_cast<size_t>(block_start) * p.ldx_test, p.ldx_test,
+            p.centroids_ptr, p.ld_centroids_local, coarse_dist, n_list, qnorms, 2,
+            this->centroid_norms.data(), 1, true, false);
+    } else {
+        da_blas::cblas_gemm(CblasRowMajor, CblasNoTrans, CblasTrans, this_query_blk_sz,
+                            n_list, p.n_features, static_cast<T>(-1.0), query_blk_ptr,
+                            p.is_cosine ? p.n_features : p.ldx_test, p.centroids_ptr,
+                            p.ld_centroids_local, static_cast<T>(0.0), coarse_dist,
+                            n_list);
+    }
+
+    // For each query, find the n_probe nearest centroids.
+    // Use a max-heap linear scan
+    for (da_int q = block_start; q < block_end; q++) {
+        const T *query_distances = coarse_dist + (q - block_start) * n_list;
+        da_std::fill(cent_sel_dists, cent_sel_dists + n_probe,
+                     std::numeric_limits<T>::max());
+        da_binary_tree::MaxHeap<T> cent_heap(n_probe, cent_idx, cent_sel_dists);
+        T max_cent_dist = cent_heap.GetMaxDist();
+        for (da_int c = 0; c < n_list; c++) {
+            T d = query_distances[c];
+            if (d < max_cent_dist) {
+                cent_heap.Insert(c, d);
+                max_cent_dist = cent_heap.GetMaxDist();
+            }
+        }
+        for (da_int pp = 0; pp < n_probe; pp++) {
+            da_int c = cent_idx[pp];
+            qpc[static_cast<size_t>(c) * p.query_blk_sz + qpc_count[c]] = q;
+            qpc_count[c]++;
+        }
+    }
+
+    // The database quantizer reconstructs one encoded component as
+    //
+    //   encoded_value[d] ~= scale[d] * code[d] + bias[d].
+    //
+    // Therefore dot(query, encoded_value) separates into a code-dependent term
+    // dot(query * scale, code) and a shared bias term dot(query, bias). Build both
+    // once for the query block; every probed list reuses them.
+    if constexpr (Backend::is_quantized) {
+        const T *scale = this->sq.scale().data();
+        const T *bias = this->sq.bias().data();
+        da_int ld_q = p.is_cosine ? p.n_features : p.ldx_test;
+        for (da_int ii = 0; ii < this_query_blk_sz; ii++) {
+            const T *row =
+                query_blk_ptr + static_cast<size_t>(ii) * static_cast<size_t>(ld_q);
+            T bias_dot_product = T(0.0);
+            for (da_int d = 0; d < p.n_features; d++) {
+                Backend::set_query_value(
+                    *ws.quantized, static_cast<size_t>(ii) * p.n_features + d,
+                    static_cast<typename Backend::T>(row[d] * scale[d]));
+                bias_dot_product += row[d] * bias[d];
+            }
+            if (!std::isfinite(bias_dot_product))
+                return false;
+            ws.bias_dot_products[ii] = bias_dot_product;
+        }
+    }
+
+    // Sequential loop over all lists for this thread's block
+    for (da_int j = 0; j < n_list; j++) {
+        if (!process_list<Backend>(ws, p, storage, j, block_start))
+            return false;
+    }
+
+    // Write results directly — no merge needed, each thread owns its output rows
+    for (da_int ii = 0; ii < this_query_blk_sz; ii++) {
+        da_neighbors::sorted_n_dist_n_ind(
+            p.k_neigh, heap_distances + static_cast<size_t>(ii) * p.k_neigh,
+            heap_indices + static_cast<size_t>(ii) * p.k_neigh,
+            p.n_dist + static_cast<size_t>(block_start + ii) * p.k_neigh,
+            p.n_ind + static_cast<size_t>(block_start + ii) * p.k_neigh, ws.topk_indices,
+            p.return_distance, false);
+    }
+    return true;
 }
 
 // Basic struture:
@@ -968,25 +1542,46 @@ void approximate_neighbors<T>::update_heaps_from_list_blk(
 //             - Update per query heaps
 //         - Write results from heaps directly to output arrays
 template <typename T>
-da_status approximate_neighbors<T>::ivfflat_search_query_parallel(
-    da_int n_queries, da_int n_features, da_int k_neigh, bool return_distance,
-    const T *X_test_ptr, da_int ldx_test, const T *centroids_ptr,
-    da_int ld_centroids_local, da_int query_blk_sz, da_int list_blk_sz, da_int n_blocks,
-    da_int final_query_blk_sz, [[maybe_unused]] da_int n_threads, da_int *n_ind,
-    T *n_dist) {
+template <typename Backend>
+da_status approximate_neighbors<T>::ivfflat_search_query_parallel_impl(
+    const dense_indexed_lists<typename Backend::stored_type> &storage, da_int n_queries,
+    da_int n_features, da_int k_neigh, bool return_distance, const T *X_test_ptr,
+    da_int ldx_test, const T *centroids_ptr, da_int ld_centroids_local,
+    da_int query_blk_sz, da_int list_blk_sz, da_int n_blocks, da_int final_query_blk_sz,
+    [[maybe_unused]] da_int n_threads, da_int *n_ind, T *n_dist) {
 
     da_int n_list = this->n_list;
     da_int n_probe = this->n_probe;
     bool is_euclidean = this->internal_metric == approx_nn_metric::sqeuclidean;
     bool is_cosine = this->internal_metric == approx_nn_metric::cosine;
     da_int threading_error = 0;
+    da_int numerical_error = 0;
+    bool use_optimized_kernel = false;
+    if constexpr (Backend::is_quantized) {
+        const auto *ctx = context::get_context();
+        use_optimized_kernel = da_quantized_backend::use_optimized_backend(
+            Backend::code_kind, ctx->has_avx512_bf16);
+    }
+
+    const search_params p{n_queries,    n_features,  k_neigh,       return_distance,
+                          X_test_ptr,   ldx_test,    centroids_ptr, ld_centroids_local,
+                          query_blk_sz, list_blk_sz, n_blocks,      final_query_blk_sz,
+                          is_euclidean, is_cosine,   n_dist,        n_ind};
 
 #pragma omp parallel default(none) num_threads(n_threads)                                \
-    shared(X_test_ptr, ldx_test, n_queries, n_features, query_blk_sz, list_blk_sz,       \
-               k_neigh, n_list, n_probe, is_euclidean, is_cosine, final_query_blk_sz,    \
-               n_blocks, centroids_ptr, ld_centroids_local, n_dist, n_ind,               \
-               return_distance, threading_error)
+    shared(p, threading_error, numerical_error, n_blocks, query_blk_sz, n_list, n_probe, \
+               k_neigh, list_blk_sz, n_features, is_cosine, is_euclidean, storage,       \
+               use_optimized_kernel)
     {
+#ifndef _WIN32
+        // DLP thread-local settings are not inherited by OpenMP workers. Keep DLP
+        // serial while AOCL-DA parallelizes query blocks across these workers.
+        if constexpr (Backend::is_quantized &&
+                      ((Backend::code_kind == scalar_quantizer::code_kind::int4) ||
+                       (Backend::code_kind == scalar_quantizer::code_kind::bfloat16)))
+            dlp_thread_set_num_threads_local(1);
+#endif
+
         // Per-thread work buffers:
         // coarse_distances_buf - store distances from query to centroid
         // fine_distances_buf - store distances from query to list vectors
@@ -1005,24 +1600,39 @@ da_status approximate_neighbors<T>::ivfflat_search_query_parallel(
         std::vector<da_int> centroid_indices_buf, queries_per_centroid_buf,
             queries_per_centroid_cnt, heap_indices_buf, topk_indices_buf;
         std::vector<da_binary_tree::MaxHeap<T>> heaps_buf;
+        // Quantized product scratch is backend-owned; metric correction remains
+        // in input precision.
+        typename Backend::workspace_type quantized_workspace_buf;
+        std::vector<T> bias_dot_products_buf, distance_offsets_buf;
 
         try {
-            coarse_distances_buf.resize(query_blk_sz * n_list);
+            coarse_distances_buf.resize(static_cast<size_t>(query_blk_sz) * n_list);
             centroid_indices_buf.resize(n_probe);
             cent_sel_dists_buf.resize(n_probe);
-            queries_per_centroid_buf.resize(n_list * query_blk_sz);
+            queries_per_centroid_buf.resize(static_cast<size_t>(n_list) * query_blk_sz);
             queries_per_centroid_cnt.resize(n_list, 0);
-            heap_indices_buf.resize(query_blk_sz * k_neigh, -1);
-            local_heap_dists.resize(query_blk_sz * k_neigh,
+            heap_indices_buf.resize(static_cast<size_t>(query_blk_sz) * k_neigh, -1);
+            local_heap_dists.resize(static_cast<size_t>(query_blk_sz) * k_neigh,
                                     std::numeric_limits<T>::infinity());
             heaps_buf.resize(query_blk_sz);
-            fine_distances_buf.resize(query_blk_sz * list_blk_sz, 0.0);
-            query_buf.resize(query_blk_sz * n_features, 0.0);
+            fine_distances_buf.resize(static_cast<size_t>(query_blk_sz) * list_blk_sz,
+                                      0.0);
             if (is_cosine)
-                query_cos_buf.resize(query_blk_sz * n_features, 0.0);
+                query_cos_buf.resize(static_cast<size_t>(query_blk_sz) * n_features, 0.0);
             if (is_euclidean)
                 qnorms_buf.resize(query_blk_sz, 0.0);
             topk_indices_buf.resize(k_neigh, 0);
+            if constexpr (Backend::is_quantized) {
+                // Backend workspace allocation must remain inside this bad_alloc
+                // boundary; list processing assumes its scratch is already reserved.
+                quantized_workspace_buf.use_optimized_kernel = use_optimized_kernel;
+                Backend::resize_workspace(quantized_workspace_buf, query_blk_sz,
+                                          list_blk_sz, n_features);
+                bias_dot_products_buf.resize(query_blk_sz, 0.0);
+                distance_offsets_buf.resize(query_blk_sz, 0.0);
+            } else {
+                query_buf.resize(static_cast<size_t>(query_blk_sz) * n_features, 0.0);
+            }
         } catch (std::bad_alloc const &) {
 #pragma omp atomic write
             threading_error = 1;
@@ -1030,163 +1640,116 @@ da_status approximate_neighbors<T>::ivfflat_search_query_parallel(
 
 #pragma omp barrier
 
-        da_int *heap_indices = heap_indices_buf.data();
-        T *heap_distances = local_heap_dists.data();
-        auto heaps = heaps_buf.data();
-        T *fine_distances = fine_distances_buf.data();
-        T *queries = query_buf.data();
-        T *query_cos = is_cosine ? query_cos_buf.data() : nullptr;
-        T *qnorms = is_euclidean ? qnorms_buf.data() : nullptr;
-        T *coarse_dist = coarse_distances_buf.data();
-        da_int *cent_idx = centroid_indices_buf.data();
-        T *cent_sel_dists = cent_sel_dists_buf.data();
-        da_int *qpc = queries_per_centroid_buf.data();
-        da_int *qpc_count = queries_per_centroid_cnt.data();
+        typename Backend::workspace_type *quantized_workspace_ptr = nullptr;
+        T *bias_dot_products_ptr = nullptr;
+        T *distance_offsets_ptr = nullptr;
+        if constexpr (Backend::is_quantized) {
+            quantized_workspace_ptr = &quantized_workspace_buf;
+            bias_dot_products_ptr = bias_dot_products_buf.data();
+            distance_offsets_ptr = distance_offsets_buf.data();
+        }
+
+        search_workspace<Backend> ws{heap_indices_buf.data(),
+                                     local_heap_dists.data(),
+                                     heaps_buf.data(),
+                                     fine_distances_buf.data(),
+                                     query_buf.data(),
+                                     is_cosine ? query_cos_buf.data() : nullptr,
+                                     is_euclidean ? qnorms_buf.data() : nullptr,
+                                     coarse_distances_buf.data(),
+                                     centroid_indices_buf.data(),
+                                     cent_sel_dists_buf.data(),
+                                     queries_per_centroid_buf.data(),
+                                     queries_per_centroid_cnt.data(),
+                                     topk_indices_buf.data(),
+                                     quantized_workspace_ptr,
+                                     bias_dot_products_ptr,
+                                     distance_offsets_ptr};
 
         if (!threading_error) {
 #pragma omp for schedule(dynamic) nowait
             for (da_int i = 0; i < n_blocks; i++) {
-                da_int this_query_blk_sz;
-                if ((i == n_blocks - 1) && final_query_blk_sz > 0) {
-                    this_query_blk_sz = final_query_blk_sz;
-                } else {
-                    this_query_blk_sz = query_blk_sz;
-                }
-
-                da_int block_start = i * query_blk_sz;
-                da_int block_end = std::min((i + 1) * query_blk_sz, n_queries);
-
-                // Reset heaps for this block
-                da_std::fill(heap_indices, heap_indices + k_neigh * query_blk_sz, -1);
-                da_std::fill(heap_distances, heap_distances + k_neigh * query_blk_sz,
-                             std::numeric_limits<T>::infinity());
-                for (da_int ii = 0; ii < query_blk_sz; ii++) {
-                    heaps[ii] =
-                        da_binary_tree::MaxHeap<T>(k_neigh, heap_indices + ii * k_neigh,
-                                                   heap_distances + ii * k_neigh);
-                }
-
-                const T *query_blk_ptr = X_test_ptr + block_start * ldx_test;
-                if (is_cosine) {
-                    for (da_int ii = 0; ii < this_query_blk_sz; ii++) {
-                        memcpy(query_cos + static_cast<size_t>(ii) *
-                                               static_cast<size_t>(n_features),
-                               query_blk_ptr + static_cast<size_t>(ii) *
-                                                   static_cast<size_t>(ldx_test),
-                               static_cast<size_t>(n_features) * sizeof(T));
-                    }
-                    da_utils::normalize_rows_inplace(row_major, this_query_blk_sz,
-                                                     n_features, query_cos, n_features,
-                                                     static_cast<T *>(nullptr));
-                    query_blk_ptr = query_cos;
-                }
-
-                // Coarse GEMM: query-to-centroid distances for this thread's block
-                da_std::fill(qpc_count, qpc_count + n_list, 0);
-
-                // Calculate coarse distance for queries
-                if (is_euclidean) {
-                    ARCH::euclidean_gemm_distance(
-                        row_major, this_query_blk_sz, n_list, n_features,
-                        X_test_ptr + block_start * ldx_test, ldx_test, centroids_ptr,
-                        ld_centroids_local, coarse_dist, n_list, qnorms, 2,
-                        this->centroid_norms.data(), 1, true, false);
-                } else {
-                    da_blas::cblas_gemm(
-                        CblasRowMajor, CblasNoTrans, CblasTrans, this_query_blk_sz,
-                        n_list, n_features, static_cast<T>(-1.0), query_blk_ptr,
-                        is_cosine ? n_features : ldx_test, centroids_ptr,
-                        ld_centroids_local, static_cast<T>(0.0), coarse_dist, n_list);
-                }
-
-                // For each query, find the n_probe nearest centroids.
-                // Use a max-heap linear scan
-                for (da_int q = block_start; q < block_end; q++) {
-                    const T *query_distances = coarse_dist + (q - block_start) * n_list;
-                    da_std::fill(cent_sel_dists, cent_sel_dists + n_probe,
-                                 std::numeric_limits<T>::max());
-                    da_binary_tree::MaxHeap<T> cent_heap(n_probe, cent_idx,
-                                                         cent_sel_dists);
-                    T max_cent_dist = cent_heap.GetMaxDist();
-                    for (da_int c = 0; c < n_list; c++) {
-                        T d = query_distances[c];
-                        if (d < max_cent_dist) {
-                            cent_heap.Insert(c, d);
-                            max_cent_dist = cent_heap.GetMaxDist();
-                        }
-                    }
-                    for (da_int p = 0; p < n_probe; p++) {
-                        da_int c = cent_idx[p];
-                        qpc[c * query_blk_sz + qpc_count[c]] = q;
-                        qpc_count[c]++;
-                    }
-                }
-
-                // Sequential loop over all lists for this thread's block
-                for (da_int j = 0; j < n_list; j++) {
-                    da_int list_size = this->list_sizes[j];
-                    const T *this_list = this->indexed_vectors[j].data();
-                    T *this_list_norms = this->list_norms[j].data();
-                    const da_int *this_list_idx = this->global_indices[j].data();
-                    const da_int *qpc_j = qpc + j * query_blk_sz;
-                    const da_int q_count = qpc_count[j];
-
-                    if (list_size > 0 && q_count > 0) {
-                        // Gather queries
-                        for (da_int k = 0; k < q_count; k++) {
-                            const T *query_ptr =
-                                is_cosine
-                                    ? query_cos + (qpc_j[k] - block_start) * n_features
-                                    : X_test_ptr + qpc_j[k] * ldx_test;
-                            memcpy(queries + static_cast<size_t>(k) *
-                                                 static_cast<size_t>(n_features),
-                                   query_ptr,
-                                   static_cast<size_t>(n_features) * sizeof(T));
-                        }
-
-                        // For each block in list vectors, calculate distances and update heaps
-                        for (da_int t = 0; t < list_size; t += list_blk_sz) {
-                            da_int this_list_blk_sz =
-                                std::min(list_blk_sz, list_size - t);
-                            if (is_euclidean) {
-                                ARCH::euclidean_gemm_distance(
-                                    row_major, q_count, this_list_blk_sz, n_features,
-                                    queries, n_features, this_list + t * n_features,
-                                    n_features, fine_distances, this_list_blk_sz, qnorms,
-                                    2, this_list_norms + t, 1, true, false);
-                            } else {
-                                da_blas::cblas_gemm(
-                                    CblasRowMajor, CblasNoTrans, CblasTrans, q_count,
-                                    this_list_blk_sz, n_features, static_cast<T>(-1.0),
-                                    queries, n_features, this_list + t * n_features,
-                                    n_features, static_cast<T>(0.0), fine_distances,
-                                    this_list_blk_sz);
-                            }
-                            update_heaps_from_list_blk(this_list_blk_sz, q_count,
-                                                       this_list_idx + t, fine_distances,
-                                                       block_start, qpc_j, heaps);
-                        }
-                    }
-                }
-
-                // Write results directly — no merge needed, each thread owns its output rows
-                for (da_int ii = 0; ii < this_query_blk_sz; ii++) {
-                    da_neighbors::sorted_n_dist_n_ind(
-                        k_neigh, heap_distances + ii * k_neigh,
-                        heap_indices + ii * k_neigh,
-                        n_dist + (block_start + ii) * k_neigh,
-                        n_ind + (block_start + ii) * k_neigh, topk_indices_buf.data(),
-                        return_distance, false);
+                if (!process_block<Backend>(ws, p, storage, i)) {
+#pragma omp atomic write
+                    numerical_error = 1;
                 }
             }
         } // if (!threading_error)
-    }     // pragma omp parallel
+#ifndef _WIN32
+        // Remove this worker's override and return to the inherited DLP policy.
+        if constexpr (Backend::is_quantized &&
+                      ((Backend::code_kind == scalar_quantizer::code_kind::int4) ||
+                       (Backend::code_kind == scalar_quantizer::code_kind::bfloat16)))
+            dlp_thread_set_num_threads_local(-1);
+#endif
+    } // pragma omp parallel
 
     if (threading_error)
         return da_error(this->err, da_status_memory_error, // LCOV_EXCL_LINE
                         "Memory allocation failed.");
+    if (numerical_error)
+        return da_error(this->err, da_status_numerical_difficulties,
+                        "Quantized query values cannot be represented by the selected "
+                        "GEMM backend.");
 
     return da_status_success;
+}
+
+template <typename T>
+da_status approximate_neighbors<T>::ivfflat_search_query_parallel(
+    da_int n_queries, da_int n_features, da_int k_neigh, bool return_distance,
+    const T *X_test_ptr, da_int ldx_test, const T *centroids_ptr,
+    da_int ld_centroids_local, da_int query_blk_sz, da_int list_blk_sz, da_int n_blocks,
+    da_int final_query_blk_sz, da_int n_threads, da_int *n_ind, T *n_dist) {
+    using namespace da_quantized_backend;
+    switch (this->sq.get_code_kind()) {
+    case scalar_quantizer::code_kind::none: {
+        const auto *storage = std::get_if<dense_indexed_lists<T>>(&this->indexed_storage);
+        if (!storage)
+            return da_error(this->err, da_status_internal_error,
+                            "Native indexed storage is not active.");
+        return ivfflat_search_query_parallel_impl<unquantized_backend<T>>(
+            *storage, n_queries, n_features, k_neigh, return_distance, X_test_ptr,
+            ldx_test, centroids_ptr, ld_centroids_local, query_blk_sz, list_blk_sz,
+            n_blocks, final_query_blk_sz, n_threads, n_ind, n_dist);
+    }
+    case scalar_quantizer::code_kind::int8: {
+        const auto *storage =
+            std::get_if<dense_indexed_lists<int8_t>>(&this->indexed_storage);
+        if (!storage)
+            return da_error(this->err, da_status_internal_error,
+                            "Int8 indexed storage is not active.");
+        return ivfflat_search_query_parallel_impl<backend<int8_t>>(
+            *storage, n_queries, n_features, k_neigh, return_distance, X_test_ptr,
+            ldx_test, centroids_ptr, ld_centroids_local, query_blk_sz, list_blk_sz,
+            n_blocks, final_query_blk_sz, n_threads, n_ind, n_dist);
+    }
+    case scalar_quantizer::code_kind::bfloat16: {
+        const auto *storage = std::get_if<dense_indexed_lists<da_bf16::storage_type>>(
+            &this->indexed_storage);
+        if (!storage)
+            return da_error(this->err, da_status_internal_error,
+                            "bfloat16 indexed storage is not active.");
+        return ivfflat_search_query_parallel_impl<backend<da_bf16::storage_type>>(
+            *storage, n_queries, n_features, k_neigh, return_distance, X_test_ptr,
+            ldx_test, centroids_ptr, ld_centroids_local, query_blk_sz, list_blk_sz,
+            n_blocks, final_query_blk_sz, n_threads, n_ind, n_dist);
+    }
+    case scalar_quantizer::code_kind::int4: {
+        const auto *storage =
+            std::get_if<dense_indexed_lists<uint8_t>>(&this->indexed_storage);
+        if (!storage)
+            return da_error(this->err, da_status_internal_error,
+                            "Int4 indexed storage is not active.");
+        return ivfflat_search_query_parallel_impl<backend<uint8_t>>(
+            *storage, n_queries, n_features, k_neigh, return_distance, X_test_ptr,
+            ldx_test, centroids_ptr, ld_centroids_local, query_blk_sz, list_blk_sz,
+            n_blocks, final_query_blk_sz, n_threads, n_ind, n_dist);
+    }
+    default:
+        return da_error(this->err, da_status_invalid_input,
+                        "No quantized GEMM backend supports the selected code format.");
+    }
 }
 
 // Performs common setup then delegates to the appropriate kernel (of which there is only one for now)
@@ -1260,8 +1823,8 @@ da_status approximate_neighbors<T>::ivf_search(da_int n_queries, da_int n_featur
 
     if (this->order == column_major) {
         try {
-            X_test_copy.resize(n_queries * n_features);
-            centroids_copy.resize(n_list * n_features);
+            X_test_copy.resize(static_cast<size_t>(n_queries) * n_features);
+            centroids_copy.resize(static_cast<size_t>(n_list) * n_features);
         } catch (std::bad_alloc const &) {
             return da_error(this->err, da_status_memory_error, // LCOV_EXCL_LINE
                             "Memory allocation failed.");
@@ -1290,16 +1853,22 @@ da_status approximate_neighbors<T>::ivf_search(da_int n_queries, da_int n_featur
         case approx_nn_metric::euclidean: {
             for (da_int i = 0; i < n_queries; i++) {
                 for (da_int j = 0; j < k_neigh; j++) {
-                    T val = n_dist[i * k_neigh + j];
-                    n_dist[i * k_neigh + j] = (val < 0) ? val : std::sqrt(val);
+                    T val = n_dist[static_cast<size_t>(i) * k_neigh + j];
+                    n_dist[static_cast<size_t>(i) * k_neigh + j] =
+                        (val < 0) ? val : std::sqrt(val);
                 }
             }
             break;
         }
         case approx_nn_metric::cosine: {
 #pragma omp simd
-            for (da_int i = 0; i < k_neigh * n_queries; i++)
-                n_dist[i] = static_cast<T>(1.0) + n_dist[i];
+            for (da_int query = 0; query < n_queries; query++) {
+                for (da_int neighbor = 0; neighbor < k_neigh; neighbor++) {
+                    n_dist[static_cast<size_t>(query) * k_neigh + neighbor] =
+                        static_cast<T>(1.0) +
+                        n_dist[static_cast<size_t>(query) * k_neigh + neighbor];
+                }
+            }
             break;
         }
         case approx_nn_metric::inner_product: {
@@ -1378,10 +1947,65 @@ da_status approximate_neighbors<T>::serialize(serialization_buffer &buffer) {
     io_dispatch(this->centroids);
     io_dispatch(this->ld_centroids);
     io_dispatch(this->n_index);
-    io_dispatch(this->indexed_vectors);
-    io_dispatch(this->global_indices);
     io_dispatch(this->list_sizes);
     io_dispatch(this->old_list_sizes);
+    io_dispatch(this->quantize_residual);
+
+    if (status != da_status_success)
+        return status;
+
+    status = this->sq.serialize(buffer);
+    if (status != da_status_success)
+        return status;
+
+    const da_status invalid_storage = buffer.get_mode() == deserialize
+                                          ? da_status_invalid_file_data
+                                          : da_status_internal_error;
+    switch (this->sq.get_code_kind()) {
+    case scalar_quantizer::none: {
+        if (buffer.get_mode() == deserialize)
+            this->indexed_storage = dense_indexed_lists<T>{};
+        auto *storage = std::get_if<dense_indexed_lists<T>>(&this->indexed_storage);
+        if (!storage)
+            return invalid_storage;
+        io_dispatch(storage->lists);
+        break;
+    }
+    case scalar_quantizer::int8: {
+        if (buffer.get_mode() == deserialize)
+            this->indexed_storage = dense_indexed_lists<int8_t>{};
+        auto *storage = std::get_if<dense_indexed_lists<int8_t>>(&this->indexed_storage);
+        if (!storage)
+            return invalid_storage;
+        io_dispatch(storage->lists);
+        break;
+    }
+    case scalar_quantizer::bfloat16: {
+        if (buffer.get_mode() == deserialize)
+            this->indexed_storage = dense_indexed_lists<da_bf16::storage_type>{};
+        auto *storage = std::get_if<dense_indexed_lists<da_bf16::storage_type>>(
+            &this->indexed_storage);
+        if (!storage)
+            return invalid_storage;
+        io_dispatch(storage->lists);
+        break;
+    }
+    case scalar_quantizer::int4: {
+        if (buffer.get_mode() == deserialize)
+            this->indexed_storage = dense_indexed_lists<uint8_t>{};
+        auto *storage = std::get_if<dense_indexed_lists<uint8_t>>(&this->indexed_storage);
+        if (!storage)
+            return invalid_storage;
+        io_dispatch(storage->lists);
+        break;
+    }
+    default:
+        return invalid_storage;
+    }
+    if (status != da_status_success)
+        return status;
+
+    io_dispatch(this->global_indices);
     io_dispatch(this->list_norms);
     io_dispatch(this->centroid_norms);
 
@@ -1437,3 +2061,9 @@ template class approximate_neighbors<float>;
 } // namespace da_approx_nn
 
 } // namespace ARCH
+
+#if defined(__clang__)
+#pragma clang diagnostic pop
+#elif defined(__GNUC__)
+#pragma GCC diagnostic pop
+#endif

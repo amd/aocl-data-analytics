@@ -578,8 +578,8 @@ const forest_param_t forest_param_pos[] = {
         {"seed", 42}, {"block size", 37}}, {{"scoring function", "cross-entropy"}}, {}, {}, 0.93},
 
     // histogram tests
-    {"iris_hist", "iris", {{"maximum bins", 40}, {"seed", 42}},
-        {{"histogram", "yes"}}, {}, {}, 0.95},
+    {"iris_hist", "iris", {{"maximum bins", 50}, {"seed", 42}, {"node minimum samples", 1}, {"maximum features", 2}},
+        {{"histogram", "yes"}, {"features selection", "custom"}, {"bootstrap", "yes"}}, {}, {}, 0.95},
     {"gen_500x20_hist", "gen_500x20_4class",
         {{"maximum bins", 30}, {"seed", 40}},
         {{"histogram", "yes"}}, {{"minimum impurity decrease", 0.003}}, {{"minimum impurity decrease", 0.003}}, 0.90},

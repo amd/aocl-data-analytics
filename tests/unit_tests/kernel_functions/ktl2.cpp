@@ -40,7 +40,7 @@ using namespace kernel_templates;
 template <typename T> class kt_level2_test : public testing::Test {};
 
 using KTL2Types = ::testing::Types<float, double
-#ifdef __AVX512FP16__
+#if defined(__AVX512FP16__) and defined(HAVE_FLOAT16_RT)
                                    ,
                                    _Float16
 #endif
@@ -61,7 +61,7 @@ template <bsz SZ, typename SUF> void test_exp_kt() {
 
     SUF expected[sz];
     for (size_t i = 0; i < sz; ++i) {
-#ifdef __AVX512FP16__
+#if defined(__AVX512FP16__) and defined(HAVE_FLOAT16_RT)
         if constexpr (std::is_same_v<SUF, _Float16>)
             expected[i] = da_std::exp(data[i]);
         else

@@ -29,6 +29,7 @@
 #define TEST_UTILS_HPP
 
 #include "aoclda.hpp"
+#include "gtest/gtest.h"
 
 #include <iostream>
 #include <mutex>

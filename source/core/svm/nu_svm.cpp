@@ -367,7 +367,7 @@ da_status nusvm<T>::set_bias(std::vector<T> &alpha, std::vector<T> &gradient,
 }
 
 template <typename T>
-da_status nusvm<T>::initialise_gradient(std::vector<T> &alpha_diff, da_int counter,
+da_status nusvm<T>::initialize_gradient(std::vector<T> &alpha_diff, da_int counter,
                                         std::vector<T> &gradient,
                                         da_cache::LRUCache<T> &cache) {
     // Early-out to avoid division by zero and unnecessary work
@@ -506,13 +506,13 @@ da_status nusvm<T>::initialise_gradient(std::vector<T> &alpha_diff, da_int count
 
 // Alphas here non-trivial, gradient needs to be calculated based on alphas
 template <typename T>
-da_status nusvc<T>::initialisation(da_int &size, std::vector<T> &gradient,
+da_status nusvc<T>::initialization(da_int &size, std::vector<T> &gradient,
                                    std::vector<T> &response, std::vector<T> &alpha,
                                    da_cache::LRUCache<T> &cache) {
     std::vector<T> alpha_diff;
     this->C = 1;
 
-    // Initialise response
+    // Initialize response
     for (da_int i = 0; i < size; i++) {
         response[i] = this->y[i] == 0 ? (T)-1.0 : this->y[i];
     }
@@ -522,7 +522,7 @@ da_status nusvc<T>::initialisation(da_int &size, std::vector<T> &gradient,
         return da_status_success;
     }
 
-    // Initialise alpha
+    // Initialize alpha
     try {
         alpha_diff.resize(size);
     } catch (std::bad_alloc &) {                           // LCOV_EXCL_LINE
@@ -549,15 +549,15 @@ da_status nusvc<T>::initialisation(da_int &size, std::vector<T> &gradient,
             counter++;
         }
     }
-    da_status status = this->initialise_gradient(alpha_diff, counter, gradient, cache);
+    da_status status = this->initialize_gradient(alpha_diff, counter, gradient, cache);
     return status;
 }
 
 template <typename T>
-da_status nusvr<T>::initialisation(da_int &size, std::vector<T> &gradient,
+da_status nusvr<T>::initialization(da_int &size, std::vector<T> &gradient,
                                    std::vector<T> &response, std::vector<T> &alpha,
                                    da_cache::LRUCache<T> &cache) {
-    // Initialise response (needed for both cold and warm start)
+    // Initialize response (needed for both cold and warm start)
     for (da_int i = 0; i < size; i++) {
         response[i] = (T)1.0;
         response[i + size] = (T)-1.0;
@@ -576,7 +576,7 @@ da_status nusvr<T>::initialisation(da_int &size, std::vector<T> &gradient,
         return da_error(this->err, da_status_memory_error, // LCOV_EXCL_LINE
                         "Memory allocation error");
     }
-    // Initialise gradient and alpha
+    // Initialize gradient and alpha
     for (da_int i = 0; i < size; i++) {
         gradient[i] = -this->y[i];
         gradient[i + size] = -this->y[i];
@@ -593,7 +593,7 @@ da_status nusvr<T>::initialisation(da_int &size, std::vector<T> &gradient,
             counter++;
         }
     }
-    da_status status = this->initialise_gradient(alpha_diff, counter, gradient, cache);
+    da_status status = this->initialize_gradient(alpha_diff, counter, gradient, cache);
     return status;
 }
 

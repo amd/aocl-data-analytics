@@ -75,6 +75,9 @@ target_link_libraries(pca_cancer PRIVATE aocl-da)
 target_compile_definitions(pca_cancer
   PRIVATE DATA_DIR="${CMAKE_CURRENT_SOURCE_DIR}/data")
 
+add_executable(nmf nmf.cpp)
+target_link_libraries(nmf PRIVATE aocl-da)
+
 add_executable(kmeans kmeans.cpp)
 target_link_libraries(kmeans PRIVATE aocl-da)
 
@@ -135,7 +138,8 @@ set(EXAMPLE_EXES
   kernel_functions
   ann
   cubic_spline
-  kernel_pca)
+  kernel_pca
+  nmf)
 
 if(BUILD_FORTRAN)
   list(APPEND EXAMPLE_EXES nlls nlls_single nlls_lanczos_fd reglinear_model logit_classifier)

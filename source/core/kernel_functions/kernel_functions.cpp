@@ -369,6 +369,10 @@ inline void kernel_setup(da_order order, da_int m, da_int n, da_int k, const T *
                          T coef0, da_int degree, bool X_is_Y, math_type math_func,
                          da_int vectorisation) {
     CBLAS_ORDER cblas_order = da_utils::da_order_to_cblas_order(order);
+    if (X_is_Y && Y == nullptr) {
+        Y = X;
+        ldy = ldx;
+    }
     // For row-major order, parallelise over rows of X first and then rows of Y, for column-major order parallelise over rows of Y first and then rows of X.
     // Consequently, for row-major we fill D matrix row by row, for column-major we fill D matrix column by column.
     // first dim is the first dimension of the array we will be parallelising over.
@@ -517,6 +521,10 @@ void rbf_kernel_internal(da_order order, da_int m, da_int n, da_int k, const T *
                          T *X_norms, da_int compute_X_norms, da_int ldx, const T *Y,
                          T *Y_norms, da_int compute_Y_norms, da_int ldy, T *D, da_int ldd,
                          T gamma, bool X_is_Y, da_int vectorisation) {
+    if (X_is_Y && Y == nullptr) {
+        Y = X;
+        ldy = ldx;
+    }
     // For row-major order, parallelise over rows of X first and then rows of Y, for column-major order parallelise over rows of Y first and then rows of X.
     // Consequently, for row-major we fill D matrix row by row, for column-major we fill D matrix column by column.
     // first dim is the first dimension of the array we will be parallelising over.
@@ -599,10 +607,13 @@ void rbf_kernel_internal(da_order order, da_int m, da_int n, da_int k, const T *
                     da_int D_block_offset = i * block_size_X * ldd + j * block_size_Y;
                     da_int m_in = current_block_size_X;
                     da_int n_in = current_block_size_Y;
+                    bool block_is_symmetric = X_is_Y && i == j;
                     ARCH::euclidean_gemm_distance(
                         order, m_in, n_in, k, X + X_block_offset, ldx, Y + Y_block_offset,
                         ldy, D + D_block_offset, ldd, static_cast<T *>(nullptr), 0,
-                        static_cast<T *>(nullptr), 0, true, X_is_Y);
+                        static_cast<T *>(nullptr), 0, true, block_is_symmetric);
+                    if (block_is_symmetric)
+                        fill_upper_triangular(order, m_in, D + D_block_offset, ldd);
                     exp_kernel_func(n_in, m_in, D + D_block_offset, ldd, multiplier,
                                     Y_norms + Y_norm_offset, X_norms + X_norm_offset);
                 }
@@ -628,10 +639,13 @@ void rbf_kernel_internal(da_order order, da_int m, da_int n, da_int k, const T *
                     da_int D_block_offset = i * block_size_Y * ldd + j * block_size_X;
                     da_int m_in = current_block_size_X;
                     da_int n_in = current_block_size_Y;
+                    bool block_is_symmetric = X_is_Y && i == j;
                     ARCH::euclidean_gemm_distance(
                         order, m_in, n_in, k, X + X_block_offset, ldx, Y + Y_block_offset,
                         ldy, D + D_block_offset, ldd, static_cast<T *>(nullptr), 0,
-                        static_cast<T *>(nullptr), 0, true, X_is_Y);
+                        static_cast<T *>(nullptr), 0, true, block_is_symmetric);
+                    if (block_is_symmetric)
+                        fill_upper_triangular(order, m_in, D + D_block_offset, ldd);
                     exp_kernel_func(m_in, n_in, D + D_block_offset, ldd, multiplier,
                                     X_norms + X_norm_offset, Y_norms + Y_norm_offset);
                 }

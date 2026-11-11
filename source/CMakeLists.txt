@@ -46,6 +46,7 @@ function(aoclda_add_dependencies OBJ_NAME)
             core/kernel_functions
             core/interpolation
             core/approximate_neighbors
+            core/approximate_neighbors/quantization
             core/dimension_reduction
             ${PROJECT_SOURCE_DIR}/external/Lbfgsb.3.0
             ${PROJECT_SOURCE_DIR}/external/RALFit
@@ -72,7 +73,8 @@ set(DA_LINMOD_PUBLIC core/linear_model/linmod_public.cpp)
 set(DA_BASIC_STATISTICS_PUBLIC
   core/basic_statistics/basic_statistics_public.cpp)
 set(DA_FACTORIZATION_PUBLIC core/factorization/pca_public.cpp
-  core/factorization/kernel_pca_public.cpp)
+  core/factorization/kernel_pca_public.cpp
+  core/factorization/nmf_public.cpp)
 set(DA_UTILS_PUBLIC core/utilities/utils_public.cpp
   core/utilities/fp16_helpers.cpp
   core/utilities/aoclda_c_wrapper.cpp)
@@ -113,7 +115,9 @@ set(DA_BASIC_STATISTICS_INTERNAL
   core/basic_statistics/order_statistics.cpp
   core/basic_statistics/row_to_col_major.cpp)
 set(DA_FACTORIZATION_INTERNAL core/factorization/pca/pca.cpp
-  core/factorization/kernel_pca/kernel_pca.cpp)
+  core/factorization/kernel_pca/kernel_pca.cpp
+  core/factorization/svd/thin_svd.cpp
+  core/factorization/nmf/nmf.cpp)
 set(DA_DECISION_FOREST_INTERNAL
   core/decision_forest/common/histogram.cpp
   core/decision_forest/common/scoring.cpp
@@ -158,7 +162,8 @@ set(DA_INTERPOLATION_INTERNAL
   core/interpolation/interpolation.cpp
   core/interpolation/cubic_spline/cubic_spline.cpp)
 set(DA_APPROXIMATE_NEIGHBORS_INTERNAL
-  core/approximate_neighbors/approximate_neighbors.cpp)
+  core/approximate_neighbors/approximate_neighbors.cpp
+  core/approximate_neighbors/quantization/scalar_quantizer.cpp)
 set(DA_DIMENSION_REDUCTION_INTERNAL
   core/dimension_reduction/tsne/tsne.cpp
   core/dimension_reduction/tsne/tsne_kernels.cpp
@@ -241,6 +246,12 @@ add_library(
 set(GENERIC_FLAGS "-march=x86-64;-mavx2;-mfma")
 set(GENERIC_AVX512_FLAGS "-mavx512f;-mavx512dq;-mavx512vl")
 
+# basic_handle is outside namespace ARCH, so each precision must have one
+# explicit-instantiation owner. Dynamic builds use generic for float and double,
+# and the highest supported Zen target for FP16.
+list(GET ARCHITECTURES 0 DA_BASIC_HANDLE_COMMON_ARCHITECTURE)
+list(GET ARCHITECTURES -1 DA_BASIC_HANDLE_FP16_ARCHITECTURE)
+
 # Add compile definitions
 if(ARCH STREQUAL "dynamic")
   # Dynamic dispatch: get a list of compilation architectures and associated
@@ -291,6 +302,13 @@ foreach(ARCHITECTURE IN LISTS ARCHITECTURES)
 
   set(ARCH_OBJECTS ${ARCHITECTURE}_OBJECTS)
   add_library(${ARCH_OBJECTS} OBJECT ${DA_CORE_DYNAMIC_DISPATCH})
+
+  if(ARCHITECTURE STREQUAL DA_BASIC_HANDLE_COMMON_ARCHITECTURE)
+    target_compile_definitions(${ARCH_OBJECTS} PRIVATE DA_BASIC_HANDLE_COMMON)
+  endif()
+  if(ARCHITECTURE STREQUAL DA_BASIC_HANDLE_FP16_ARCHITECTURE)
+    target_compile_definitions(${ARCH_OBJECTS} PRIVATE DA_BASIC_HANDLE_FP16)
+  endif()
 
   # Set the compile definitions for the architecture
   if(ARCHITECTURE STREQUAL "generic"

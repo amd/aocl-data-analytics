@@ -606,4 +606,269 @@ class kernel_pca : public pyda_handle {
     }
 };
 
+class nmf : public pyda_handle {
+  public:
+    nmf(da_int n_components = 0, std::string solver = "mu",
+        std::string beta_loss = "frobenius", da_int max_iter = 200, double tol = 1.0e-4,
+        std::string init = "nndsvda", da_int random_state = -1, da_int check_every = 10,
+        std::string prec = "double", bool check_data = false) {
+        if (prec == "double")
+            da_handle_init<double>(&handle, da_handle_nmf);
+        else if (prec == "single") {
+            da_handle_init<float>(&handle, da_handle_nmf);
+            precision = da_single;
+        }
+        da_status status;
+        status = da_options_set_int(handle, "n_components", n_components);
+        exception_check(status);
+        status = da_options_set_int(handle, "max_iter", max_iter);
+        exception_check(status);
+        status = da_options_set_int(handle, "random_state", random_state);
+        exception_check(status);
+        status = da_options_set_int(handle, "check_every", check_every);
+        exception_check(status);
+        status = da_options_set_string(handle, "solver", solver.c_str());
+        exception_check(status);
+        status = da_options_set_string(handle, "beta_loss", beta_loss.c_str());
+        exception_check(status);
+        status = da_options_set_string(handle, "init", init.c_str());
+        exception_check(status);
+        if (precision == da_single) {
+            status = da_options_set(handle, "tol", (float)tol);
+        } else {
+            status = da_options_set(handle, "tol", tol);
+        }
+        exception_check(status);
+        if (check_data) {
+            std::string yes_str = "yes";
+            status = da_options_set(handle, "check data", yes_str.c_str());
+            exception_check(status);
+        }
+    }
+    nmf(da_precision prec) { this->precision = prec; }
+    ~nmf() { da_handle_destroy(&handle); }
+
+    template <typename T> void fit(py::array_t<T> A) {
+        da_status status;
+        da_int n_samples, n_features, lda;
+
+        get_numpy_array_properties(A, n_samples, n_features, lda);
+
+        if (order == c_contiguous) {
+            status = da_options_set(handle, "storage order", "row-major");
+        } else {
+            status = da_options_set(handle, "storage order", "column-major");
+        }
+        exception_check(status);
+
+        status = da_nmf_init(handle, n_samples, n_features, A.data(), lda);
+        exception_check(status);
+        status = da_nmf_compute<T>(handle);
+        exception_check(status);
+    }
+
+    da_int get_n_components() {
+        da_status status;
+        da_int dim = 1;
+        da_int n_components = 0;
+        status =
+            da_handle_get_result_int(handle, da_nmf_n_components, &dim, &n_components);
+        exception_check(status);
+        return n_components;
+    }
+
+    void set_n_components(da_int n_components) {
+        da_status status = da_options_set_int(handle, "n_components", n_components);
+        exception_check(status);
+    }
+
+    /* Fit with a user-supplied (W, H) pair for init='custom'. */
+    template <typename T>
+    void fit_custom(py::array_t<T> A, py::array_t<T> W, py::array_t<T> H) {
+        da_status status;
+        da_int n_samples, n_features, lda;
+        da_int n_rows_w, k_w, ldw;
+        da_int k_h, n_cols_h, ldh;
+
+        get_numpy_array_properties(A, n_samples, n_features, lda);
+        get_numpy_array_properties(W, n_rows_w, k_w, ldw);
+        get_numpy_array_properties(H, k_h, n_cols_h, ldh);
+
+        if (k_w != k_h)
+            throw std::invalid_argument(
+                "W and H have incompatible inner dimensions: W has " +
+                std::to_string(k_w) + " columns but H has " + std::to_string(k_h) +
+                " rows.");
+
+        if (order == c_contiguous) {
+            status = da_options_set(handle, "storage order", "row-major");
+        } else {
+            status = da_options_set(handle, "storage order", "column-major");
+        }
+        exception_check(status);
+
+        status = da_nmf_init(handle, n_samples, n_features, A.data(), lda);
+        exception_check(status);
+        status = da_nmf_set_data<T>(handle, n_rows_w, k_w, W.data(), ldw, n_cols_h,
+                                    H.data(), ldh);
+        exception_check(status);
+        status = da_nmf_compute<T>(handle);
+        exception_check(status);
+    }
+
+    template <typename T> py::array_t<T> transform(py::array_t<T> X) {
+        da_status status;
+        da_int m_samples, m_features, ldx;
+        get_numpy_array_properties(X, m_samples, m_features, ldx);
+
+        /* Output W_new has shape (m_samples, n_components). */
+        da_int n_components = get_n_components();
+        std::vector<size_t> shape{(size_t)m_samples, (size_t)n_components};
+        std::vector<size_t> strides(2);
+        da_int ldx_t;
+        if (order == c_contiguous) {
+            strides[0] = sizeof(T) * (size_t)n_components;
+            strides[1] = sizeof(T);
+            ldx_t = n_components;
+        } else {
+            strides[0] = sizeof(T);
+            strides[1] = sizeof(T) * (size_t)m_samples;
+            ldx_t = m_samples;
+        }
+        auto Xt = py::array_t<T>(shape, strides);
+        status = da_nmf_transform<T>(handle, m_samples, m_features, X.data(), ldx,
+                                     Xt.mutable_data(), ldx_t);
+        exception_check(status);
+        return Xt;
+    }
+
+    template <typename T> py::array_t<T> inverse_transform(py::array_t<T> Xt) {
+        da_status status;
+        da_int k_samples, k_features, ldxt;
+        get_numpy_array_properties(Xt, k_samples, k_features, ldxt);
+
+        /* Output has shape (k_samples, n_features). */
+        da_int n_features = get_n_features();
+        std::size_t stride = sizeof(T);
+        std::vector<size_t> shape{(size_t)k_samples, (size_t)n_features};
+        std::vector<size_t> strides(2);
+        da_int ldx_t;
+        if (order == c_contiguous) {
+            strides[0] = stride * (size_t)n_features;
+            strides[1] = stride;
+            ldx_t = n_features;
+        } else {
+            strides[0] = stride;
+            strides[1] = stride * (size_t)k_samples;
+            ldx_t = k_samples;
+        }
+        auto X = py::array_t<T>(shape, strides);
+        status = da_nmf_inverse_transform<T>(handle, k_samples, k_features, Xt.data(),
+                                             ldxt, X.mutable_data(), ldx_t);
+        exception_check(status);
+        return X;
+    }
+
+  private:
+    /* Common helper for the two 2D result accessors (W, H). dim1/dim2 give
+     * the row/column count of the matrix in the storage order requested by
+     * the user (row-major or column-major). The total element count is
+     * dim1*dim2 regardless. */
+    py::array get_2d_result(da_result query, da_int dim1, da_int dim2) {
+        da_status status = da_status_success;
+        da_int dim = dim1 * dim2;
+        size_t stride_size = (precision == da_single) ? sizeof(float) : sizeof(double);
+
+        std::vector<size_t> shape, strides;
+        shape.push_back((size_t)dim1);
+        shape.push_back((size_t)dim2);
+        if (order == c_contiguous) {
+            strides.push_back(stride_size * (size_t)dim2);
+            strides.push_back(stride_size);
+        } else {
+            strides.push_back(stride_size);
+            strides.push_back(stride_size * (size_t)dim1);
+        }
+
+        if (precision == da_single) {
+            auto res = py::array_t<float>(shape, strides);
+            status = da_handle_get_result(handle, query, &dim, res.mutable_data());
+            exception_check(status);
+            return py::reinterpret_borrow<py::array>(res);
+        } else {
+            auto res = py::array_t<double>(shape, strides);
+            status = da_handle_get_result(handle, query, &dim, res.mutable_data());
+            exception_check(status);
+            return py::reinterpret_borrow<py::array>(res);
+        }
+    }
+
+  public:
+    /* H matrix: (n_components, n_features). */
+    py::array get_components() {
+        return get_2d_result(da_nmf_h, get_n_components(), get_n_features());
+    }
+
+    /* W matrix: (n_samples, n_components). */
+    py::array get_transform() {
+        return get_2d_result(da_nmf_w, get_n_samples(), get_n_components());
+    }
+
+    double get_reconstruction_error() {
+        da_status status;
+        da_int dim = 1;
+        if (precision == da_single) {
+            float v = 0.0f;
+            status = da_handle_get_result(handle, da_nmf_reconstruction_err, &dim, &v);
+            exception_check(status);
+            return (double)v;
+        } else {
+            double v = 0.0;
+            status = da_handle_get_result(handle, da_nmf_reconstruction_err, &dim, &v);
+            exception_check(status);
+            return v;
+        }
+    }
+
+    da_int get_n_iter() {
+        da_status status;
+        da_int dim = 1;
+        da_int v = 0;
+        status = da_handle_get_result(handle, da_nmf_n_iter, &dim, &v);
+        exception_check(status);
+        return v;
+    }
+
+    void get_rinfo(da_int *n_samples, da_int *n_features, size_t *stride_size) {
+        da_status status;
+        da_int dim = 2;
+        if (precision == da_single) {
+            float rinfo[2];
+            *stride_size = sizeof(float);
+            status = da_handle_get_result(handle, da_rinfo, &dim, rinfo);
+            *n_samples = (da_int)rinfo[0];
+            *n_features = (da_int)rinfo[1];
+        } else {
+            double rinfo[2];
+            *stride_size = sizeof(double);
+            status = da_handle_get_result(handle, da_rinfo, &dim, rinfo);
+            *n_samples = (da_int)rinfo[0];
+            *n_features = (da_int)rinfo[1];
+        }
+        exception_check(status);
+    }
+    da_int get_n_samples() {
+        da_int n_samples, n_features;
+        size_t stride_size;
+        get_rinfo(&n_samples, &n_features, &stride_size);
+        return n_samples;
+    }
+    da_int get_n_features() {
+        da_int n_samples, n_features;
+        size_t stride_size;
+        get_rinfo(&n_samples, &n_features, &stride_size);
+        return n_features;
+    }
+};
+
 #endif

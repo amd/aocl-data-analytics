@@ -47,7 +47,7 @@ namespace da_model_persistence {
 // Minimum serialization version accepted during deserialization.
 // Update this value to globally invalidate all models saved before a breaking
 // infrastructure change. Use format: Major*10000+Minor*100+Patch.
-constexpr da_int model_persistence_min_version = 50301; // v5.3.1
+constexpr da_int model_persistence_min_version = 60000; // 6.0.0
 
 constexpr std::string_view header_keyword = "AOCLDA_STORED_MODEL";
 
@@ -66,8 +66,9 @@ using save_type_t = std::conditional_t<
 template <typename T>
 constexpr bool is_valid_scalar =
     std::is_same_v<T, bool> || std::is_same_v<T, float> || std::is_same_v<T, double> ||
-    std::is_same_v<T, da_int> || std::is_enum_v<T> || std::is_same_v<T, char> ||
-    std::is_same_v<T, _Float16>;
+    std::is_same_v<T, int32_t> || std::is_same_v<T, int64_t> || std::is_enum_v<T> ||
+    std::is_same_v<T, char> || std::is_same_v<T, int8_t> || std::is_same_v<T, uint8_t> ||
+    std::is_same_v<T, int16_t> || std::is_same_v<T, _Float16>;
 
 // Type trait indicating whether a container type is supported for serialization.
 template <typename T> struct is_valid_container_type : std::false_type {};

@@ -37,28 +37,14 @@ namespace ARCH {
 namespace da_decision_forest {
 
 template <typename T> da_status decision_tree<T>::init_working_memory_raw() {
-    bool init_cat_data = usr_categorical_feat != nullptr || check_cat_data;
 
-    try {
-        cat_feat.resize(this->n_features);
-    } catch (std::bad_alloc &) {                                  // LCOV_EXCL_LINE
-        return da_error_bypass(this->err, da_status_memory_error, // LCOV_EXCL_LINE
-                               "Memory allocation error");
-    }
-
-    if (usr_categorical_feat != 0)
-        memcpy(cat_feat.data(), usr_categorical_feat, n_features * sizeof(da_int));
-    else if (check_cat_data) {
-        for (da_int j = 0; j < n_features; j++) {
-            da_utils::check_categorical_data(n_samples, &X[j * ldx], cat_feat[j],
-                                             opt_max_cat, cat_tol);
-        }
-    }
-    if (init_cat_data) {
+    if (usr_categorical_feat != nullptr) {
         max_cat =
-            std::max((da_int)0, *std::max_element(cat_feat.begin(), cat_feat.end()));
-    } else
-        da_std::fill(cat_feat.begin(), cat_feat.end(), -1);
+            std::max((da_int)0, *std::max_element(feat_prop.begin(), feat_prop.end()));
+    } else {
+        max_cat = 0;
+        da_std::fill(feat_prop.begin(), feat_prop.end(), -1);
+    }
 
     // Allocate per-thread workspace buffers for raw data path
     try {
@@ -93,7 +79,6 @@ template <typename T> da_status decision_tree<T>::init_working_memory_hist() {
         return da_error_bypass(this->err, da_status_invalid_option, e.what());
     }
 
-    // Allocate per-thread workspace buffers for histogram path
     try {
         for (da_int t = 0; t < n_threads_split; t++) {
             split_workspace<T> &ws = thread_workspaces[t];
@@ -117,11 +102,14 @@ template <typename T> da_status decision_tree<T>::init_working_memory() {
         count_classes.resize(this->n_class);
         features_idx.resize(this->n_features);
         selected_features.reserve(this->n_features);
+        feat_prop.resize(n_features);
     } catch (std::bad_alloc &) {                                  // LCOV_EXCL_LINE
         return da_error_bypass(this->err, da_status_memory_error, // LCOV_EXCL_LINE
                                "Memory allocation error");
     }
     da_std::iota(features_idx.begin(), features_idx.end(), 0);
+    if (usr_categorical_feat != 0)
+        memcpy(feat_prop.data(), usr_categorical_feat, n_features * sizeof(da_int));
 
     if (bootstrap) {
         try {

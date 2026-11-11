@@ -26,7 +26,7 @@ if(POLICY CMP0167)
   cmake_policy(SET CMP0167 OLD) # FindBoost
 endif()
 
-project(AOCL-DA VERSION 5.3.2)
+project(AOCL-DA VERSION 6.0.0)
 
 set(AOCLDA_VERSION
   "${PROJECT_VERSION_MAJOR}.${PROJECT_VERSION_MINOR}.${PROJECT_VERSION_PATCH}"
@@ -362,19 +362,15 @@ if(WIN32)
 
 else()
   if(BUILD_FORTRAN)
-    if(CMAKE_Fortran_COMPILER_ID STREQUAL "Flang") # AOCC 5.x
-      set(FORTRAN_RUNTIME "flang")
-    elseif(CMAKE_Fortran_COMPILER_ID STREQUAL "GNU")
-      set(FORTRAN_RUNTIME "gfortran")
-    elseif(CMAKE_Fortran_COMPILER_ID STREQUAL "LLVMFlang")
-      IsAOCCFlang(IS_AOCC_FLANG)
-      if(IS_AOCC_FLANG)
-        set(FORTRAN_RUNTIME "flang") # AOCC AOF 6+
-      else()
-        set(FORTRAN_RUNTIME "FortranRuntime") # upstream LLVM 19+ Flang-new
-      endif()
-    else()
-      message(FATAL_ERROR "Unsupported Fortran compiler on GNU/Linux: ${CMAKE_Fortran_COMPILER_ID}")
+    # Forward Fortran toolchain implicit link libraries/directories
+    set(FORTRAN_RUNTIME ${CMAKE_Fortran_IMPLICIT_LINK_LIBRARIES})
+    set(FLANG_LIBS ${CMAKE_Fortran_IMPLICIT_LINK_DIRECTORIES})
+    # Drop the Fortran program-entry object; it defines main() and hijacks our
+    # C/C++ entry point in static executables (undefined MAIN__ at link time).
+    list(REMOVE_ITEM FORTRAN_RUNTIME flangmain Fortran_main flang_rt.main)
+    # When we link a real OpenMP runtime, drop the compiler's stub OpenMP lib (e.g. flang's ompstub)
+    if(BUILD_SMP)
+      list(REMOVE_ITEM FORTRAN_RUNTIME ompstub)
     endif()
   endif()
 endif()

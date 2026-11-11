@@ -100,6 +100,86 @@ def test_pca_pickle_cross_patch(tmp_path):
     assert np.array_equal(pred_before, pred_after)
 
 # ============================================================================
+# NMF Pickle Tests
+# ============================================================================
+
+
+def test_nmf_pickle_with_patch(tmp_path):
+    """Test NMF: save with patch, load with patch."""
+    skpatch("NMF", print_patched=False)
+
+    from sklearn.decomposition import NMF
+
+    X_train = np.array([
+        [1., 2., 3., 4.],
+        [2., 4., 6., 8.],
+        [3., 6., 9., 12.],
+        [4., 1., 5., 2.],
+        [5., 3., 8., 4.],
+    ])
+    X_test = np.array([[2., 3., 5., 4.], [1., 1., 2., 1.]])
+
+    nmf = NMF(n_components=2, random_state=42)
+    assert nmf.aocl is True
+    nmf.fit_transform(X_train)
+    H_before = nmf.components_.copy()
+    transform_before = nmf.transform(X_test)
+
+    filepath = tmp_path / "nmf_sk_full.pkl"
+    with open(filepath, 'wb') as f:
+        pickle.dump(nmf, f)
+    del nmf
+
+    with open(filepath, 'rb') as f:
+        nmf_loaded = pickle.load(f)
+
+    assert nmf_loaded.aocl is True
+    assert np.array_equal(H_before, nmf_loaded.components_)
+    transform_after = nmf_loaded.transform(X_test)
+    assert np.array_equal(transform_before, transform_after)
+
+    undo_skpatch("NMF", print_patched=False)
+
+
+def test_nmf_pickle_cross_patch(tmp_path):
+    """Test NMF: save with patch, load without patch."""
+    skpatch("NMF", print_patched=False)
+
+    from sklearn.decomposition import NMF
+
+    X_train = np.array([
+        [1., 2., 3., 4.],
+        [2., 4., 6., 8.],
+        [3., 6., 9., 12.],
+        [4., 1., 5., 2.],
+        [5., 3., 8., 4.],
+    ])
+    X_test = np.array([[2., 3., 5., 4.], [1., 1., 2., 1.]])
+
+    nmf = NMF(n_components=2, random_state=42)
+    assert nmf.aocl is True
+    nmf.fit_transform(X_train)
+    H_before = nmf.components_.copy()
+    transform_before = nmf.transform(X_test)
+
+    filepath = tmp_path / "nmf_sk_cross.pkl"
+    with open(filepath, 'wb') as f:
+        pickle.dump(nmf, f)
+    del nmf
+
+    undo_skpatch("NMF", print_patched=False)
+
+    # Load without patch — still an AOCL-DA object
+    with open(filepath, 'rb') as f:
+        nmf_loaded = pickle.load(f)
+
+    assert nmf_loaded.aocl is True
+    assert np.array_equal(H_before, nmf_loaded.components_)
+    transform_after = nmf_loaded.transform(X_test)
+    assert np.array_equal(transform_before, transform_after)
+
+
+# ============================================================================
 # KMeans Pickle Tests
 # ============================================================================
 

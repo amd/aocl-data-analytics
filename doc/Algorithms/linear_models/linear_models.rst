@@ -57,9 +57,10 @@ for the cost function becomes,
 
 
 .. math::
+   :label: loss
+
    C_{\{\lambda,\alpha\}} \left( \beta \right) = L(y, \beta X)
    + \lambda \bigg( \alpha \lVert \beta \rVert_1 + \frac{(1 - \alpha)}{2} \lVert \beta \rVert_2^2  \bigg),
-   :label: loss
 
 where :math:`0\le\lambda, 0\le\alpha\le1` are hyperparameters with :math:`\lambda` setting the magnitude of the overall penalization and
 :math:`\alpha` distributing its share across the :math:`\ell_1` and :math:`\ell_2` regularization terms, :math:`\lVert \beta \rVert_1` and :math:`\lVert \beta \rVert_2`. :math:`L` is known as the

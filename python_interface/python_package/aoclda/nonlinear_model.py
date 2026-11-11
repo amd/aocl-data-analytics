@@ -352,13 +352,13 @@ class nlls():
                 stop when this limit is surpassed. Default = 1.0e6.
 
             fd_step (float, optional): Defines the overall step size to use in
-            the finite-difference approximation. If the optimization process
-            stagnates or fails, then trialing different values for this
-            parameter may help.
+                the finite-difference approximation. If the optimization process
+                stagnates or fails, then trialing different values for this
+                parameter may help.
 
             fd_ttol (float, optional): Derivative test tolerance, sets the
-            threshold for deciding if a user-supplied derivative is acceptably
-            close to the finite-difference approximation.
+                threshold for deciding if a user-supplied derivative is acceptably
+                close to the finite-difference approximation.
 
         Returns:
             self (object): Returns the fitted model, instance itself.

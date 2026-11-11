@@ -40,8 +40,8 @@ struct udata_t {
     const float *t;
     const float *y;
 };
-const float t[n_res]{0.25f, 0.5f, 0.75f, 0.4f, 0.66f};
-const float y[n_res]{0.60f, 0.368f, 0.22f, 0.45f, 0.26f};
+const float t[n_res]{1.0f, 2.0f, 4.0f, 5.0f, 8.0f};
+const float y[n_res]{0.606531f, 0.367879f, 0.135335f, 0.082085f, 0.018316f};
 const struct udata_t udata = {t, y};
 
 da_int eval_r(da_int n_coef, da_int n_res, void *udata, float const *x, float *r) {
@@ -63,8 +63,8 @@ int main(void) {
     std::cout << " --------------------------------------------------------------------"
               << std::endl;
 
-    float coef[n_coef]{0.f, 1.f};
-    const float coef_exp[n_coef]{1.0f, 2.0f};
+    float coef[n_coef]{0.1f, 0.1f};
+    const float coef_exp[n_coef]{1.0f, 0.5f};
 
     const float tol{2.0e-2};
 

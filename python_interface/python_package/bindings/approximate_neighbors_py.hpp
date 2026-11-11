@@ -44,10 +44,13 @@ class approximate_neighbors : public pyda_handle {
     da_int internal_neigh;
 
   public:
-    approximate_neighbors(da_int n_neighbors = 5, std::string algorithm = "ivfflat",
+    approximate_neighbors(da_int n_neighbors = 5, std::string algorithm = "auto",
                           std::string metric = "sqeuclidean", da_int n_list = 1,
                           da_int n_probe = 1, da_int kmeans_iter = 10, da_int seed = 0,
-                          std::string prec = "double", bool check_data = false) {
+                          std::string prec = "double",
+                          std::string quantization = "bfloat16",
+                          std::string quantization_scheme = "per_dimension",
+                          bool quantization_residual = true, bool check_data = false) {
         da_status status;
         if (prec == "double") {
             status = da_handle_init<double>(&handle, da_handle_approx_nn);
@@ -70,6 +73,14 @@ class approximate_neighbors : public pyda_handle {
         status = da_options_set(handle, "k-means_iter", kmeans_iter);
         exception_check(status);
         status = da_options_set(handle, "seed", seed);
+        exception_check(status);
+        status = da_options_set(handle, "quantization", quantization.c_str());
+        exception_check(status);
+        status =
+            da_options_set(handle, "quantization_scheme", quantization_scheme.c_str());
+        exception_check(status);
+        status = da_options_set(handle, "quantization_residual",
+                                quantization_residual ? "yes" : "no");
         exception_check(status);
 
         if (check_data == true) {

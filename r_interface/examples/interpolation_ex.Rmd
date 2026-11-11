@@ -1,0 +1,103 @@
+---
+# Copyright (C) 2026 Advanced Micro Devices, Inc. All rights reserved.
+#
+# Redistribution and use in source and binary forms, with or without modification,
+# are permitted provided that the following conditions are met:
+# 1. Redistributions of source code must retain the above copyright notice,
+#    this list of conditions and the following disclaimer.
+# 2. Redistributions in binary form must reproduce the above copyright notice,
+#    this list of conditions and the following disclaimer in the documentation
+#    and/or other materials provided with the distribution.
+# 3. Neither the name of the copyright holder nor the names of its contributors
+#    may be used to endorse or promote products derived from this software without
+#    specific prior written permission.
+#
+# THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS "AS IS" AND
+# ANY EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED TO, THE IMPLIED
+# WARRANTIES OF MERCHANTABILITY AND FITNESS FOR A PARTICULAR PURPOSE ARE DISCLAIMED.
+# IN NO EVENT SHALL THE COPYRIGHT HOLDER OR CONTRIBUTORS BE LIABLE FOR ANY DIRECT,
+# INDIRECT, INCIDENTAL, SPECIAL, EXEMPLARY, OR CONSEQUENTIAL DAMAGES (INCLUDING,
+# BUT NOT LIMITED TO, PROCUREMENT OF SUBSTITUTE GOODS OR SERVICES; LOSS OF USE, DATA,
+# OR PROFITS; OR BUSINESS INTERRUPTION) HOWEVER CAUSED AND ON ANY THEORY OF LIABILITY,
+# WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE)
+# ARISING IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE
+# POSSIBILITY OF SUCH DAMAGE.
+
+title: "Cubic Spline Interpolation"
+output: html_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+## Overview
+
+This example demonstrates cubic spline interpolation using the `aoclda` package. A
+cubic spline constructs a smooth, twice continuously differentiable curve that passes
+through a set of data points.
+
+```{r library}
+library(aoclda)
+```
+
+## Data
+
+We sample `sin(x)` at 10 uniformly spaced interpolation sites in the interval `[0, 9]`.
+
+```{r data}
+n_sites <- 10
+x <- seq(0, 9, length.out = n_sites)
+y <- sin(x)
+```
+
+## Fit a natural cubic spline
+
+```{r fit}
+spline <- cubic_spline$new(spline_type = "natural")
+spline$fit(x, y)
+```
+
+## Evaluate the spline
+
+The spline can be evaluated at any set of query points. Points at the interpolation
+sites reproduce the original data values.
+
+```{r evaluate}
+x_eval <- seq(0, 9, length.out = 50)
+values <- spline$evaluate(x_eval)
+head(values)
+
+# At the interpolation sites the spline reproduces the original data values.
+all.equal(spline$evaluate(x), y)
+```
+
+## Evaluate derivatives
+
+Passing a vector of `orders` evaluates several derivatives at once. Here we request the
+value (order 0) and the first derivative (order 1); the result is a matrix whose rows
+correspond to the requested orders.
+
+```{r derivatives}
+deriv <- spline$evaluate(x_eval, orders = c(0, 1))
+deriv
+```
+
+## Piecewise polynomial coefficients
+
+The fitted spline can be inspected through its per-cell cubic coefficients, stored in
+ascending power order `[c0, c1, c2, c3]` along the columns (one row per cell).
+
+```{r coefficients}
+print(spline$coefficients)
+```
+
+## Locate query points
+
+`search_cells` returns, for each query point, the 0-based index of the cell that
+contains it.
+
+```{r search}
+cells <- spline$search_cells(c(0.5, 4.5, 8.5))
+print(cells)
+```
