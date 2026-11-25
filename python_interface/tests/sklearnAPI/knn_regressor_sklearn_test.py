@@ -74,7 +74,7 @@ def test_knn_regressor(
                        [-1, -2, 4],
                        [4, 1, -3]], dtype=precision)
 
-    tol = np.sqrt(10 * np.finfo(precision).eps)
+    tol = float(np.sqrt(10 * np.finfo(precision).eps))
 
     p = 3.2
     # patch and import scikit-learn

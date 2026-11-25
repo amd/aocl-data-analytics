@@ -38,7 +38,7 @@ namespace da_decision_forest {
 using namespace da_model_persistence;
 
 template <typename T>
-da_status decision_forest<T>::forest_serialization(
+da_status decision_forest_classification<T>::forest_serialization(
     da_model_persistence::serialization_buffer &buffer) {
     da_status status = da_status_success;
 
@@ -46,7 +46,7 @@ da_status decision_forest<T>::forest_serialization(
         try {
             this->forest.resize(n_tree);
             for (da_int i = 0; i < this->n_tree; ++i) {
-                this->forest[i] = std::make_unique<decision_tree<T>>();
+                this->forest[i] = std::make_unique<decision_tree_classification<T>>();
             }
         } catch (std::bad_alloc const &) {
             return da_error(this->err, da_status_memory_error,
@@ -63,8 +63,8 @@ da_status decision_forest<T>::forest_serialization(
 }
 
 template <typename T>
-da_status
-decision_forest<T>::serialize(da_model_persistence::serialization_buffer &buffer) {
+da_status decision_forest_classification<T>::serialize(
+    da_model_persistence::serialization_buffer &buffer) {
     da_status status = da_status_success;
     auto io_dispatch = [&buffer, &status](auto &data) -> void {
         if (status != da_status_success) {
@@ -95,8 +95,8 @@ decision_forest<T>::serialize(da_model_persistence::serialization_buffer &buffer
 }
 
 template <typename T>
-da_status
-decision_forest<T>::save_model(da_model_persistence::serialization_buffer &buffer) {
+da_status decision_forest_classification<T>::save_model(
+    da_model_persistence::serialization_buffer &buffer) {
 
     if (!this->model_trained) {
         return da_error(this->err, da_status_no_data,
@@ -112,8 +112,8 @@ decision_forest<T>::save_model(da_model_persistence::serialization_buffer &buffe
 }
 
 template <typename T>
-da_status
-decision_forest<T>::load_model(da_model_persistence::serialization_buffer &buffer) {
+da_status decision_forest_classification<T>::load_model(
+    da_model_persistence::serialization_buffer &buffer) {
 
     da_status status = basic_handle<T>::load_model(buffer);
     if (status != da_status_success)
@@ -122,8 +122,8 @@ decision_forest<T>::load_model(da_model_persistence::serialization_buffer &buffe
     return status;
 }
 
-template class decision_forest<double>;
-template class decision_forest<float>;
+template class decision_forest_classification<double>;
+template class decision_forest_classification<float>;
 
 } // namespace da_decision_forest
 

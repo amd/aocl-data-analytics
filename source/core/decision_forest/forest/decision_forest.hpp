@@ -30,9 +30,8 @@
 
 #include "aoclda.h"
 #include "basic_handle.hpp"
-#include "da_omp.hpp"
-
 #include "common/histogram.hpp"
+#include "da_omp.hpp"
 #include "macros.h"
 #include "model_persistence.hpp"
 #include "options.hpp"
@@ -47,12 +46,21 @@
 #include <vector>
 
 namespace ARCH {
-
 namespace da_decision_forest {
+
+/** Model-neutral forest interface; ensemble ownership remains in the concrete model. */
+template <typename T> class decision_forest : public basic_handle<T> {
+  public:
+    decision_forest() = default;
+    decision_forest(da_errors::da_error_t &err) : basic_handle<T>(err) {}
+    ~decision_forest() override = default;
+
+    virtual da_status fit() = 0;
+};
 
 using namespace da_errors;
 
-template <typename T> class decision_forest : public basic_handle<T> {
+template <typename T> class decision_forest_classification : public decision_forest<T> {
 
     bool init_done = false;
 
@@ -89,7 +97,7 @@ template <typename T> class decision_forest : public basic_handle<T> {
     da_int n_tree_threads = 0;
 
     // Model data
-    std::vector<std::unique_ptr<decision_tree<T>>> forest;
+    std::vector<std::unique_ptr<decision_tree_classification<T>>> forest;
 
   private:
     void compute_thread_distribution(da_int n_tree, da_int &n_forest_threads,
@@ -99,12 +107,12 @@ template <typename T> class decision_forest : public basic_handle<T> {
     da_status read_storage_order();
 
   public:
-    decision_forest(da_errors::da_error_t &err);
-    ~decision_forest();
+    decision_forest_classification(da_errors::da_error_t &err);
+    ~decision_forest_classification() override;
     da_status set_training_data(da_int n_samples, da_int n_features, const T *X,
                                 da_int ldx, const da_int *y, da_int n_class = 0,
                                 const da_int *usr_cat_feat = nullptr);
-    da_status fit();
+    da_status fit() override;
     da_int inference_block_nsamp(da_int nsamp, da_int n_threads) const;
     void parallel_sum_proba(const T *X_test, da_int ldx_test, da_int nsamp,
                             const da_int &n_threads, std::vector<T> &sum_proba,
@@ -130,7 +138,6 @@ template <typename T> class decision_forest : public basic_handle<T> {
 };
 
 } // namespace da_decision_forest
-
 } // namespace ARCH
 
 #endif // DECISION_FOREST_HPP

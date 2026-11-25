@@ -42,7 +42,7 @@ def test_kernel_pca(precision):
                   [2, 3, 1.5], [0.5, 1.2, 2.8], [4, 2, 0.6]], dtype=precision)
     b = np.array([[3, 2, 3], [1.22, 5, 4.1], [3, 3, 1]], dtype=precision)
 
-    tol = np.sqrt(np.finfo(precision).eps)
+    tol = float(np.sqrt(np.finfo(precision).eps))
 
     # patch and import scikit-learn
     skpatch()

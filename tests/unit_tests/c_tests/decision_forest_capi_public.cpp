@@ -42,6 +42,7 @@ TEST(DecisionForestCAPI, BasicDouble) {
     da_int n_samples = 12, n_features = 2, n_class = 2, ldx = 12;
 
     EXPECT_EQ(da_handle_init_d(&handle, da_handle_decision_forest), da_status_success);
+    ASSERT_EQ(da_forest_select_model_d(handle, df_classifier), da_status_success);
     EXPECT_EQ(da_forest_set_training_data_d(handle, n_samples, n_features, n_class, X,
                                             ldx, y, nullptr),
               da_status_success);
@@ -91,6 +92,7 @@ TEST(DecisionForestCAPI, BasicFloat) {
     da_int n_samples = 12, n_features = 2, n_class = 2, ldx = 12;
 
     EXPECT_EQ(da_handle_init_s(&handle, da_handle_decision_forest), da_status_success);
+    ASSERT_EQ(da_forest_select_model_s(handle, df_classifier), da_status_success);
     EXPECT_EQ(da_forest_set_training_data_s(handle, n_samples, n_features, n_class, X,
                                             ldx, y, nullptr),
               da_status_success);

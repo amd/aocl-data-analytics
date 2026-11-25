@@ -95,11 +95,11 @@ template <typename T> struct ANNParamType {
     std::string quantization_scheme = "per_dimension";
     std::string quantization_residual = "yes";
 
-    ANNParamType(){};
+    ANNParamType() {};
     ANNParamType(da_int nlist, da_int nprobe, da_int k, std::string metric,
                  std::string algorithm, std::string order)
         : nlist(nlist), nprobe(nprobe), k(k), metric(metric), algorithm(algorithm),
-          order(order){};
+          order(order) {};
 };
 
 // Clone a fixture and turn on quantization, for building quantized variants of

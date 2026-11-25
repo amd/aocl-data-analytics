@@ -258,25 +258,25 @@ Nonlinear least-squares options
       .. csv-table:: Nonlinear data fitting options
          :header: "Option name", "Type", "Default", "Description", "Constraints", "Notes"
 
-         "ralfit model", "string", ":math:`s=` `hybrid`", "NLLS model to solve.", ":math:`s=` `gauss-newton`, `hybrid`, `quasi-newton`, or `tensor-newton`.", Foundational.
-         "ralfit nlls method", "string", ":math:`s=` `galahad`", "NLLS solver to use.", ":math:`s=` `aint`, `galahad`, `linear solver`, `more-sorensen`, or `powell-dogleg`.", Foundational.
-         "ralfit globalization method", "string", ":math:`s=` `trust-region`", "Globalization method to use. This parameter makes use of the regularization term and power option values.", ":math:`s=` `reg`, `regularization`, `tr`, or `trust-region`.", Foundational.
-         "regularization power", "string", ":math:`s=` `quadratic`", "Value of the regularization power term.", ":math:`s=` `cubic`, or `quadratic`.", Foundational.
-         "regularization term", "real", ":math:`r=0`", "Value of the regularization term. A value of 0 disables regularization.", ":math:`0 \le r`", Foundational.
-         "ralfit iteration limit", "integer", ":math:`i=100`", "Maximum number of iterations to perform.", ":math:`1 \le i`", Foundational.
-         "time limit", "real", ":math:`r=10^6`", "Maximum time allowed to run (in seconds).", ":math:`0 < r`", Foundational.
-         "ralfit convergence rel tol fun", "real", ":math:`r=10/21\sqrt{2\,\varepsilon}`", "Relative tolerance to declare convergence for the iterative optimization step. See details in optimization solver documentation.", ":math:`0 < r < 1`", Foundational.
-         "ralfit convergence abs tol fun", "real", ":math:`r=10/21\sqrt{2\,\varepsilon}`", "Absolute tolerance to declare convergence for the iterative optimization step. See details in optimization solver documentation.", ":math:`0 < r < 1`", Foundational.
-         "ralfit convergence rel tol grd", "real", ":math:`r=10/21\sqrt{2\,\varepsilon}`", "Relative tolerance on the gradient norm to declare convergence for the iterative optimization step. See details in optimization solver documentation.", ":math:`0 < r < 1`", Foundational.
-         "ralfit convergence abs tol grd", "real", ":math:`r=500\;\sqrt{2\,\varepsilon}`", "Absolute tolerance on the gradient norm to declare convergence for the iterative optimization step. See details in optimization solver documentation.", ":math:`0 < r < 1`", Foundational.
-         "ralfit convergence step size", "real", ":math:`r=\varepsilon/2`", "Absolute tolerance over the step size to declare convergence for the iterative optimization step. See details in optimization solver documentation.", ":math:`0 < r < 1`", Foundational.
-         "print level", "integer", ":math:`i=1`", "Set level of verbosity for the solver: from 0, indicating no output, to 5, which is very verbose.", ":math:`0 \le i \le 5`", Foundational.
-         "print options", "string", ":math:`s=` `no`", "Print options list.", ":math:`s=` `no`, or `yes`.", Foundational.
-         "check derivatives", "string", ":math:`s=` `no`", "Check user-provided derivatives using finite-differences.", ":math:`s=` `no`, or `yes`.", Foundational.
-         "finite differences step", "real", ":math:`r=10\;\sqrt{2\,\varepsilon}`", "Size of step to use for estimating derivatives using finite-differences.", ":math:`0 < r < 10`", Foundational.
-         "derivative test tol", "real", ":math:`r=10^{-4}`", "Tolerance used to check user-provided derivatives by finite-differences. If <print level> is 1, then only the entries with larger discrepancy are reported, and if print level is greater than or equal to 2, then all entries are printed.", ":math:`0 < r \le 10`", Foundational.
-         "check data", "string", ":math:`s=` `no`", "Check input data for NaNs prior to performing computation.", ":math:`s=` `no`, or `yes`.", Foundational.
-         "storage order", "string", ":math:`s=` `column-major`", "Whether data is supplied and returned in row- or column-major order.", ":math:`s=` `c`, `column-major`, `f`, `fortran`, or `row-major`.", Foundational.
+         "ralfit model", "string", ":math:`s=` `hybrid`", "NLLS model to solve.", ":math:`s=` `gauss-newton`, `hybrid`, `quasi-newton`, or `tensor-newton`.", "Foundational."
+         "ralfit nlls method", "string", ":math:`s=` `galahad`", "NLLS solver to use.", ":math:`s=` `aint`, `galahad`, `linear solver`, `more-sorensen`, or `powell-dogleg`.", "Foundational."
+         "ralfit globalization method", "string", ":math:`s=` `trust-region`", "Globalization method to use. This parameter makes use of the regularization term and power option values.", ":math:`s=` `reg`, `regularization`, `tr`, or `trust-region`.", "Foundational."
+         "regularization power", "string", ":math:`s=` `quadratic`", "Value of the regularization power term.", ":math:`s=` `cubic`, or `quadratic`.", "Foundational."
+         "regularization term", "real", ":math:`r=0`", "Value of the regularization term. A value of 0 disables regularization.", ":math:`0 \le r`", "Foundational."
+         "ralfit iteration limit", "integer", ":math:`i=100`", "Maximum number of iterations to perform.", ":math:`1 \le i`", "Foundational."
+         "time limit", "real", ":math:`r=10^6`", "Maximum time allowed to run (in seconds).", ":math:`0 < r`", "Foundational."
+         "ralfit convergence rel tol fun", "real", ":math:`r=10/21\sqrt{2\,\varepsilon}`", "Relative tolerance to declare convergence for the iterative optimization step. See details in optimization solver documentation.", ":math:`0 < r < 1`", "Foundational."
+         "ralfit convergence abs tol fun", "real", ":math:`r=10/21\sqrt{2\,\varepsilon}`", "Absolute tolerance to declare convergence for the iterative optimization step. See details in optimization solver documentation.", ":math:`0 < r < 1`", "Foundational."
+         "ralfit convergence rel tol grd", "real", ":math:`r=10/21\sqrt{2\,\varepsilon}`", "Relative tolerance on the gradient norm to declare convergence for the iterative optimization step. See details in optimization solver documentation.", ":math:`0 < r < 1`", "Foundational."
+         "ralfit convergence abs tol grd", "real", ":math:`r=500\;\sqrt{2\,\varepsilon}`", "Absolute tolerance on the gradient norm to declare convergence for the iterative optimization step. See details in optimization solver documentation.", ":math:`0 < r < 1`", "Foundational."
+         "ralfit convergence step size", "real", ":math:`r=\varepsilon/2`", "Absolute tolerance over the step size to declare convergence for the iterative optimization step. See details in optimization solver documentation.", ":math:`0 < r < 1`", "Foundational."
+         "print level", "integer", ":math:`i=1`", "Set level of verbosity for the solver: from 0, indicating no output, to 5, which is very verbose.", ":math:`0 \le i \le 5`", "Foundational."
+         "print options", "string", ":math:`s=` `no`", "Print options list.", ":math:`s=` `no`, or `yes`.", "Foundational."
+         "check derivatives", "string", ":math:`s=` `no`", "Check user-provided derivatives using finite-differences.", ":math:`s=` `no`, or `yes`.", "Foundational."
+         "finite differences step", "real", ":math:`r=10\;\sqrt{2\,\varepsilon}`", "Size of step to use for estimating derivatives using finite-differences.", ":math:`0 < r < 10`", "Foundational."
+         "derivative test tol", "real", ":math:`r=10^{-4}`", "Tolerance used to check user-provided derivatives by finite-differences. If <print level> is 1, then only the entries with larger discrepancy are reported, and if print level is greater than or equal to 2, then all entries are printed.", ":math:`0 < r \le 10`", "Foundational."
+         "check data", "string", ":math:`s=` `no`", "Check input data for NaNs prior to performing computation.", ":math:`s=` `no`, or `yes`.", "Foundational."
+         "storage order", "string", ":math:`s=` `column-major`", "Whether data is supplied and returned in row- or column-major order.", ":math:`s=` `c`, `column-major`, `f`, `fortran`, or `row-major`.", "Foundational."
 
 Examples
 ========

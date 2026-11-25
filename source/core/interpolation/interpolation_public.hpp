@@ -28,7 +28,7 @@
 #include "aoclda.h"
 #include "da_handle.hpp"
 #include "dynamic_dispatch.hpp"
-#include "interpolation.hpp"
+#include "interpolation_generic.hpp"
 #include "macros.h"
 
 #ifndef INTERPOLATION_PUBLIC_HPP
@@ -36,76 +36,69 @@
 
 namespace interpolation_public {
 template <typename interp_class, typename T>
-da_status interpolation_select_model(da_handle handle, da_interpolation_model model) {
-    interp_class *interp = dynamic_cast<interp_class *>(handle->get_alg_handle<T>());
-    if (interp == nullptr)
-        return da_error(
-            handle->err, da_status_invalid_handle_type,
-            "handle was not initialized with handle_type=da_handle_interpolation or "
-            "handle is invalid.");
+da_status get_interpolation(da_handle handle, interp_class *&interp) {
+    interp = nullptr;
+    if (handle->handle_type != da_handle_interpolation)
+        return da_error(handle->err, da_status_invalid_handle_type,
+                        "The handle was not initialized with da_handle_interpolation.");
 
-    return interp->select_model(model);
+    interp = dynamic_cast<interp_class *>(handle->get_alg_handle<T>());
+    if (interp == nullptr)
+        return da_error(handle->err, da_status_invalid_input,
+                        "The interpolation model has not been selected.");
+
+    return da_status_success;
 }
 
 template <typename interp_class, typename T>
 da_status interpolation_set_sites(da_handle handle, da_int n_sites, const T *x) {
-    interp_class *interp = dynamic_cast<interp_class *>(handle->get_alg_handle<T>());
-    if (interp == nullptr)
-        return da_error(
-            handle->err, da_status_invalid_handle_type,
-            "handle was not initialized with handle_type=da_handle_interpolation or "
-            "handle is invalid.");
+    interp_class *interp = nullptr;
+    da_status status = get_interpolation<interp_class, T>(handle, interp);
+    if (status != da_status_success)
+        return status;
 
-    return interp->set_sites(n_sites, x);
+    return interp->set_sites_1d(n_sites, x);
 }
 
 template <typename interp_class, typename T>
 da_status interpolation_set_sites_uniform(da_handle handle, da_int n_sites, T x_start,
                                           T x_end) {
-    interp_class *interp = dynamic_cast<interp_class *>(handle->get_alg_handle<T>());
-    if (interp == nullptr)
-        return da_error(
-            handle->err, da_status_invalid_handle_type,
-            "handle was not initialized with handle_type=da_handle_interpolation or "
-            "handle is invalid.");
+    interp_class *interp = nullptr;
+    da_status status = get_interpolation<interp_class, T>(handle, interp);
+    if (status != da_status_success)
+        return status;
 
-    return interp->set_sites_uniform(n_sites, x_start, x_end);
+    return interp->set_sites_uniform_1d(n_sites, x_start, x_end);
 }
 
 template <typename interp_class, typename T>
 da_status interpolation_set_values(da_handle handle, da_int n, da_int dim,
                                    const T *y_data, da_int ldy, da_int order) {
-    interp_class *interp = dynamic_cast<interp_class *>(handle->get_alg_handle<T>());
-    if (interp == nullptr)
-        return da_error(
-            handle->err, da_status_invalid_handle_type,
-            "handle was not initialized with handle_type=da_handle_interpolation or "
-            "handle is invalid.");
+    interp_class *interp = nullptr;
+    da_status status = get_interpolation<interp_class, T>(handle, interp);
+    if (status != da_status_success)
+        return status;
 
-    return interp->set_values(n, dim, y_data, ldy, order);
+    return interp->set_values_1d(n, dim, y_data, ldy, order);
 }
 
 template <typename interp_class, typename T>
 da_status interpolation_search_cells(da_handle handle, da_int n_eval, const T *x_eval,
                                      da_int *cells) {
-    interp_class *interp = dynamic_cast<interp_class *>(handle->get_alg_handle<T>());
-    if (interp == nullptr)
-        return da_error(
-            handle->err, da_status_invalid_handle_type,
-            "handle was not initialized with handle_type=da_handle_interpolation or "
-            "handle is invalid.");
+    interp_class *interp = nullptr;
+    da_status status = get_interpolation<interp_class, T>(handle, interp);
+    if (status != da_status_success)
+        return status;
 
     return interp->search_cells(n_eval, x_eval, cells);
 }
 
 template <typename interp_class, typename T>
 da_status interpolation_interpolate(da_handle handle) {
-    interp_class *interp = dynamic_cast<interp_class *>(handle->get_alg_handle<T>());
-    if (interp == nullptr)
-        return da_error(
-            handle->err, da_status_invalid_handle_type,
-            "handle was not initialized with handle_type=da_handle_interpolation or "
-            "handle is invalid.");
+    interp_class *interp = nullptr;
+    da_status status = get_interpolation<interp_class, T>(handle, interp);
+    if (status != da_status_success)
+        return status;
 
     return interp->interpolate();
 }
@@ -115,12 +108,10 @@ da_status interpolation_set_boundary_conditions(da_handle handle, da_int dim,
                                                 da_int left_order, const T *left_values,
                                                 da_int right_order,
                                                 const T *right_values) {
-    interp_class *interp = dynamic_cast<interp_class *>(handle->get_alg_handle<T>());
-    if (interp == nullptr)
-        return da_error(
-            handle->err, da_status_invalid_handle_type,
-            "handle was not initialized with handle_type=da_handle_interpolation or "
-            "handle is invalid.");
+    interp_class *interp = nullptr;
+    da_status status = get_interpolation<interp_class, T>(handle, interp);
+    if (status != da_status_success)
+        return status;
 
     return interp->set_boundary_conditions(dim, left_order, left_values, right_order,
                                            right_values);
@@ -129,12 +120,10 @@ da_status interpolation_set_boundary_conditions(da_handle handle, da_int dim,
 template <typename interp_class, typename T>
 da_status interpolation_evaluate(da_handle handle, da_int n_eval, const T *x_eval,
                                  T *y_eval, da_int n_orders, da_int *orders) {
-    interp_class *interp = dynamic_cast<interp_class *>(handle->get_alg_handle<T>());
-    if (interp == nullptr)
-        return da_error(
-            handle->err, da_status_invalid_handle_type,
-            "handle was not initialized with handle_type=da_handle_interpolation or "
-            "handle is invalid.");
+    interp_class *interp = nullptr;
+    da_status status = get_interpolation<interp_class, T>(handle, interp);
+    if (status != da_status_success)
+        return status;
 
     return interp->evaluate(n_eval, x_eval, y_eval, n_orders, orders);
 }

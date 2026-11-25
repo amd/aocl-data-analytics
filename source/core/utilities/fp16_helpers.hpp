@@ -1,23 +1,28 @@
 /******************************************************************************
 * Copyright (c) 2026 Advanced Micro Devices, Inc. All rights reserved.
 *
-* Permission is hereby granted, free of charge, to any person obtaining a copy
-* of this software and associated documentation files (the "Software"), to deal
-* in the Software without restriction, including without limitation the rights
-* to use, copy, modify, merge, publish, distribute, sublicense, and/or sell
-* copies of the Software, and to permit persons to whom the Software is
-* furnished to do so, subject to the following conditions:
+* Redistribution and use in source and binary forms, with or without modification,
+* are permitted provided that the following conditions are met:
+* 1. Redistributions of source code must retain the above copyright notice,
+*    this list of conditions and the following disclaimer.
+* 2. Redistributions in binary form must reproduce the above copyright notice,
+*    this list of conditions and the following disclaimer in the documentation
+*    and/or other materials provided with the distribution.
+* 3. Neither the name of the copyright holder nor the names of its contributors
+*    may be used to endorse or promote products derived from this software without
+*    specific prior written permission.
 *
-* The above copyright notice and this permission notice shall be included in
-* all copies or substantial portions of the Software.
+* THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS "AS IS" AND
+* ANY EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED TO, THE IMPLIED
+* WARRANTIES OF MERCHANTABILITY AND FITNESS FOR A PARTICULAR PURPOSE ARE DISCLAIMED.
+* IN NO EVENT SHALL THE COPYRIGHT HOLDER OR CONTRIBUTORS BE LIABLE FOR ANY DIRECT,
+* INDIRECT, INCIDENTAL, SPECIAL, EXEMPLARY, OR CONSEQUENTIAL DAMAGES (INCLUDING,
+* BUT NOT LIMITED TO, PROCUREMENT OF SUBSTITUTE GOODS OR SERVICES; LOSS OF USE, DATA,
+* OR PROFITS; OR BUSINESS INTERRUPTION) HOWEVER CAUSED AND ON ANY THEORY OF LIABILITY,
+* WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE)
+* ARISING IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE
+* POSSIBILITY OF SUCH DAMAGE.
 *
-* THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
-* IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
-* FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT.  IN NO EVENT SHALL THE
-* AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
-* LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
-* OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
-* THE SOFTWARE.
 *******************************************************************************/
 
 #ifndef FP16_HELPERS_HPP
@@ -72,7 +77,7 @@ using wider_t = std::conditional_t<std::is_same_v<T, _Float16>, float, T>;
 // Guard against generating _Float16 code when AVX512FP16 is not available
 // For non-_Float16 U this is always true, so float/double paths are unaffected.
 template <typename U>
-inline constexpr bool fp16_codegen_ok =
+static inline constexpr bool fp16_codegen_ok =
 #if defined(__AVX512FP16__)
     true;
 #else
@@ -85,28 +90,30 @@ inline constexpr bool fp16_codegen_ok =
 // integers above 2048 are not all representable exactly). The following
 // helpers perform the arithmetic in `wider_t<T>` and convert back to T at the
 // end. For T in {float, double} they are zero-overhead.
-template <typename T> __attribute__((always_inline)) inline T div_int(T x, da_int n) {
+template <typename T>
+__attribute__((always_inline)) static inline T div_int(T x, da_int n) {
     if constexpr (std::is_same_v<T, _Float16>) {
         return static_cast<T>(static_cast<float>(x) / static_cast<float>(n));
     } else {
         return x / static_cast<T>(n);
     }
 }
-template <typename T> __attribute__((always_inline)) inline T mul_int(T x, da_int n) {
+template <typename T>
+__attribute__((always_inline)) static inline T mul_int(T x, da_int n) {
     if constexpr (std::is_same_v<T, _Float16>) {
         return static_cast<T>(static_cast<float>(x) * static_cast<float>(n));
     } else {
         return x * static_cast<T>(n);
     }
 }
-template <typename T> __attribute__((always_inline)) inline T inv_int(da_int n) {
+template <typename T> __attribute__((always_inline)) static inline T inv_int(da_int n) {
     if constexpr (std::is_same_v<T, _Float16>) {
         return static_cast<T>(1.0f / static_cast<float>(n));
     } else {
         return T(1) / static_cast<T>(n);
     }
 }
-template <typename T> __attribute__((always_inline)) inline T sqrt_int(da_int n) {
+template <typename T> __attribute__((always_inline)) static inline T sqrt_int(da_int n) {
     if constexpr (std::is_same_v<T, _Float16>) {
         return static_cast<T>(std::sqrt(static_cast<float>(n)));
     } else {
@@ -115,7 +122,7 @@ template <typename T> __attribute__((always_inline)) inline T sqrt_int(da_int n)
 }
 
 // float (binary32) -> half (binary16) bit pattern, round-to-nearest-even
-inline uint16_t f32_to_f16_bits(float a) {
+static inline uint16_t f32_to_f16_bits(float a) {
     uint32_t fbits;
     std::memcpy(&fbits, &a, sizeof(fbits));
     uint16_t sign = static_cast<uint16_t>((fbits >> 16) & 0x8000u);
@@ -153,7 +160,7 @@ inline uint16_t f32_to_f16_bits(float a) {
 }
 
 // half (binary16) bit pattern -> float (binary32)
-inline float f16_bits_to_f32(uint16_t a) {
+static inline float f16_bits_to_f32(uint16_t a) {
     uint32_t sign = static_cast<uint32_t>(a & 0x8000u) << 16;
     int32_t exponent = (a >> 10) & 0x1F;
     uint32_t mantissa = a & 0x3FFu;
@@ -182,7 +189,7 @@ inline float f16_bits_to_f32(uint16_t a) {
     return result;
 }
 
-inline _Float16 bits_to_f16(uint16_t bits) {
+static inline _Float16 bits_to_f16(uint16_t bits) {
 #if defined(__FLT16_MAX__)
     _Float16 h;
     std::memcpy(&h, &bits, sizeof(h));
@@ -194,7 +201,7 @@ inline _Float16 bits_to_f16(uint16_t bits) {
 #endif
 }
 
-inline uint16_t f16_to_bits(_Float16 h) {
+static inline uint16_t f16_to_bits(_Float16 h) {
 #if defined(__FLT16_MAX__)
     uint16_t bits;
     std::memcpy(&bits, &h, sizeof(bits));
@@ -283,10 +290,11 @@ namespace da_blas {
 // -----------------------------------------------------------------------------
 // cblas_gemm for _Float16
 // -----------------------------------------------------------------------------
-inline void cblas_gemm(CBLAS_ORDER layout, CBLAS_TRANSPOSE transA, CBLAS_TRANSPOSE transB,
-                       da_int m, da_int n, da_int k, _Float16 alpha, _Float16 const *A,
-                       da_int lda, _Float16 const *B, da_int ldb, _Float16 beta,
-                       _Float16 *C, da_int ldc) {
+static inline void cblas_gemm(CBLAS_ORDER layout, CBLAS_TRANSPOSE transA,
+                              CBLAS_TRANSPOSE transB, da_int m, da_int n, da_int k,
+                              _Float16 alpha, _Float16 const *A, da_int lda,
+                              _Float16 const *B, da_int ldb, _Float16 beta, _Float16 *C,
+                              da_int ldc) {
 #ifndef _WIN32
     // Use aocl_gemm_f16f16f16of16 (DLP) on Linux
     const char order = (layout == CblasRowMajor) ? 'r' : 'c';
@@ -318,13 +326,13 @@ inline void cblas_gemm(CBLAS_ORDER layout, CBLAS_TRANSPOSE transA, CBLAS_TRANSPO
                 sbeta, Cf.data(), ldc);
     for (da_int i = 0; i < m * n; i++)
         C[i] = static_cast<_Float16>(Cf[i]);
-        // LCOV_EXCL_STOP
+    // LCOV_EXCL_STOP
 #endif
 }
 // -----------------------------------------------------------------------------
 // cblas_scal for _Float16 (simple loop)
 // -----------------------------------------------------------------------------
-inline void cblas_scal(da_int n, _Float16 alpha, _Float16 *x, da_int incx) {
+static inline void cblas_scal(da_int n, _Float16 alpha, _Float16 *x, da_int incx) {
     for (da_int i = 0; i < n; i++) {
         x[i * incx] *= alpha;
     }
@@ -338,7 +346,7 @@ inline void cblas_scal(da_int n, _Float16 alpha, _Float16 *x, da_int incx) {
 // the precision loss of a half-precision running sum) when n is large. The
 // result is cast back to _Float16 to keep the BLAS signature unchanged.
 // -----------------------------------------------------------------------------
-inline _Float16 cblas_nrm2(da_int n, _Float16 const *x, da_int incx) {
+static inline _Float16 cblas_nrm2(da_int n, _Float16 const *x, da_int incx) {
     float sum = 0.0f;
     for (da_int i = 0; i < n; i++) {
         float xi = static_cast<float>(x[i * incx]);
@@ -363,8 +371,8 @@ inline _Float16 cblas_nrm2(da_int n, _Float16 const *x, da_int incx) {
 // to keep the value in half-precision range should do so on the final
 // scalar.
 // -----------------------------------------------------------------------------
-inline _Float16 cblas_dot(da_int n, _Float16 const *x, da_int incx, _Float16 const *y,
-                          da_int incy) {
+static inline _Float16 cblas_dot(da_int n, _Float16 const *x, da_int incx,
+                                 _Float16 const *y, da_int incy) {
     constexpr da_int BLOCK = 1024;
     float acc = 0.0f;
     da_int i = 0;
@@ -419,8 +427,8 @@ inline _Float16 cblas_dot(da_int n, _Float16 const *x, da_int incx, _Float16 con
 // per-element magnitude is far from unity.
 // -----------------------------------------------------------------------------
 template <typename T>
-inline da_fp16::wider_t<T> cblas_dot_wide(da_int n, T const *x, da_int incx, T const *y,
-                                          da_int incy) {
+static inline da_fp16::wider_t<T> cblas_dot_wide(da_int n, T const *x, da_int incx,
+                                                 T const *y, da_int incy) {
     if constexpr (std::is_same_v<T, _Float16>) {
         float acc = 0.0f;
         if (incx == 1 && incy == 1) {
@@ -447,9 +455,10 @@ inline da_fp16::wider_t<T> cblas_dot_wide(da_int n, T const *x, da_int incx, T c
 // or sgemm-via-float on Windows). For strided x/y we fall back to a direct
 // loop performing native _Float16 arithmetic.
 // -----------------------------------------------------------------------------
-inline void cblas_gemv(CBLAS_ORDER layout, CBLAS_TRANSPOSE trans, da_int m, da_int n,
-                       _Float16 alpha, _Float16 const *A, da_int lda, _Float16 const *x,
-                       da_int incx, _Float16 beta, _Float16 *y, da_int incy) {
+static inline void cblas_gemv(CBLAS_ORDER layout, CBLAS_TRANSPOSE trans, da_int m,
+                              da_int n, _Float16 alpha, _Float16 const *A, da_int lda,
+                              _Float16 const *x, da_int incx, _Float16 beta, _Float16 *y,
+                              da_int incy) {
     if (incx == 1 && incy == 1) {
         // Map GEMV to GEMM with N=1.
         //   y = alpha * op(A) * x + beta * y
@@ -504,10 +513,10 @@ namespace da_fp16 {
 // the (potentially huge) strided padding implied by lda / ldc.
 constexpr da_int SYRK_FP16_LEAF = 32;
 
-inline void cblas_syrk_fp16_leaf(CBLAS_ORDER layout, CBLAS_UPLO uplo,
-                                 CBLAS_TRANSPOSE trans, da_int n, da_int k, float alpha,
-                                 _Float16 const *A, da_int lda, float beta, _Float16 *C,
-                                 da_int ldc) {
+static inline void cblas_syrk_fp16_leaf(CBLAS_ORDER layout, CBLAS_UPLO uplo,
+                                        CBLAS_TRANSPOSE trans, da_int n, da_int k,
+                                        float alpha, _Float16 const *A, da_int lda,
+                                        float beta, _Float16 *C, da_int ldc) {
     const da_int a_rows = (trans == CblasNoTrans) ? n : k;
     const da_int a_cols = (trans == CblasNoTrans) ? k : n;
     const da_int lda_f = (layout == CblasColMajor) ? a_rows : a_cols;
@@ -567,9 +576,9 @@ namespace da_blas {
 // the first level of recursion, so only the small leaf triangles ever
 // promote to float.
 // -----------------------------------------------------------------------------
-inline void cblas_syrk(CBLAS_ORDER layout, CBLAS_UPLO uplo, CBLAS_TRANSPOSE trans,
-                       da_int n, da_int k, _Float16 alpha, _Float16 const *A, da_int lda,
-                       _Float16 beta, _Float16 *C, da_int ldc) {
+static inline void cblas_syrk(CBLAS_ORDER layout, CBLAS_UPLO uplo, CBLAS_TRANSPOSE trans,
+                              da_int n, da_int k, _Float16 alpha, _Float16 const *A,
+                              da_int lda, _Float16 beta, _Float16 *C, da_int ldc) {
     if (n <= da_fp16::SYRK_FP16_LEAF) {
         da_fp16::cblas_syrk_fp16_leaf(layout, uplo, trans, n, k,
                                       static_cast<float>(alpha), A, lda,
@@ -626,8 +635,8 @@ inline void cblas_syrk(CBLAS_ORDER layout, CBLAS_UPLO uplo, CBLAS_TRANSPOSE tran
 // -----------------------------------------------------------------------------
 // cblas_axpy for _Float16 (native half-precision arithmetic)
 // -----------------------------------------------------------------------------
-inline void cblas_axpy(da_int n, _Float16 alpha, _Float16 const *x, da_int incx,
-                       _Float16 *y, da_int incy) {
+static inline void cblas_axpy(da_int n, _Float16 alpha, _Float16 const *x, da_int incx,
+                              _Float16 *y, da_int incy) {
     for (da_int i = 0; i < n; ++i) {
         y[i * incy] += alpha * x[i * incx];
     }
@@ -636,8 +645,8 @@ inline void cblas_axpy(da_int n, _Float16 alpha, _Float16 const *x, da_int incx,
 // -----------------------------------------------------------------------------
 // cblas_copy for _Float16
 // -----------------------------------------------------------------------------
-inline void cblas_copy(da_int n, _Float16 const *x, da_int incx, _Float16 *y,
-                       da_int incy) {
+static inline void cblas_copy(da_int n, _Float16 const *x, da_int incx, _Float16 *y,
+                              da_int incy) {
     for (da_int i = 0; i < n; ++i)
         y[i * incy] = x[i * incx];
 }
@@ -648,8 +657,9 @@ inline void cblas_copy(da_int n, _Float16 const *x, da_int incx, _Float16 *y,
 // m-by-n with leading dimension lda_in; destination is m-by-n (no trans) or
 // n-by-m (trans) with leading dimension ldb_out. Native _Float16 arithmetic.
 // -----------------------------------------------------------------------------
-inline void omatcopy(char trans, da_int m, da_int n, _Float16 alpha, _Float16 const *A,
-                     da_int lda_in, _Float16 *B, da_int ldb_out) {
+static inline void omatcopy(char trans, da_int m, da_int n, _Float16 alpha,
+                            _Float16 const *A, da_int lda_in, _Float16 *B,
+                            da_int ldb_out) {
     const bool transpose = (trans == 'T' || trans == 't' || trans == 'C' || trans == 'c');
     if (!transpose) {
         for (da_int j = 0; j < n; ++j) {
@@ -667,7 +677,7 @@ inline void omatcopy(char trans, da_int m, da_int n, _Float16 alpha, _Float16 co
 }
 
 // cblas_asum for _Float16: native half-precision accumulation of |x_i|.
-inline _Float16 cblas_asum(da_int n, _Float16 const *x, da_int incx) {
+static inline _Float16 cblas_asum(da_int n, _Float16 const *x, da_int incx) {
     _Float16 s = (_Float16)0;
     for (da_int i = 0; i < n; ++i) {
         s += ARCH::da_std::abs(x[i * incx]);
@@ -677,7 +687,7 @@ inline _Float16 cblas_asum(da_int n, _Float16 const *x, da_int incx) {
 
 // cblas_iamax for _Float16: index of element with maximum |x_i|, half-precision
 // comparison.
-inline da_int cblas_iamax(da_int n, _Float16 const *x, da_int incx) {
+static inline da_int cblas_iamax(da_int n, _Float16 const *x, da_int incx) {
     if (n <= 0)
         return 0;
     da_int imax = 0;
@@ -699,8 +709,8 @@ namespace da {
 // -----------------------------------------------------------------------------
 // lange for _Float16
 // -----------------------------------------------------------------------------
-inline _Float16 lange(char const *norm, da_int const *m, da_int const *n,
-                      _Float16 const *A, da_int const *lda, _Float16 *work) {
+static inline _Float16 lange(char const *norm, da_int const *m, da_int const *n,
+                             _Float16 const *A, da_int const *lda, _Float16 *work) {
     const _Float16 zero = (_Float16)0.0;
     const _Float16 one = (_Float16)1.0;
     _Float16 value = zero;

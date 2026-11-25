@@ -51,10 +51,13 @@ class decision_tree : public pyda_handle {
         da_status status;
         if (prec == "double") {
             da_handle_init<double>(&handle, da_handle_decision_tree);
+            status = da_tree_select_model<double>(handle, df_classifier);
         } else {
             da_handle_init<float>(&handle, da_handle_decision_tree);
             precision = da_single;
+            status = da_tree_select_model<float>(handle, df_classifier);
         }
+        exception_check(status);
 
         std::string opt_str;
 
@@ -310,10 +313,13 @@ class decision_forest : public pyda_handle {
         da_status status;
         if (prec == "double") {
             da_handle_init<double>(&handle, da_handle_decision_forest);
+            status = da_forest_select_model<double>(handle, df_classifier);
         } else {
             da_handle_init<float>(&handle, da_handle_decision_forest);
             precision = da_single;
+            status = da_forest_select_model<float>(handle, df_classifier);
         }
+        exception_check(status);
 
         status = da_options_set(handle, "seed", seed);
         exception_check(status);

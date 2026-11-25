@@ -120,18 +120,18 @@ Options
       .. csv-table:: PCA options
          :header: "Option name", "Type", "Default", "Description", "Constraints", "Notes"
 
-         "power normalization", "string", ":math:`s=` `qr`", "Normalization method used in the randomized solver power iteration.", ":math:`s=` `lu`, `none`, or `qr`.", Foundational.
-         "power iterations", "integer", ":math:`i=-1`", "Number of power iterations used in the randomized solver.", ":math:`-1 \le i`", Foundational.
-         "degrees of freedom", "string", ":math:`s=` `unbiased`", "Whether to use biased or unbiased estimators for standard deviations and variances.", ":math:`s=` `biased`, or `unbiased`.", Foundational.
-         "pca method", "string", ":math:`s=` `covariance`", "Compute PCA based on the covariance or correlation matrix.", ":math:`s=` `correlation`, `covariance`, or `svd`.", Foundational.
-         "whiten", "integer", ":math:`i=0`", "Whether or not we whiten when transforming the data.", ":math:`0 \le i \le 1`", Foundational.
-         "seed", "integer", ":math:`i=0`", "Seed for random number generation; set to -1 for non-deterministic results. This option is only used in the randomized solver.", ":math:`-1 \le i`", Foundational.
-         "store u", "integer", ":math:`i=0`", "Whether or not to store the matrix U from the SVD.", ":math:`0 \le i \le 1`", Foundational.
-         "n_components", "integer", ":math:`i=1`", "Number of principal components to compute. If 0, then all components will be kept.", ":math:`0 \le i`", Foundational.
-         "svd solver", "string", ":math:`s=` `auto`", "Which LAPACK routine to use for the underlying singular value decomposition.", ":math:`s=` `auto`, `gesdd`, `gesvd`, `gesvdx`, `randomized`, or `syevd`.", Foundational.
-         "check data", "string", ":math:`s=` `no`", "Check input data for NaNs prior to performing computation.", ":math:`s=` `no`, or `yes`.", Foundational.
-         "n_oversamples", "integer", ":math:`i=10`", "Extra columns added to the random sample to reduce approximation error. This option is only used in the randomized solver.", ":math:`0 \le i`", Foundational.
-         "storage order", "string", ":math:`s=` `column-major`", "Whether data is supplied and returned in row- or column-major order.", ":math:`s=` `c`, `column-major`, `f`, `fortran`, or `row-major`.", Foundational.
+         "power normalization", "string", ":math:`s=` `qr`", "Normalization method used in the randomized solver power iteration.", ":math:`s=` `lu`, `none`, or `qr`.", "Foundational."
+         "power iterations", "integer", ":math:`i=-1`", "Number of power iterations used in the randomized solver.", ":math:`-1 \le i`", "Foundational."
+         "degrees of freedom", "string", ":math:`s=` `unbiased`", "Whether to use biased or unbiased estimators for standard deviations and variances.", ":math:`s=` `biased`, or `unbiased`.", "Foundational."
+         "pca method", "string", ":math:`s=` `covariance`", "Compute PCA based on the covariance or correlation matrix.", ":math:`s=` `correlation`, `covariance`, or `svd`.", "Foundational."
+         "whiten", "integer", ":math:`i=0`", "Whether or not we whiten when transforming the data.", ":math:`0 \le i \le 1`", "Foundational."
+         "seed", "integer", ":math:`i=0`", "Seed for random number generation; set to -1 for non-deterministic results. This option is only used in the randomized solver.", ":math:`-1 \le i`", "Foundational."
+         "store u", "integer", ":math:`i=0`", "Whether or not to store the matrix U from the SVD.", ":math:`0 \le i \le 1`", "Foundational."
+         "n_components", "integer", ":math:`i=1`", "Number of principal components to compute. If 0, then all components will be kept.", ":math:`0 \le i`", "Foundational."
+         "svd solver", "string", ":math:`s=` `auto`", "Which LAPACK routine to use for the underlying singular value decomposition.", ":math:`s=` `auto`, `gesdd`, `gesvd`, `gesvdx`, `randomized`, or `syevd`.", "Foundational."
+         "check data", "string", ":math:`s=` `no`", "Check input data for NaNs prior to performing computation.", ":math:`s=` `no`, or `yes`.", "Foundational."
+         "n_oversamples", "integer", ":math:`i=10`", "Extra columns added to the random sample to reduce approximation error. This option is only used in the randomized solver.", ":math:`0 \le i`", "Foundational."
+         "storage order", "string", ":math:`s=` `column-major`", "Whether data is supplied and returned in row- or column-major order.", ":math:`s=` `c`, `column-major`, `f`, `fortran`, or `row-major`.", "Foundational."
 
       If the `pca method` option is set to `svd` then no standardization is performed. This option should be used if the input data is already standardized or if an explicit singular value decomposition is required.
       Note, however, that if the columns of the data matrix are not mean-centered, then the computed **variance** and **total_variance** will be meaningless.
@@ -279,22 +279,22 @@ Options
       .. csv-table:: Kernel PCA options
          :header: "Option name", "Type", "Default", "Description", "Constraints", "Notes"
 
-         "coef0", "real", ":math:`r=1`", "Independent term for polynomial and sigmoid kernels.", "There are no constraints on :math:`r`.", Foundational.
-         "kernel", "string", ":math:`s=` `linear`", "Kernel function to use.", ":math:`s=` `linear`, `poly`, `precomputed`, `rbf`, or `sigmoid`.", Foundational.
-         "storage order", "string", ":math:`s=` `column-major`", "Whether data is supplied and returned in row- or column-major order.", ":math:`s=` `c`, `column-major`, `f`, `fortran`, or `row-major`.", Foundational.
-         "n_oversamples", "integer", ":math:`i=10`", "Extra columns added to the random sample to reduce approximation error. This option is only used in the randomized solver.", ":math:`0 \le i`", Foundational.
-         "n_components", "integer", ":math:`i=0`", "Number of kernel principal components to compute.", ":math:`0 \le i`", Foundational.
-         "degree", "integer", ":math:`i=3`", "Degree for the polynomial kernel.", ":math:`1 \le i`", Foundational.
-         "check data", "string", ":math:`s=` `no`", "Check input data for NaNs prior to performing computation.", ":math:`s=` `no`, or `yes`.", Foundational.
-         "fit inverse transform", "string", ":math:`s=` `no`", "Whether to fit the inverse transform.", ":math:`s=` `no`, or `yes`.", Foundational.
-         "gamma", "real", ":math:`r=-1`", "Kernel coefficient for rbf, poly, and sigmoid kernels.", "There are no constraints on :math:`r`.", Foundational.
-         "remove zero eig", "string", ":math:`s=` `no`", "Whether to remove components whose eigenvalue is zero.", ":math:`s=` `no`, or `yes`.", Foundational.
-         "power normalization", "string", ":math:`s=` `qr`", "Normalization method used in the randomized solver power iteration.", ":math:`s=` `lu`, `none`, or `qr`.", Foundational.
-         "alpha", "real", ":math:`r=1`", "Ridge regularization parameter for the inverse transform linear solve.", ":math:`0 < r`", Foundational.
-         "copy data", "string", ":math:`s=` `yes`", "Whether or not to store a copy of the training data.", ":math:`s=` `no`, or `yes`.", Foundational.
-         "eigensolver", "string", ":math:`s=` `auto`", "Which method to use for computing the eigendecomposition of the kernel matrix", ":math:`s=` `auto`, `randomized`, or `syevd`.", Foundational.
-         "power iterations", "integer", ":math:`i=-1`", "Number of power iterations used in the randomized solver.", ":math:`-1 \le i`", Foundational.
-         "seed", "integer", ":math:`i=0`", "Seed for random number generation; set to -1 for non-deterministic results. This option is only used in the randomized solver.", ":math:`-1 \le i`", Foundational.
+         "coef0", "real", ":math:`r=1`", "Independent term for polynomial and sigmoid kernels.", "There are no constraints on :math:`r`.", "Foundational."
+         "kernel", "string", ":math:`s=` `linear`", "Kernel function to use.", ":math:`s=` `linear`, `poly`, `precomputed`, `rbf`, or `sigmoid`.", "Foundational."
+         "storage order", "string", ":math:`s=` `column-major`", "Whether data is supplied and returned in row- or column-major order.", ":math:`s=` `c`, `column-major`, `f`, `fortran`, or `row-major`.", "Foundational."
+         "n_oversamples", "integer", ":math:`i=10`", "Extra columns added to the random sample to reduce approximation error. This option is only used in the randomized solver.", ":math:`0 \le i`", "Foundational."
+         "n_components", "integer", ":math:`i=0`", "Number of kernel principal components to compute.", ":math:`0 \le i`", "Foundational."
+         "degree", "integer", ":math:`i=3`", "Degree for the polynomial kernel.", ":math:`1 \le i`", "Foundational."
+         "check data", "string", ":math:`s=` `no`", "Check input data for NaNs prior to performing computation.", ":math:`s=` `no`, or `yes`.", "Foundational."
+         "fit inverse transform", "string", ":math:`s=` `no`", "Whether to fit the inverse transform.", ":math:`s=` `no`, or `yes`.", "Foundational."
+         "gamma", "real", ":math:`r=-1`", "Kernel coefficient for rbf, poly, and sigmoid kernels.", "There are no constraints on :math:`r`.", "Foundational."
+         "remove zero eig", "string", ":math:`s=` `no`", "Whether to remove components whose eigenvalue is zero.", ":math:`s=` `no`, or `yes`.", "Foundational."
+         "power normalization", "string", ":math:`s=` `qr`", "Normalization method used in the randomized solver power iteration.", ":math:`s=` `lu`, `none`, or `qr`.", "Foundational."
+         "alpha", "real", ":math:`r=1`", "Ridge regularization parameter for the inverse transform linear solve.", ":math:`0 < r`", "Foundational."
+         "copy data", "string", ":math:`s=` `yes`", "Whether or not to store a copy of the training data.", ":math:`s=` `no`, or `yes`.", "Foundational."
+         "eigensolver", "string", ":math:`s=` `auto`", "Which method to use for computing the eigendecomposition of the kernel matrix", ":math:`s=` `auto`, `randomized`, or `syevd`.", "Foundational."
+         "power iterations", "integer", ":math:`i=-1`", "Number of power iterations used in the randomized solver.", ":math:`-1 \le i`", "Foundational."
+         "seed", "integer", ":math:`i=0`", "Seed for random number generation; set to -1 for non-deterministic results. This option is only used in the randomized solver.", ":math:`-1 \le i`", "Foundational."
 
       If ``n_components`` is set to 0, all principal components with a non-zero eigenvalue are retained.
 
@@ -447,16 +447,16 @@ Options
       .. csv-table:: NMF options
          :header: "Option name", "Type", "Default", "Description", "Constraints", "Notes"
 
-         "n_components", "integer", ":math:`i=0`", "Number of components to compute. If 0 (default), all components are kept.", ":math:`0 \le i`", Foundational.
-         "max_iter", "integer", ":math:`i=200`", "Maximum number of MU iterations.", ":math:`1 \le i`", Foundational.
-         "tol", "real", ":math:`r=0.0001`", "Tolerance for the stopping condition: iterations stop when the relative improvement of the Frobenius residual falls below this value. Set to 0 to disable early stopping. The check frequency is controlled by the 'check_every' option.", ":math:`0 \le r`", Foundational.
-         "check_every", "integer", ":math:`i=10`", "Number of MU iterations between successive convergence checks. The convergence criterion (relative change of the Frobenius residual against tol) is evaluated once every check_every iterations. Larger values reduce the overhead of the residual computation at the cost of potentially running extra iterations after the threshold is met. Only effective when tol > 0.", ":math:`1 \le i`", Foundational.
-         "init", "string", ":math:`s=` `auto`", "Procedure used to initialize W and H.", ":math:`s=` `auto`, `custom`, `nndsvd`, `nndsvda`, `nndsvdar`, or `random`.", Foundational.
-         "solver", "string", ":math:`s=` `mu`", "NMF solver to use. Currently only multiplicative update.", ":math:`s=` `mu`.", Foundational.
-         "beta_loss", "string", ":math:`s=` `frobenius`", "Loss function to minimize. Currently only Frobenius norm.", ":math:`s=` `frobenius`.", Foundational.
-         "random_state", "integer", ":math:`i=-1`", "Random seed used to initialize W and H.", ":math:`-1 \le i`", Foundational.
-         "storage order", "string", ":math:`s=` `column-major`", "Whether data is supplied and returned in row- or column-major order.", ":math:`s=` `c`, `column-major`, `f`, `fortran`, or `row-major`.", Foundational.
-         "check data", "string", ":math:`s=` `no`", "Check input data for NaNs prior to performing computation.", ":math:`s=` `no`, or `yes`.", Foundational.
+         "n_components", "integer", ":math:`i=0`", "Number of components to compute. If 0 (default), all components are kept.", ":math:`0 \le i`", "Foundational."
+         "max_iter", "integer", ":math:`i=200`", "Maximum number of MU iterations.", ":math:`1 \le i`", "Foundational."
+         "tol", "real", ":math:`r=0.0001`", "Tolerance for the stopping condition: iterations stop when the relative improvement of the Frobenius residual falls below this value. Set to 0 to disable early stopping. The check frequency is controlled by the 'check_every' option.", ":math:`0 \le r`", "Foundational."
+         "check_every", "integer", ":math:`i=10`", "Number of MU iterations between successive convergence checks. The convergence criterion (relative change of the Frobenius residual against tol) is evaluated once every check_every iterations. Larger values reduce the overhead of the residual computation at the cost of potentially running extra iterations after the threshold is met. Only effective when tol > 0.", ":math:`1 \le i`", "Foundational."
+         "init", "string", ":math:`s=` `auto`", "Procedure used to initialize W and H.", ":math:`s=` `auto`, `custom`, `nndsvd`, `nndsvda`, `nndsvdar`, or `random`.", "Foundational."
+         "solver", "string", ":math:`s=` `mu`", "NMF solver to use. Currently only multiplicative update.", ":math:`s=` `mu`.", "Foundational."
+         "beta_loss", "string", ":math:`s=` `frobenius`", "Loss function to minimize. Currently only Frobenius norm.", ":math:`s=` `frobenius`.", "Foundational."
+         "random_state", "integer", ":math:`i=-1`", "Random seed used to initialize W and H.", ":math:`-1 \le i`", "Foundational."
+         "storage order", "string", ":math:`s=` `column-major`", "Whether data is supplied and returned in row- or column-major order.", ":math:`s=` `c`, `column-major`, `f`, `fortran`, or `row-major`.", "Foundational."
+         "check data", "string", ":math:`s=` `no`", "Check input data for NaNs prior to performing computation.", ":math:`s=` `no`, or `yes`.", "Foundational."
 
       If ``n_components`` is set to 0, ``min(n_samples, n_features)`` components are computed.
 

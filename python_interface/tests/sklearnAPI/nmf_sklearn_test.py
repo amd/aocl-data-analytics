@@ -47,7 +47,7 @@ def test_nmf(precision, init):
         dtype=precision,
     )
     max_iter = 200
-    tol = 10 * np.sqrt(np.finfo(precision).eps)
+    tol = float(10 * np.sqrt(np.finfo(precision).eps))
 
     if init == 'custom':
         W0 = np.array(
@@ -124,14 +124,15 @@ def test_nmf(precision, init):
         assert da_Xt == pytest.approx(sk_Xt, rel=tol)
     elif init == 'nndsvdar':
         # Random perturbation of zeros. Different RNGs cause different cross-backend tol.
-        assert da_WH == pytest.approx(sk_WH, abs=0.01 * a_fro)
+        assert da_WH == pytest.approx(sk_WH, abs=float(0.01 * a_fro))
         assert da_Xt == pytest.approx(da_WH, rel=tol)
     else:
         # 'random': fully random init with different RNGs, so only check self-consistency.
         assert da_Xt == pytest.approx(da_WH, rel=tol)
 
     print(f"init={init}  reconstruction_err_  aocl: {da_err}  sklearn: {sk_err}")
-    print(f"init={init}  n_iter_              aocl: {da_n_iter}  sklearn: {sk_n_iter}")
+    print(
+        f"init={init}  n_iter_              aocl: {da_n_iter}  sklearn: {sk_n_iter}")
 
     if init != 'custom':
         # Also test the fit() + transform() API: in-sample and out-of-sample.
@@ -166,7 +167,7 @@ def test_nmf(precision, init):
         if init in ('nndsvd', 'nndsvda'):
             assert da_WH_t == pytest.approx(sk_WH_t, rel=tol)
         elif init == 'nndsvdar':
-            assert da_WH_t == pytest.approx(sk_WH_t, abs=0.01 * a_fro)
+            assert da_WH_t == pytest.approx(sk_WH_t, abs=float(0.01 * a_fro))
 
         # Out-of-sample transform + inverse_transform
         x_fro = np.linalg.norm(x_new)
@@ -175,7 +176,8 @@ def test_nmf(precision, init):
         assert np.all(da_xt_new >= 0.0)
         assert np.all(da_Xt_new >= 0.0)
         if init in ('nndsvd', 'nndsvda'):
-            assert da_Xt_new == pytest.approx(sk_Xt_new, abs=tol * x_fro + 5e-2 * x_fro)
+            assert da_Xt_new == pytest.approx(sk_Xt_new,
+                                              abs=float(tol * x_fro + 5e-2 * x_fro))
         print(
             f"init={init}  fit+transform  da_WH_t[0]: {da_WH_t[0]}  sk_WH_t[0]: {sk_WH_t[0]}")
 
@@ -191,7 +193,7 @@ def test_double_solve(precision):
          [5, 3, 8, 4]],
         dtype=precision,
     )
-    tol = np.sqrt(np.finfo(precision).eps)
+    tol = float(np.sqrt(np.finfo(precision).eps))
 
     skpatch()
     from sklearn.decomposition import NMF

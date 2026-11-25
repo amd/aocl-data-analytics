@@ -27,6 +27,7 @@
 
 #include "optimization.hpp"
 #include "da_error.hpp"
+#include "da_logger.hpp"
 #include "da_std.hpp"
 #include "macros.h"
 #include "optimization_options.hpp"
@@ -34,7 +35,6 @@
 #include <algorithm>
 #include <cmath>
 #include <functional>
-#include <iostream>
 #include <string>
 #include <vector>
 
@@ -348,6 +348,8 @@ da_status da_optimization<T>::solve(std::vector<T> &x, void *usrdata) {
         return da_error(this->err, da_status_internal_error,
                         "expected option not found: optim method");
 
+    da_logger::logger out;
+
     switch (solver) {
     case solver_lbfgsb:
         if constexpr (std::is_same_v<T, _Float16>) {
@@ -359,9 +361,9 @@ da_status da_optimization<T>::solve(std::vector<T> &x, void *usrdata) {
             break;
         } else {
             if (prnlvl > 0) {
-                std::cout << "-----------------------------------------------------\n"
-                          << "    AOCL-DA L-BFGS-B Nonlinear Programming Solver\n"
-                          << "-----------------------------------------------------\n";
+                out << "-----------------------------------------------------\n"
+                    << "    AOCL-DA L-BFGS-B Nonlinear Programming Solver\n"
+                    << "-----------------------------------------------------\n";
             }
             if (prn == "yes")
                 this->opts.print_options();
@@ -380,9 +382,9 @@ da_status da_optimization<T>::solve(std::vector<T> &x, void *usrdata) {
         }
     case solver_coord:
         if (prnlvl > 0) {
-            std::cout << "-----------------------------------------------------------\n"
-                      << " AOCL-DA COORD Generalized Linear Model Elastic Net Solver\n"
-                      << "-----------------------------------------------------------\n";
+            out << "-----------------------------------------------------------\n"
+                << " AOCL-DA COORD Generalized Linear Model Elastic Net Solver\n"
+                << "-----------------------------------------------------------\n";
         }
         if (prn == "yes")
             this->opts.print_options();
@@ -398,9 +400,9 @@ da_status da_optimization<T>::solve(std::vector<T> &x, void *usrdata) {
             break;
         } else {
             if (prnlvl > 0) {
-                std::cout << " ------------------------------------------------------\n"
-                          << "     AOCL-DA NLP Solver for Nonlinear Least-Squares    \n"
-                          << " ------------------------------------------------------\n";
+                out << " ------------------------------------------------------\n"
+                    << "     AOCL-DA NLP Solver for Nonlinear Least-Squares    \n"
+                    << " ------------------------------------------------------\n";
             }
             if (prn == "yes")
                 this->opts.print_options();

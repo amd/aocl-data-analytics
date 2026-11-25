@@ -50,28 +50,28 @@ The following options are supported.
    :escape: ~
    :header: "Option name", "Type", "Default", "Description", "Constraints", "Notes"
    
-   "mixed precision", "string", ":math:`s=` `no`", "Whether to use mixed precision iterative refinement, in which lower precision arithmetic is used before switching to the working precision for the final iterations.", ":math:`s=` `no`, or `yes`.", Foundational.
-   "optim method", "string", ":math:`s=` `auto`", "Select optimization method to use.", ":math:`s=` `auto`, `bfgs`, `cg`, `chol`, `cholesky`, `coord`, `lbfgs`, `lbfgsb`, `qr`, `sparse_cg`, or `svd`.", Foundational.
-   "optim coord skip tol", "real", ":math:`r=10^{-4}`", "Coordinate skip tolerance, a given coordinate could be skipped if the change between two consecutive iterates is less than tolerance. Any negative value disables the skipping scheme.", "There are no constraints on :math:`r`.", Foundational.
-   "low precision convergence tol", "real", ":math:`r=10^{-3}`", "If mixed precision iterative refinement is enabled, convergence tolerance for the low precision phase.", ":math:`0 \le r`", Foundational.
-   "scaling", "string", ":math:`s=` `auto`", "Scale or standardize feature matrix and response vector. Matrix is copied and then rescaled. Option key value auto indicates that rescaling type is chosen by the solver (this also includes no scaling).", ":math:`s=` `auto`, `centering`, `no`, `none`, `scale`, `scale only`, `standardise`, or `standardize`.", Foundational.
-   "print options", "string", ":math:`s=` `no`", "Print options.", ":math:`s=` `no`, or `yes`.", Foundational.
-   "storage order", "string", ":math:`s=` `column-major`", "Whether data is supplied and returned in row- or column-major order.", ":math:`s=` `c`, `column-major`, `f`, `fortran`, or `row-major`.", Foundational.
-   "check data", "string", ":math:`s=` `no`", "Check input data for NaNs prior to performing computation.", ":math:`s=` `no`, or `yes`.", Foundational.
-   "optim dual gap tol", "real", ":math:`r=10^{-4}`", "Tolerance to declare convergence based on the estimate of dual gap size. See option in the corresponding optimization solver documentation.", ":math:`0 < r`", Foundational.
-   "print level", "integer", ":math:`i=0`", "Set level of verbosity for the solver.", ":math:`0 \le i \le 5`", Foundational.
-   "optim convergence tol", "real", ":math:`r=10^{-4}`", "Tolerance to declare convergence for the iterative optimization step. See option in the corresponding optimization solver documentation.", ":math:`0 < r < 1`", Foundational.
-   "intercept", "integer", ":math:`i=0`", "Add intercept variable to the model.", ":math:`0 \le i \le 1`", Foundational.
-   "optim iteration limit", "integer", ":math:`i=10000`", "Maximum number of iterations to perform in the optimization phase. Valid only for iterative solvers, e.g. L-BFGS-B, Coordinate Descent, etc.", ":math:`1 \le i`", Foundational.
-   "low precision iteration limit", "integer", ":math:`i=5000`", "If mixed precision iterative refinement is enabled, maximum number of iterations for the low precision phase.", ":math:`1 \le i`", Foundational.
-   "optim progress factor", "real", ":math:`r=\frac{10}{\sqrt{2\,\varepsilon}}`", "Factor used to detect convergence of the iterative optimization step. See option in the corresponding optimization solver documentation.", ":math:`0 \le r`", Foundational.
-   "alpha", "real", ":math:`r=0`", "Coefficient of alpha in the regularization terms: lambda( (1-alpha)/2 L2 + alpha L1 ).", ":math:`0 \le r \le 1`", Foundational.
-   "optim coord skip min", "integer", ":math:`i=2`", "Minimum times a coordinate change is smaller than coord skip tol to start skipping.", ":math:`2 \le i`", Foundational.
-   "optim coord skip max", "integer", ":math:`i=100`", "Maximum times a coordinate can be skipped, after this the coordinate is checked.", ":math:`10 \le i`", Foundational.
-   "debug", "integer", ":math:`i=0`", "Set debug level (internal use).", ":math:`0 \le i \le 3`", Foundational.
-   "logistic constraint", "string", ":math:`s=` `ssc`", "Affects only multinomial logistic regression. Type of constraint put on coefficients. This will affect number of coefficients returned. RSC - means we choose a reference category whose coefficients will be set to all 0. This results in K-1 class coefficients for problems with K classes. SSC - means the sum of coefficients class-wise for each feature is 0. It will result in K class coefficients for problems with K classes.", ":math:`s=` `reference category`, `rsc`, `ssc`, `symmetric`, or `symmetric side`.", Foundational.
-   "optim time limit", "real", ":math:`r=10^6`", "Maximum time limit (in seconds). Solver will exit with a warning after this limit. Valid only for iterative solvers, e.g. L-BFGS-B, Coordinate Descent, etc.", ":math:`0 < r`", Foundational.
-   "lambda", "real", ":math:`r=0`", "Penalty coefficient for the regularization terms: lambda( (1-alpha)/2 L2 + alpha L1 ).", ":math:`0 \le r`", Foundational.
+   "mixed precision", "string", ":math:`s=` `no`", "Whether to use mixed precision iterative refinement, in which lower precision arithmetic is used before switching to the working precision for the final iterations.", ":math:`s=` `no`, or `yes`.", "Foundational."
+   "optim method", "string", ":math:`s=` `auto`", "Select optimization method to use.", ":math:`s=` `auto`, `bfgs`, `cg`, `chol`, `cholesky`, `coord`, `lbfgs`, `lbfgsb`, `qr`, `sparse_cg`, or `svd`.", "Foundational."
+   "optim coord skip tol", "real", ":math:`r=10^{-4}`", "Coordinate skip tolerance, a given coordinate could be skipped if the change between two consecutive iterates is less than tolerance. Any negative value disables the skipping scheme.", "There are no constraints on :math:`r`.", "Foundational."
+   "low precision convergence tol", "real", ":math:`r=10^{-3}`", "If mixed precision iterative refinement is enabled, convergence tolerance for the low precision phase.", ":math:`0 \le r`", "Foundational."
+   "scaling", "string", ":math:`s=` `auto`", "Scale or standardize feature matrix and response vector. Matrix is copied and then rescaled. Option key value auto indicates that rescaling type is chosen by the solver (this also includes no scaling).", ":math:`s=` `auto`, `centering`, `no`, `none`, `scale`, `scale only`, `standardise`, or `standardize`.", "Foundational."
+   "print options", "string", ":math:`s=` `no`", "Print options.", ":math:`s=` `no`, or `yes`.", "Foundational."
+   "storage order", "string", ":math:`s=` `column-major`", "Whether data is supplied and returned in row- or column-major order.", ":math:`s=` `c`, `column-major`, `f`, `fortran`, or `row-major`.", "Foundational."
+   "check data", "string", ":math:`s=` `no`", "Check input data for NaNs prior to performing computation.", ":math:`s=` `no`, or `yes`.", "Foundational."
+   "optim dual gap tol", "real", ":math:`r=10^{-4}`", "Tolerance to declare convergence based on the estimate of dual gap size. See option in the corresponding optimization solver documentation.", ":math:`0 < r`", "Foundational."
+   "print level", "integer", ":math:`i=0`", "Set level of verbosity for the solver.", ":math:`0 \le i \le 5`", "Foundational."
+   "optim convergence tol", "real", ":math:`r=10^{-4}`", "Tolerance to declare convergence for the iterative optimization step. See option in the corresponding optimization solver documentation.", ":math:`0 < r < 1`", "Foundational."
+   "intercept", "integer", ":math:`i=0`", "Add intercept variable to the model.", ":math:`0 \le i \le 1`", "Foundational."
+   "optim iteration limit", "integer", ":math:`i=10000`", "Maximum number of iterations to perform in the optimization phase. Valid only for iterative solvers, e.g. L-BFGS-B, Coordinate Descent, etc.", ":math:`1 \le i`", "Foundational."
+   "low precision iteration limit", "integer", ":math:`i=5000`", "If mixed precision iterative refinement is enabled, maximum number of iterations for the low precision phase.", ":math:`1 \le i`", "Foundational."
+   "optim progress factor", "real", ":math:`r=\frac{10}{\sqrt{2\,\varepsilon}}`", "Factor used to detect convergence of the iterative optimization step. See option in the corresponding optimization solver documentation.", ":math:`0 \le r`", "Foundational."
+   "alpha", "real", ":math:`r=0`", "Coefficient of alpha in the regularization terms: lambda( (1-alpha)/2 L2 + alpha L1 ).", ":math:`0 \le r \le 1`", "Foundational."
+   "optim coord skip min", "integer", ":math:`i=2`", "Minimum times a coordinate change is smaller than coord skip tol to start skipping.", ":math:`2 \le i`", "Foundational."
+   "optim coord skip max", "integer", ":math:`i=100`", "Maximum times a coordinate can be skipped, after this the coordinate is checked.", ":math:`10 \le i`", "Foundational."
+   "debug", "integer", ":math:`i=0`", "Set debug level (internal use).", ":math:`0 \le i \le 3`", "Foundational."
+   "logistic constraint", "string", ":math:`s=` `ssc`", "Affects only multinomial logistic regression. Type of constraint put on coefficients. This will affect number of coefficients returned. RSC - means we choose a reference category whose coefficients will be set to all 0. This results in K-1 class coefficients for problems with K classes. SSC - means the sum of coefficients class-wise for each feature is 0. It will result in K class coefficients for problems with K classes.", ":math:`s=` `reference category`, `rsc`, `ssc`, `symmetric`, or `symmetric side`.", "Foundational."
+   "optim time limit", "real", ":math:`r=10^6`", "Maximum time limit (in seconds). Solver will exit with a warning after this limit. Valid only for iterative solvers, e.g. L-BFGS-B, Coordinate Descent, etc.", ":math:`0 < r`", "Foundational."
+   "lambda", "real", ":math:`r=0`", "Penalty coefficient for the regularization terms: lambda( (1-alpha)/2 L2 + alpha L1 ).", ":math:`0 \le r`", "Foundational."
 
 
 .. _opts_principalcomponentanalysis:
@@ -85,18 +85,18 @@ The following options are supported.
    :escape: ~
    :header: "Option name", "Type", "Default", "Description", "Constraints", "Notes"
    
-   "power normalization", "string", ":math:`s=` `qr`", "Normalization method used in the randomized solver power iteration.", ":math:`s=` `lu`, `none`, or `qr`.", Foundational.
-   "power iterations", "integer", ":math:`i=-1`", "Number of power iterations used in the randomized solver.", ":math:`-1 \le i`", Foundational.
-   "degrees of freedom", "string", ":math:`s=` `unbiased`", "Whether to use biased or unbiased estimators for standard deviations and variances.", ":math:`s=` `biased`, or `unbiased`.", Foundational.
-   "pca method", "string", ":math:`s=` `covariance`", "Compute PCA based on the covariance or correlation matrix.", ":math:`s=` `correlation`, `covariance`, or `svd`.", Foundational.
-   "whiten", "integer", ":math:`i=0`", "Whether or not we whiten when transforming the data.", ":math:`0 \le i \le 1`", Foundational.
-   "seed", "integer", ":math:`i=0`", "Seed for random number generation; set to -1 for non-deterministic results. This option is only used in the randomized solver.", ":math:`-1 \le i`", Foundational.
-   "store u", "integer", ":math:`i=0`", "Whether or not to store the matrix U from the SVD.", ":math:`0 \le i \le 1`", Foundational.
-   "n_components", "integer", ":math:`i=1`", "Number of principal components to compute. If 0, then all components will be kept.", ":math:`0 \le i`", Foundational.
-   "svd solver", "string", ":math:`s=` `auto`", "Which LAPACK routine to use for the underlying singular value decomposition.", ":math:`s=` `auto`, `gesdd`, `gesvd`, `gesvdx`, `randomized`, or `syevd`.", Foundational.
-   "check data", "string", ":math:`s=` `no`", "Check input data for NaNs prior to performing computation.", ":math:`s=` `no`, or `yes`.", Foundational.
-   "n_oversamples", "integer", ":math:`i=10`", "Extra columns added to the random sample to reduce approximation error. This option is only used in the randomized solver.", ":math:`0 \le i`", Foundational.
-   "storage order", "string", ":math:`s=` `column-major`", "Whether data is supplied and returned in row- or column-major order.", ":math:`s=` `c`, `column-major`, `f`, `fortran`, or `row-major`.", Foundational.
+   "power normalization", "string", ":math:`s=` `qr`", "Normalization method used in the randomized solver power iteration.", ":math:`s=` `lu`, `none`, or `qr`.", "Foundational."
+   "power iterations", "integer", ":math:`i=-1`", "Number of power iterations used in the randomized solver.", ":math:`-1 \le i`", "Foundational."
+   "degrees of freedom", "string", ":math:`s=` `unbiased`", "Whether to use biased or unbiased estimators for standard deviations and variances.", ":math:`s=` `biased`, or `unbiased`.", "Foundational."
+   "pca method", "string", ":math:`s=` `covariance`", "Compute PCA based on the covariance or correlation matrix.", ":math:`s=` `correlation`, `covariance`, or `svd`.", "Foundational."
+   "whiten", "integer", ":math:`i=0`", "Whether or not we whiten when transforming the data.", ":math:`0 \le i \le 1`", "Foundational."
+   "seed", "integer", ":math:`i=0`", "Seed for random number generation; set to -1 for non-deterministic results. This option is only used in the randomized solver.", ":math:`-1 \le i`", "Foundational."
+   "store u", "integer", ":math:`i=0`", "Whether or not to store the matrix U from the SVD.", ":math:`0 \le i \le 1`", "Foundational."
+   "n_components", "integer", ":math:`i=1`", "Number of principal components to compute. If 0, then all components will be kept.", ":math:`0 \le i`", "Foundational."
+   "svd solver", "string", ":math:`s=` `auto`", "Which LAPACK routine to use for the underlying singular value decomposition.", ":math:`s=` `auto`, `gesdd`, `gesvd`, `gesvdx`, `randomized`, or `syevd`.", "Foundational."
+   "check data", "string", ":math:`s=` `no`", "Check input data for NaNs prior to performing computation.", ":math:`s=` `no`, or `yes`.", "Foundational."
+   "n_oversamples", "integer", ":math:`i=10`", "Extra columns added to the random sample to reduce approximation error. This option is only used in the randomized solver.", ":math:`0 \le i`", "Foundational."
+   "storage order", "string", ":math:`s=` `column-major`", "Whether data is supplied and returned in row- or column-major order.", ":math:`s=` `c`, `column-major`, `f`, `fortran`, or `row-major`.", "Foundational."
 
 
 .. _opts_k-meansclustering:
@@ -110,22 +110,22 @@ The following options are supported.
    :escape: ~
    :header: "Option name", "Type", "Default", "Description", "Constraints", "Notes"
    
-   "low precision convergence tolerance", "real", ":math:`r=10^{-2}`", "If mixed precision iterative refinement is enabled, convergence tolerance for the low precision phase.", ":math:`0 \le r`", Foundational.
-   "convergence tolerance", "real", ":math:`r=10^{-4}`", "Convergence tolerance.", ":math:`0 \le r`", Foundational.
-   "normalize data", "string", ":math:`s=` `yes`", "Whether to normalize the input data before clustering. This option is only used if distance is set to cosine.", ":math:`s=` `no`, or `yes`.", Foundational.
-   "storage order", "string", ":math:`s=` `column-major`", "Whether data is supplied and returned in row- or column-major order.", ":math:`s=` `c`, `column-major`, `f`, `fortran`, or `row-major`.", Foundational.
-   "n_init", "integer", ":math:`i=10`", "Number of runs with different random seeds (ignored if you have specified initial cluster centres).", ":math:`1 \le i`", Foundational.
-   "low precision max_iter", "integer", ":math:`i=200`", "If mixed precision iterative refinement is enabled, maximum number of iterations for the low precision phase.", ":math:`1 \le i`", Foundational.
-   "check data", "string", ":math:`s=` `no`", "Check input data for NaNs prior to performing computation.", ":math:`s=` `no`, or `yes`.", Foundational.
-   "max_iter", "integer", ":math:`i=300`", "Maximum number of iterations.", ":math:`1 \le i`", Foundational.
-   "seed", "integer", ":math:`i=0`", "Seed for random number generation; set to -1 for non-deterministic results.", ":math:`-1 \le i`", Foundational.
-   "initialization method", "string", ":math:`s=` `k-means++`", "How to determine the initial cluster centres.", ":math:`s=` `afk-mc2`, `k-means++`, `random`, `random partitions`, or `supplied`.", Foundational.
-   "algorithm", "string", ":math:`s=` `lloyd`", "Choice of underlying k-means algorithm.", ":math:`s=` `elkan`, `hartigan-wong`, `lloyd`, or `macqueen`.", Foundational.
-   "mixed precision", "string", ":math:`s=` `no`", "Whether to use mixed precision iterative refinement, in which lower precision arithmetic is used before switching to the working precision for the final iterations.", ":math:`s=` `no`, or `yes`.", Foundational.
-   "n_clusters", "integer", ":math:`i=1`", "Number of clusters required.", ":math:`1 \le i`", Foundational.
-   "afk-mc2 samples", "integer", ":math:`i=50`", "Number of samples to take for the AFK-MC2 initialization method.", ":math:`1 \le i`", Foundational.
-   "distance", "string", ":math:`s=` `euclidean`", "Distance metric used for clustering. Use 'euclidean' for standard k-means or 'cosine' for spherical k-means (not compatible with Hartigan-Wong).", ":math:`s=` `cosine`, or `euclidean`.", Foundational.
-   "empty clusters", "string", ":math:`s=` `ignore`", "How to deal with empty clusters at the end of a k-means iteration.", ":math:`s=` `error`, `ignore`, or `split`.", Foundational.
+   "low precision convergence tolerance", "real", ":math:`r=10^{-2}`", "If mixed precision iterative refinement is enabled, convergence tolerance for the low precision phase.", ":math:`0 \le r`", "Foundational."
+   "convergence tolerance", "real", ":math:`r=10^{-4}`", "Convergence tolerance.", ":math:`0 \le r`", "Foundational."
+   "normalize data", "string", ":math:`s=` `yes`", "Whether to normalize the input data before clustering. This option is only used if distance is set to cosine.", ":math:`s=` `no`, or `yes`.", "Foundational."
+   "storage order", "string", ":math:`s=` `column-major`", "Whether data is supplied and returned in row- or column-major order.", ":math:`s=` `c`, `column-major`, `f`, `fortran`, or `row-major`.", "Foundational."
+   "n_init", "integer", ":math:`i=10`", "Number of runs with different random seeds (ignored if you have specified initial cluster centres).", ":math:`1 \le i`", "Foundational."
+   "low precision max_iter", "integer", ":math:`i=200`", "If mixed precision iterative refinement is enabled, maximum number of iterations for the low precision phase.", ":math:`1 \le i`", "Foundational."
+   "check data", "string", ":math:`s=` `no`", "Check input data for NaNs prior to performing computation.", ":math:`s=` `no`, or `yes`.", "Foundational."
+   "max_iter", "integer", ":math:`i=300`", "Maximum number of iterations.", ":math:`1 \le i`", "Foundational."
+   "seed", "integer", ":math:`i=0`", "Seed for random number generation; set to -1 for non-deterministic results.", ":math:`-1 \le i`", "Foundational."
+   "initialization method", "string", ":math:`s=` `k-means++`", "How to determine the initial cluster centres.", ":math:`s=` `afk-mc2`, `k-means++`, `random`, `random partitions`, or `supplied`.", "Foundational."
+   "algorithm", "string", ":math:`s=` `lloyd`", "Choice of underlying k-means algorithm.", ":math:`s=` `elkan`, `hartigan-wong`, `lloyd`, or `macqueen`.", "Foundational."
+   "mixed precision", "string", ":math:`s=` `no`", "Whether to use mixed precision iterative refinement, in which lower precision arithmetic is used before switching to the working precision for the final iterations.", ":math:`s=` `no`, or `yes`.", "Foundational."
+   "n_clusters", "integer", ":math:`i=1`", "Number of clusters required.", ":math:`1 \le i`", "Foundational."
+   "afk-mc2 samples", "integer", ":math:`i=50`", "Number of samples to take for the AFK-MC2 initialization method.", ":math:`1 \le i`", "Foundational."
+   "distance", "string", ":math:`s=` `euclidean`", "Distance metric used for clustering. Use 'euclidean' for standard k-means or 'cosine' for spherical k-means (not compatible with Hartigan-Wong).", ":math:`s=` `cosine`, or `euclidean`.", "Foundational."
+   "empty clusters", "string", ":math:`s=` `ignore`", "How to deal with empty clusters at the end of a k-means iteration.", ":math:`s=` `error`, `ignore`, or `split`.", "Foundational."
 
 
 .. _opts_dbscanclustering:
@@ -139,14 +139,14 @@ The following options are supported.
    :escape: ~
    :header: "Option name", "Type", "Default", "Description", "Constraints", "Notes"
    
-   "power", "real", ":math:`r=2.0`", "The power of the Minkowski metric used.", ":math:`0 \le r`", Foundational.
-   "metric", "string", ":math:`s=` `euclidean`", "Choice of metric used to compute pairwise distances.", ":math:`s=` `cityblock`, `cosine`, `euclidean`, `l1`, `l2`, `manhattan`, `minkowski`, or `sqeuclidean`.", Foundational.
-   "algorithm", "string", ":math:`s=` `auto`", "Choice of algorithm.", ":math:`s=` `auto`, `ball tree`, `brute`, or `kd tree`.", Foundational.
-   "leaf size", "integer", ":math:`i=30`", "Leaf size for k-d tree or ball tree.", ":math:`1 \le i`", Foundational.
-   "eps", "real", ":math:`r=10^{-4}`", "Maximum distance for two samples to be considered in each other's neighborhood.", ":math:`0 \le r`", Foundational.
-   "min samples", "integer", ":math:`i=5`", "Minimum number of neighborhood samples for a core point.", ":math:`1 \le i`", Foundational.
-   "check data", "string", ":math:`s=` `no`", "Check input data for NaNs prior to performing computation.", ":math:`s=` `no`, or `yes`.", Foundational.
-   "storage order", "string", ":math:`s=` `column-major`", "Whether data is supplied and returned in row- or column-major order.", ":math:`s=` `c`, `column-major`, `f`, `fortran`, or `row-major`.", Foundational.
+   "power", "real", ":math:`r=2.0`", "The power of the Minkowski metric used.", ":math:`0 \le r`", "Foundational."
+   "metric", "string", ":math:`s=` `euclidean`", "Choice of metric used to compute pairwise distances.", ":math:`s=` `cityblock`, `cosine`, `euclidean`, `l1`, `l2`, `manhattan`, `minkowski`, or `sqeuclidean`.", "Foundational."
+   "algorithm", "string", ":math:`s=` `auto`", "Choice of algorithm.", ":math:`s=` `auto`, `ball tree`, `brute`, or `kd tree`.", "Foundational."
+   "leaf size", "integer", ":math:`i=30`", "Leaf size for k-d tree or ball tree.", ":math:`1 \le i`", "Foundational."
+   "eps", "real", ":math:`r=10^{-4}`", "Maximum distance for two samples to be considered in each other's neighborhood.", ":math:`0 \le r`", "Foundational."
+   "min samples", "integer", ":math:`i=5`", "Minimum number of neighborhood samples for a core point.", ":math:`1 \le i`", "Foundational."
+   "check data", "string", ":math:`s=` `no`", "Check input data for NaNs prior to performing computation.", ":math:`s=` `no`, or `yes`.", "Foundational."
+   "storage order", "string", ":math:`s=` `column-major`", "Whether data is supplied and returned in row- or column-major order.", ":math:`s=` `c`, `column-major`, `f`, `fortran`, or `row-major`.", "Foundational."
 
 
 .. _opts_decisiontrees:
@@ -161,19 +161,19 @@ The following options are supported.
    :header: "Option name", "Type", "Default", "Description", "Constraints", "Notes"
    
    "storage order", "string", ":math:`s=` `column-major`", "Whether data is supplied and returned in row- or column-major order.", ":math:`s=` `c`, `column-major`, `f`, `fortran`, or `row-major`.", 
-   "category split strategy", "string", ":math:`s=` `ordered`", "Strategy to split categorical features. For a given categorical feature, 'one-vs-all' tries to split each categorical value from all the others while 'ordered' will try to split the smaller categories from the bigger ones.", ":math:`s=` `one-vs-all`, or `ordered`.", Foundational.
-   "check data", "string", ":math:`s=` `no`", "Check input data for NaNs prior to performing computation.", ":math:`s=` `no`, or `yes`.", Foundational.
-   "feature threshold", "real", ":math:`r=1e-05`", "Minimum difference in feature value required for splitting.", ":math:`0 \le r`", Foundational.
-   "node minimum samples", "integer", ":math:`i=2`", "The minimum number of samples required to split an internal node.", ":math:`1 \le i`", Foundational.
-   "predict probabilities", "string", ":math:`s=` `yes`", "evaluate class probabilities (in addition to class predictions). Needs to be set to 'yes' if calls to predict_proba or predict_log_proba are made after fit.", ":math:`s=` `no`, or `yes`.", Foundational.
-   "scoring function", "string", ":math:`s=` `gini`", "Select scoring function to use.", ":math:`s=` `cross-entropy`, `entropy`, `gini`, `misclass`, `misclassification`, or `misclassification-error`.", Foundational.
-   "maximum depth", "integer", ":math:`i=29`", "Set the maximum depth of trees.", ":math:`0 \le i \le 29`", Foundational.
-   "seed", "integer", ":math:`i=-1`", "Set the random seed for the random number generator. If the value is -1, a random seed is automatically generated. In this case the resulting classification will create non-reproducible results.", ":math:`-1 \le i`", Foundational.
-   "maximum features", "integer", ":math:`i=0`", "Set the number of features to consider when splitting a node. 0 means take all the features.", ":math:`0 \le i`", Foundational.
-   "minimum split score", "real", ":math:`r=0`", "Minimum score needed for a node to be considered for splitting.", ":math:`0 \le r \le 1`", Foundational.
-   "minimum impurity decrease", "real", ":math:`r=0`", "Minimum score improvement needed to consider a split from the parent node.", ":math:`0 \le r`", Foundational.
-   "maximum bins", "integer", ":math:`i=256`", "Maximum number of bins in histograms.", ":math:`2 \le i \le 65535`", Foundational.
-   "histogram", "string", ":math:`s=` `no`", "Choose whether to use histograms constructed from the data matrix X.", ":math:`s=` `no`, or `yes`.", Foundational.
+   "category split strategy", "string", ":math:`s=` `ordered`", "Strategy to split categorical features. For a given categorical feature, 'one-vs-all' tries to split each categorical value from all the others while 'ordered' will try to split the smaller categories from the bigger ones.", ":math:`s=` `one-vs-all`, or `ordered`.", "Foundational."
+   "check data", "string", ":math:`s=` `no`", "Check input data for NaNs prior to performing computation.", ":math:`s=` `no`, or `yes`.", "Foundational."
+   "feature threshold", "real", ":math:`r=1e-05`", "Minimum difference in feature value required for splitting.", ":math:`0 \le r`", "Foundational."
+   "node minimum samples", "integer", ":math:`i=2`", "The minimum number of samples required to split an internal node.", ":math:`1 \le i`", "Foundational."
+   "predict probabilities", "string", ":math:`s=` `yes`", "evaluate class probabilities (in addition to class predictions). Needs to be set to 'yes' if calls to predict_proba or predict_log_proba are made after fit.", ":math:`s=` `no`, or `yes`.", "Foundational."
+   "scoring function", "string", ":math:`s=` `gini`", "Select scoring function to use.", ":math:`s=` `cross-entropy`, `entropy`, `gini`, `misclass`, `misclassification`, or `misclassification-error`.", "Foundational."
+   "maximum depth", "integer", ":math:`i=29`", "Set the maximum depth of trees.", ":math:`0 \le i \le 29`", "Foundational."
+   "seed", "integer", ":math:`i=-1`", "Set the random seed for the random number generator. If the value is -1, a random seed is automatically generated. In this case the resulting classification will create non-reproducible results.", ":math:`-1 \le i`", "Foundational."
+   "maximum features", "integer", ":math:`i=0`", "Set the number of features to consider when splitting a node. 0 means take all the features.", ":math:`0 \le i`", "Foundational."
+   "minimum split score", "real", ":math:`r=0`", "Minimum score needed for a node to be considered for splitting.", ":math:`0 \le r \le 1`", "Foundational."
+   "minimum impurity decrease", "real", ":math:`r=0`", "Minimum score improvement needed to consider a split from the parent node.", ":math:`0 \le r`", "Foundational."
+   "maximum bins", "integer", ":math:`i=256`", "Maximum number of bins in histograms.", ":math:`2 \le i \le 65535`", "Foundational."
+   "histogram", "string", ":math:`s=` `no`", "Choose whether to use histograms constructed from the data matrix X.", ":math:`s=` `no`, or `yes`.", "Foundational."
 
 
 .. _opts_decisionforests:
@@ -187,26 +187,26 @@ The following options are supported.
    :escape: ~
    :header: "Option name", "Type", "Default", "Description", "Constraints", "Notes"
    
-   "maximum tree threads", "integer", ":math:`i=0`", "Maximum number of threads allocated to each tree for parallel feature evaluation. 0 means no cap.", ":math:`0 \le i`", Foundational.
-   "category split strategy", "string", ":math:`s=` `ordered`", "How to split categorical features: split one category from all other or consider them ordered.", ":math:`s=` `one-vs-all`, or `ordered`.", Foundational.
-   "maximum bins", "integer", ":math:`i=256`", "Maximum number of bins in histograms.", ":math:`2 \le i \le 65535`", Foundational.
-   "histogram", "string", ":math:`s=` `no`", "Choose whether to use histograms constructed from the data matrix X.", ":math:`s=` `no`, or `yes`.", Foundational.
-   "feature threshold", "real", ":math:`r=1e-05`", "Minimum difference in feature value required for splitting.", ":math:`0 \le r`", Foundational.
-   "storage order", "string", ":math:`s=` `column-major`", "Whether data is supplied and returned in row- or column-major order.", ":math:`s=` `c`, `column-major`, `f`, `fortran`, or `row-major`.", Foundational.
-   "check data", "string", ":math:`s=` `no`", "Check input data for NaNs prior to performing computation.", ":math:`s=` `no`, or `yes`.", Foundational.
-   "minimum split score", "real", ":math:`r=1e-05`", "Minimum score needed for a node to be considered for splitting.", ":math:`0 \le r \le 1`", Foundational.
-   "maximum features", "integer", ":math:`i=0`", "Set the number of features to consider when 'features selection' is set to 'custom'. 0 means take all the features.", ":math:`0 \le i`", Foundational.
-   "number of trees", "integer", ":math:`i=100`", "Set the number of trees to compute. ", ":math:`1 \le i`", Foundational.
-   "seed", "integer", ":math:`i=-1`", "Set random seed for the random number generator. If the value is -1, a random seed is automatically generated. In this case the resulting classification will create non-reproducible results.", ":math:`-1 \le i`", Foundational.
-   "node minimum samples", "integer", ":math:`i=2`", "Minimum number of samples to consider a node for splitting.", ":math:`1 \le i`", Foundational.
-   "maximum depth", "integer", ":math:`i=29`", "Set the maximum depth of trees.", ":math:`0 \le i \le 29`", Foundational.
-   "scoring function", "string", ":math:`s=` `gini`", "Select scoring function to use.", ":math:`s=` `cross-entropy`, `entropy`, `gini`, `misclass`, `misclassification`, or `misclassification-error`.", Foundational.
-   "minimum impurity decrease", "real", ":math:`r=0`", "Minimum score improvement needed to consider a split from the parent node.", ":math:`0 \le r`", Foundational.
-   "block size", "integer", ":math:`i=256`", "Set the size of the blocks for parallel computations.", ":math:`1 \le i`", Foundational.
-   "features selection", "string", ":math:`s=` `sqrt`", "Select how many features to use for each split. 'custom' reads the 'maximum features' option, proportion reads the 'proportion features' option. 'all', 'sqrt' and 'log2' select respectively all, the square root or the base-2 logarithm of the total number of features.", ":math:`s=` `all`, `custom`, `log2`, `proportion`, or `sqrt`.", Foundational.
-   "bootstrap", "string", ":math:`s=` `yes`", "Select whether to bootstrap the samples in the trees.", ":math:`s=` `no`, or `yes`.", Foundational.
-   "bootstrap samples factor", "real", ":math:`r=1`", "Proportion of samples to draw from the data set to build each tree if 'bootstrap' was set to 'yes'.", ":math:`0 < r \le 1`", Foundational.
-   "proportion features", "real", ":math:`r=0.1`", "Set the proportion of features to consider when 'features selection' is set to 'proportion'.", ":math:`0 < r \le 1`", Foundational.
+   "maximum tree threads", "integer", ":math:`i=0`", "Maximum number of threads allocated to each tree for parallel feature evaluation. 0 means no cap.", ":math:`0 \le i`", "Foundational."
+   "category split strategy", "string", ":math:`s=` `ordered`", "How to split categorical features: split one category from all other or consider them ordered.", ":math:`s=` `one-vs-all`, or `ordered`.", "Foundational."
+   "maximum bins", "integer", ":math:`i=256`", "Maximum number of bins in histograms.", ":math:`2 \le i \le 65535`", "Foundational."
+   "histogram", "string", ":math:`s=` `no`", "Choose whether to use histograms constructed from the data matrix X.", ":math:`s=` `no`, or `yes`.", "Foundational."
+   "feature threshold", "real", ":math:`r=1e-05`", "Minimum difference in feature value required for splitting.", ":math:`0 \le r`", "Foundational."
+   "storage order", "string", ":math:`s=` `column-major`", "Whether data is supplied and returned in row- or column-major order.", ":math:`s=` `c`, `column-major`, `f`, `fortran`, or `row-major`.", "Foundational."
+   "check data", "string", ":math:`s=` `no`", "Check input data for NaNs prior to performing computation.", ":math:`s=` `no`, or `yes`.", "Foundational."
+   "minimum split score", "real", ":math:`r=1e-05`", "Minimum score needed for a node to be considered for splitting.", ":math:`0 \le r \le 1`", "Foundational."
+   "maximum features", "integer", ":math:`i=0`", "Set the number of features to consider when 'features selection' is set to 'custom'. 0 means take all the features.", ":math:`0 \le i`", "Foundational."
+   "number of trees", "integer", ":math:`i=100`", "Set the number of trees to compute. ", ":math:`1 \le i`", "Foundational."
+   "seed", "integer", ":math:`i=-1`", "Set random seed for the random number generator. If the value is -1, a random seed is automatically generated. In this case the resulting classification will create non-reproducible results.", ":math:`-1 \le i`", "Foundational."
+   "node minimum samples", "integer", ":math:`i=2`", "Minimum number of samples to consider a node for splitting.", ":math:`1 \le i`", "Foundational."
+   "maximum depth", "integer", ":math:`i=29`", "Set the maximum depth of trees.", ":math:`0 \le i \le 29`", "Foundational."
+   "scoring function", "string", ":math:`s=` `gini`", "Select scoring function to use.", ":math:`s=` `cross-entropy`, `entropy`, `gini`, `misclass`, `misclassification`, or `misclassification-error`.", "Foundational."
+   "minimum impurity decrease", "real", ":math:`r=0`", "Minimum score improvement needed to consider a split from the parent node.", ":math:`0 \le r`", "Foundational."
+   "block size", "integer", ":math:`i=256`", "Set the size of the blocks for parallel computations.", ":math:`1 \le i`", "Foundational."
+   "features selection", "string", ":math:`s=` `sqrt`", "Select how many features to use for each split. 'custom' reads the 'maximum features' option, proportion reads the 'proportion features' option. 'all', 'sqrt' and 'log2' select respectively all, the square root or the base-2 logarithm of the total number of features.", ":math:`s=` `all`, `custom`, `log2`, `proportion`, or `sqrt`.", "Foundational."
+   "bootstrap", "string", ":math:`s=` `yes`", "Select whether to bootstrap the samples in the trees.", ":math:`s=` `no`, or `yes`.", "Foundational."
+   "bootstrap samples factor", "real", ":math:`r=1`", "Proportion of samples to draw from the data set to build each tree if 'bootstrap' was set to 'yes'.", ":math:`0 < r \le 1`", "Foundational."
+   "proportion features", "real", ":math:`r=0.1`", "Set the proportion of features to consider when 'features selection' is set to 'proportion'.", ":math:`0 < r \le 1`", "Foundational."
 
 
 .. _opts_nonlinearleastsquares:
@@ -220,40 +220,40 @@ The following options are supported.
    :escape: ~
    :header: "Option name", "Type", "Default", "Description", "Constraints", "Notes"
    
-   "ralfit model", "string", ":math:`s=` `hybrid`", "NLLS model to solve.", ":math:`s=` `gauss-newton`, `hybrid`, `quasi-newton`, or `tensor-newton`.", Foundational.
-   "print level", "integer", ":math:`i=1`", "Set level of verbosity for the solver: from 0, indicating no output, to 5, which is very verbose.", ":math:`0 \le i \le 5`", Foundational.
-   "derivative test tol", "real", ":math:`r=10^{-4}`", "Tolerance used to check user-provided derivatives by finite-differences. If <print level> is 1, then only the entries with larger discrepancy are reported, and if print level is greater than or equal to 2, then all entries are printed.", ":math:`0 < r \le 10`", Foundational.
-   "ralfit iteration limit", "integer", ":math:`i=100`", "Maximum number of iterations to perform.", ":math:`1 \le i`", Foundational.
-   "lbfgsb memory limit", "integer", ":math:`i=11`", "Number of vectors to use for approximating the Hessian.", ":math:`1 \le i \le 1000`", Foundational.
-   "lbfgsb iteration limit", "integer", ":math:`i=10000`", "Maximum number of iterations to perform.", ":math:`1 \le i`", Foundational.
-   "coord iteration limit", "integer", ":math:`i=100000`", "Maximum number of iterations to perform.", ":math:`1 \le i`", Foundational.
-   "monitoring frequency", "integer", ":math:`i=0`", "How frequently to call the user-supplied monitor function.", ":math:`0 \le i`", Foundational.
-   "check derivatives", "string", ":math:`s=` `no`", "Check user-provided derivatives using finite-differences.", ":math:`s=` `no`, or `yes`.", Foundational.
-   "ralfit nlls method", "string", ":math:`s=` `galahad`", "NLLS solver to use.", ":math:`s=` `aint`, `galahad`, `linear solver`, `more-sorensen`, or `powell-dogleg`.", Foundational.
-   "optim method", "string", ":math:`s=` `lbfgsb`", "Select optimization solver to use.", ":math:`s=` `bfgs`, `coord`, `lbfgs`, `lbfgsb`, or `ralfit`.", Foundational.
-   "ralfit convergence step size", "real", ":math:`r=\varepsilon/2`", "Absolute tolerance over the step size to declare convergence for the iterative optimization step. See details in optimization solver documentation.", ":math:`0 < r < 1`", Foundational.
-   "coord restart", "integer", ":math:`i=\infty`", "Number of inner iterations to perform before requesting to perform a full evaluation of the step function.", ":math:`0 \le i`", Foundational.
-   "ralfit convergence rel tol grd", "real", ":math:`r=10/21\sqrt{2\,\varepsilon}`", "Relative tolerance on the gradient norm to declare convergence for the iterative optimization step. See details in optimization solver documentation.", ":math:`0 < r < 1`", Foundational.
-   "coord skip max", "integer", ":math:`i=100`", "Maximum times a coordinate can be skipped, after this the coordinate is checked.", ":math:`10 \le i`", Foundational.
-   "coord skip min", "integer", ":math:`i=2`", "Minimum times a coordinate change is smaller than coord skip tol to start skipping.", ":math:`2 \le i`", Foundational.
-   "check data", "string", ":math:`s=` `no`", "Check input data for NaNs prior to performing computation.", ":math:`s=` `no`, or `yes`.", Foundational.
-   "storage order", "string", ":math:`s=` `column-major`", "Whether data is supplied and returned in row- or column-major order.", ":math:`s=` `c`, `column-major`, `f`, `fortran`, or `row-major`.", Foundational.
-   "ralfit globalization method", "string", ":math:`s=` `trust-region`", "Globalization method to use. This parameter makes use of the regularization term and power option values.", ":math:`s=` `reg`, `regularization`, `tr`, or `trust-region`.", Foundational.
-   "ralfit convergence abs tol fun", "real", ":math:`r=10/21\sqrt{2\,\varepsilon}`", "Absolute tolerance to declare convergence for the iterative optimization step. See details in optimization solver documentation.", ":math:`0 < r < 1`", Foundational.
-   "print options", "string", ":math:`s=` `no`", "Print options list.", ":math:`s=` `no`, or `yes`.", Foundational.
-   "debug", "integer", ":math:`i=0`", "Set debug level (internal use).", ":math:`0 \le i \le 3`", Foundational.
-   "regularization term", "real", ":math:`r=0`", "Value of the regularization term. A value of 0 disables regularization.", ":math:`0 \le r`", Foundational.
-   "finite differences step", "real", ":math:`r=10\;\sqrt{2\,\varepsilon}`", "Size of step to use for estimating derivatives using finite-differences.", ":math:`0 < r < 10`", Foundational.
-   "lbfgsb convergence tol", "real", ":math:`r=\sqrt{2\,\varepsilon}`", "Tolerance of the projected gradient infinity norm to declare convergence.", ":math:`0 < r < 1`", Foundational.
-   "lbfgsb progress factor", "real", ":math:`r=\frac{10}{\sqrt{2\,\varepsilon}}`", "The iteration stops when (f^k - f{k+1})/max{abs(fk);abs(f{k+1});1} <= factr*epsmch where epsmch is the machine precision. Typical values for type double: 10e12 for low accuracy; 10e7 for moderate accuracy; 10 for extremely high accuracy.", ":math:`0 \le r`", Foundational.
-   "regularization power", "string", ":math:`s=` `quadratic`", "Value of the regularization power term.", ":math:`s=` `cubic`, or `quadratic`.", Foundational.
-   "infinite bound size", "real", ":math:`r=10^{20}`", "Threshold value to take for +/- infinity.", ":math:`1000 < r`", Foundational.
-   "time limit", "real", ":math:`r=10^6`", "Maximum time allowed to run (in seconds).", ":math:`0 < r`", Foundational.
-   "coord convergence tol", "real", ":math:`r=50\;\sqrt{2\,\varepsilon}`", "Tolerance of the projected gradient infinity norm to declare convergence.", ":math:`0 < r < 1`", Foundational.
-   "coord optimality tol", "real", ":math:`r=50\;\sqrt{2\,\varepsilon}`", "Tolerance to declare optimality, e.g. dual-gap, KKT conditions, etc.", ":math:`0 \le r`", Foundational.
-   "ralfit convergence rel tol fun", "real", ":math:`r=10/21\sqrt{2\,\varepsilon}`", "Relative tolerance to declare convergence for the iterative optimization step. See details in optimization solver documentation.", ":math:`0 < r < 1`", Foundational.
-   "coord skip tol", "real", ":math:`r=10^{-4}`", "Coordinate skip tolerance, a given coordinate could be skipped if the change between two consecutive iterates is less than tolerance. Any negative value disables the skipping scheme.", "There are no constraints on :math:`r`.", Foundational.
-   "ralfit convergence abs tol grd", "real", ":math:`r=500\;\sqrt{2\,\varepsilon}`", "Absolute tolerance on the gradient norm to declare convergence for the iterative optimization step. See details in optimization solver documentation.", ":math:`0 < r < 1`", Foundational.
+   "ralfit model", "string", ":math:`s=` `hybrid`", "NLLS model to solve.", ":math:`s=` `gauss-newton`, `hybrid`, `quasi-newton`, or `tensor-newton`.", "Foundational."
+   "print level", "integer", ":math:`i=1`", "Set level of verbosity for the solver: from 0, indicating no output, to 5, which is very verbose.", ":math:`0 \le i \le 5`", "Foundational."
+   "derivative test tol", "real", ":math:`r=10^{-4}`", "Tolerance used to check user-provided derivatives by finite-differences. If <print level> is 1, then only the entries with larger discrepancy are reported, and if print level is greater than or equal to 2, then all entries are printed.", ":math:`0 < r \le 10`", "Foundational."
+   "ralfit iteration limit", "integer", ":math:`i=100`", "Maximum number of iterations to perform.", ":math:`1 \le i`", "Foundational."
+   "lbfgsb memory limit", "integer", ":math:`i=11`", "Number of vectors to use for approximating the Hessian.", ":math:`1 \le i \le 1000`", "Foundational."
+   "lbfgsb iteration limit", "integer", ":math:`i=10000`", "Maximum number of iterations to perform.", ":math:`1 \le i`", "Foundational."
+   "coord iteration limit", "integer", ":math:`i=100000`", "Maximum number of iterations to perform.", ":math:`1 \le i`", "Foundational."
+   "monitoring frequency", "integer", ":math:`i=0`", "How frequently to call the user-supplied monitor function.", ":math:`0 \le i`", "Foundational."
+   "check derivatives", "string", ":math:`s=` `no`", "Check user-provided derivatives using finite-differences.", ":math:`s=` `no`, or `yes`.", "Foundational."
+   "ralfit nlls method", "string", ":math:`s=` `galahad`", "NLLS solver to use.", ":math:`s=` `aint`, `galahad`, `linear solver`, `more-sorensen`, or `powell-dogleg`.", "Foundational."
+   "optim method", "string", ":math:`s=` `lbfgsb`", "Select optimization solver to use.", ":math:`s=` `bfgs`, `coord`, `lbfgs`, `lbfgsb`, or `ralfit`.", "Foundational."
+   "ralfit convergence step size", "real", ":math:`r=\varepsilon/2`", "Absolute tolerance over the step size to declare convergence for the iterative optimization step. See details in optimization solver documentation.", ":math:`0 < r < 1`", "Foundational."
+   "coord restart", "integer", ":math:`i=\infty`", "Number of inner iterations to perform before requesting to perform a full evaluation of the step function.", ":math:`0 \le i`", "Foundational."
+   "ralfit convergence rel tol grd", "real", ":math:`r=10/21\sqrt{2\,\varepsilon}`", "Relative tolerance on the gradient norm to declare convergence for the iterative optimization step. See details in optimization solver documentation.", ":math:`0 < r < 1`", "Foundational."
+   "coord skip max", "integer", ":math:`i=100`", "Maximum times a coordinate can be skipped, after this the coordinate is checked.", ":math:`10 \le i`", "Foundational."
+   "coord skip min", "integer", ":math:`i=2`", "Minimum times a coordinate change is smaller than coord skip tol to start skipping.", ":math:`2 \le i`", "Foundational."
+   "check data", "string", ":math:`s=` `no`", "Check input data for NaNs prior to performing computation.", ":math:`s=` `no`, or `yes`.", "Foundational."
+   "storage order", "string", ":math:`s=` `column-major`", "Whether data is supplied and returned in row- or column-major order.", ":math:`s=` `c`, `column-major`, `f`, `fortran`, or `row-major`.", "Foundational."
+   "ralfit globalization method", "string", ":math:`s=` `trust-region`", "Globalization method to use. This parameter makes use of the regularization term and power option values.", ":math:`s=` `reg`, `regularization`, `tr`, or `trust-region`.", "Foundational."
+   "ralfit convergence abs tol fun", "real", ":math:`r=10/21\sqrt{2\,\varepsilon}`", "Absolute tolerance to declare convergence for the iterative optimization step. See details in optimization solver documentation.", ":math:`0 < r < 1`", "Foundational."
+   "print options", "string", ":math:`s=` `no`", "Print options list.", ":math:`s=` `no`, or `yes`.", "Foundational."
+   "debug", "integer", ":math:`i=0`", "Set debug level (internal use).", ":math:`0 \le i \le 3`", "Foundational."
+   "regularization term", "real", ":math:`r=0`", "Value of the regularization term. A value of 0 disables regularization.", ":math:`0 \le r`", "Foundational."
+   "finite differences step", "real", ":math:`r=10\;\sqrt{2\,\varepsilon}`", "Size of step to use for estimating derivatives using finite-differences.", ":math:`0 < r < 10`", "Foundational."
+   "lbfgsb convergence tol", "real", ":math:`r=\sqrt{2\,\varepsilon}`", "Tolerance of the projected gradient infinity norm to declare convergence.", ":math:`0 < r < 1`", "Foundational."
+   "lbfgsb progress factor", "real", ":math:`r=\frac{10}{\sqrt{2\,\varepsilon}}`", "The iteration stops when (f^k - f{k+1})/max{abs(fk);abs(f{k+1});1} <= factr*epsmch where epsmch is the machine precision. Typical values for type double: 10e12 for low accuracy; 10e7 for moderate accuracy; 10 for extremely high accuracy.", ":math:`0 \le r`", "Foundational."
+   "regularization power", "string", ":math:`s=` `quadratic`", "Value of the regularization power term.", ":math:`s=` `cubic`, or `quadratic`.", "Foundational."
+   "infinite bound size", "real", ":math:`r=10^{20}`", "Threshold value to take for +/- infinity.", ":math:`1000 < r`", "Foundational."
+   "time limit", "real", ":math:`r=10^6`", "Maximum time allowed to run (in seconds).", ":math:`0 < r`", "Foundational."
+   "coord convergence tol", "real", ":math:`r=50\;\sqrt{2\,\varepsilon}`", "Tolerance of the projected gradient infinity norm to declare convergence.", ":math:`0 < r < 1`", "Foundational."
+   "coord optimality tol", "real", ":math:`r=50\;\sqrt{2\,\varepsilon}`", "Tolerance to declare optimality, e.g. dual-gap, KKT conditions, etc.", ":math:`0 \le r`", "Foundational."
+   "ralfit convergence rel tol fun", "real", ":math:`r=10/21\sqrt{2\,\varepsilon}`", "Relative tolerance to declare convergence for the iterative optimization step. See details in optimization solver documentation.", ":math:`0 < r < 1`", "Foundational."
+   "coord skip tol", "real", ":math:`r=10^{-4}`", "Coordinate skip tolerance, a given coordinate could be skipped if the change between two consecutive iterates is less than tolerance. Any negative value disables the skipping scheme.", "There are no constraints on :math:`r`.", "Foundational."
+   "ralfit convergence abs tol grd", "real", ":math:`r=500\;\sqrt{2\,\varepsilon}`", "Absolute tolerance on the gradient norm to declare convergence for the iterative optimization step. See details in optimization solver documentation.", ":math:`0 < r < 1`", "Foundational."
 
 
 .. _opts_nearestneighbors:
@@ -267,18 +267,18 @@ The following options are supported.
    :escape: ~
    :header: "Option name", "Type", "Default", "Description", "Constraints", "Notes"
    
-   "weights", "string", ":math:`s=` `uniform`", "Weight function used to compute the k-nearest neighbors.", ":math:`s=` `distance`, or `uniform`.", Foundational.
-   "metric", "string", ":math:`s=` `euclidean`", "Metric used to compute the pairwise distance matrix.", ":math:`s=` `cityblock`, `cosine`, `euclidean`, `euclidean_gemm`, `inner product`, `l1`, `l2`, `manhattan`, `minkowski`, `sqeuclidean`, or `sqeuclidean_gemm`.", Foundational.
-   "algorithm", "string", ":math:`s=` `auto`", "Algorithm used to compute the k-nearest neighbors.", ":math:`s=` `auto`, `ball tree`, `brute`, or `kd tree`.", Foundational.
-   "radius", "real", ":math:`r=1`", "Maximum distance for the radius neighbors computation.", ":math:`0 \le r`", Foundational.
-   "outlier target", "real", ":math:`r=0`", "Regression target for queries with no neighbors within the specified radius.", "There are no constraints on :math:`r`.", Foundational.
-   "minkowski parameter", "real", ":math:`r=2`", "Minkowski parameter for metric used for the computation of nearest neighbors.", ":math:`0 < r`", Foundational.
-   "outlier handling", "string", ":math:`s=` `none`", "How to handle samples with no neighbors within the specified radius.", ":math:`s=` `manual`, `most frequent`, or `none`.", Foundational.
-   "outlier label", "integer", ":math:`i=0`", "Classification label for queries with no neighbors within the specified radius.", "There are no constraints on :math:`i`.", Foundational.
-   "leaf size", "integer", ":math:`i=30`", "Leaf size for k-d tree.", ":math:`1 \le i`", Foundational.
-   "number of neighbors", "integer", ":math:`i=5`", "Number of neighbors considered for k-nearest neighbors.", ":math:`1 \le i`", Foundational.
-   "check data", "string", ":math:`s=` `no`", "Check input data for NaNs prior to performing computation.", ":math:`s=` `no`, or `yes`.", Foundational.
-   "storage order", "string", ":math:`s=` `column-major`", "Whether data is supplied and returned in row- or column-major order.", ":math:`s=` `c`, `column-major`, `f`, `fortran`, or `row-major`.", Foundational.
+   "weights", "string", ":math:`s=` `uniform`", "Weight function used to compute the k-nearest neighbors.", ":math:`s=` `distance`, or `uniform`.", "Foundational."
+   "metric", "string", ":math:`s=` `euclidean`", "Metric used to compute the pairwise distance matrix.", ":math:`s=` `cityblock`, `cosine`, `euclidean`, `euclidean_gemm`, `inner product`, `l1`, `l2`, `manhattan`, `minkowski`, `sqeuclidean`, or `sqeuclidean_gemm`.", "Foundational."
+   "algorithm", "string", ":math:`s=` `auto`", "Algorithm used to compute the k-nearest neighbors.", ":math:`s=` `auto`, `ball tree`, `brute`, or `kd tree`.", "Foundational."
+   "radius", "real", ":math:`r=1`", "Maximum distance for the radius neighbors computation.", ":math:`0 \le r`", "Foundational."
+   "outlier target", "real", ":math:`r=0`", "Regression target for queries with no neighbors within the specified radius.", "There are no constraints on :math:`r`.", "Foundational."
+   "minkowski parameter", "real", ":math:`r=2`", "Minkowski parameter for metric used for the computation of nearest neighbors.", ":math:`0 < r`", "Foundational."
+   "outlier handling", "string", ":math:`s=` `none`", "How to handle samples with no neighbors within the specified radius.", ":math:`s=` `manual`, `most frequent`, or `none`.", "Foundational."
+   "outlier label", "integer", ":math:`i=0`", "Classification label for queries with no neighbors within the specified radius.", "There are no constraints on :math:`i`.", "Foundational."
+   "leaf size", "integer", ":math:`i=30`", "Leaf size for k-d tree.", ":math:`1 \le i`", "Foundational."
+   "number of neighbors", "integer", ":math:`i=5`", "Number of neighbors considered for k-nearest neighbors.", ":math:`1 \le i`", "Foundational."
+   "check data", "string", ":math:`s=` `no`", "Check input data for NaNs prior to performing computation.", ":math:`s=` `no`, or `yes`.", "Foundational."
+   "storage order", "string", ":math:`s=` `column-major`", "Whether data is supplied and returned in row- or column-major order.", ":math:`s=` `c`, `column-major`, `f`, `fortran`, or `row-major`.", "Foundational."
 
 
 .. _opts_supportvectormachines:
@@ -292,26 +292,26 @@ The following options are supported.
    :escape: ~
    :header: "Option name", "Type", "Default", "Description", "Constraints", "Notes"
    
-   "mixed precision", "string", ":math:`s=` `no`", "Whether to use mixed precision iterative refinement, in which lower precision arithmetic is used before switching to the working precision for the final iterations.", ":math:`s=` `no`, or `yes`.", Foundational.
-   "low precision convergence tolerance", "real", ":math:`r=10^{-2}`", "If mixed precision iterative refinement is enabled, convergence tolerance for the low precision phase.", ":math:`0 \le r`", Foundational.
-   "tau", "real", ":math:`r=\varepsilon`", "Numerical stability parameter used in working set selection when kernel is not positive semi definite.", ":math:`0 \le r`", Foundational.
-   "kernel", "string", ":math:`s=` `rbf`", "Kernel function to use for the calculations.", ":math:`s=` `linear`, `poly`, `polynomial`, `rbf`, or `sigmoid`.", Foundational.
-   "storage order", "string", ":math:`s=` `column-major`", "Whether data is supplied and returned in row- or column-major order.", ":math:`s=` `c`, `column-major`, `f`, `fortran`, or `row-major`.", Foundational.
-   "n_folds", "integer", ":math:`i=5`", "Number of folds to use with cross validation. Only used when predict probabilities is enabled.", ":math:`1 \le i`", Foundational.
-   "low precision max_iter", "integer", ":math:`i=80000`", "If mixed precision iterative refinement is enabled, maximum number of iterations for the low precision phase.", ":math:`0 \le i`", Foundational.
-   "check data", "string", ":math:`s=` `no`", "Check input data for NaNs prior to performing computation.", ":math:`s=` `no`, or `yes`.", Foundational.
-   "cache size", "real", ":math:`r=-1`", "Size of the kernel cache in MB. The default value is -1.0 which automatically sets it to a value which will enable storage of the sampled kernel matrix. Increasing value of this option will result in faster training time.", ":math:`-1 \le r`", Foundational.
-   "degree", "integer", ":math:`i=3`", "Parameter for 'polynomial' kernel.", ":math:`1 \le i`", Foundational.
-   "c", "real", ":math:`r=1`", "Regularization parameter. Controls the trade-off between maximizing the margin between classes and minimizing classification errors. A larger value means higher penalty to the loss function on misclassified observations. Applies to SVC, SVR and NuSVR.", ":math:`0 < r`", Foundational.
-   "max_iter", "integer", ":math:`i=100000`", "Sets the maximum number of iterations. Use 0 to specify no limit.", ":math:`0 \le i`", Foundational.
-   "nu", "real", ":math:`r=0.5`", "An upper bound on the fraction of margin errors and a lower bound of the fraction of support vectors. Applies to NuSVC and NuSVR.", ":math:`0 < r \le 1`", Foundational.
-   "coef0", "real", ":math:`r=0`", "Constant in 'polynomial' and 'sigmoid' kernels.", "There are no constraints on :math:`r`.", Foundational.
-   "tolerance", "real", ":math:`r=10^{-3}`", "Convergence tolerance.", ":math:`0 < r`", Foundational.
-   "gamma", "real", ":math:`r=-1`", "Parameter for 'rbf', 'polynomial', and 'sigmoid' kernels. If the value is less than 0, it is set to 1/(n_features * Var(X)).", ":math:`-1 \le r`", Foundational.
-   "max_ws_size", "integer", ":math:`i=-1`", "Specifies the maximum working set size. A value divisible by 64 is recommended for optimal performance. Setting -1 automatically selects the optimal size based on the input data.", ":math:`-1 \le i`", Foundational.
-   "predict probabilities", "integer", ":math:`i=0`", "Evaluate class probabilities (in addition to class predictions).Needs to be 1 if calls to predict_proba or predict_log_probaare made after fit.", ":math:`0 \le i \le 1`", Foundational.
-   "seed", "integer", ":math:`i=0`", "Seed for random number generation; set to -1 for non-deterministic results.", ":math:`-1 \le i`", Foundational.
-   "epsilon", "real", ":math:`r=0.1`", "Defines the tolerance for errors in predictions by creating an acceptable margin (tube) within which errors are not penalized. Applies to SVR", ":math:`0 \le r`", Foundational.
+   "mixed precision", "string", ":math:`s=` `no`", "Whether to use mixed precision iterative refinement, in which lower precision arithmetic is used before switching to the working precision for the final iterations.", ":math:`s=` `no`, or `yes`.", "Foundational."
+   "low precision convergence tolerance", "real", ":math:`r=10^{-2}`", "If mixed precision iterative refinement is enabled, convergence tolerance for the low precision phase.", ":math:`0 \le r`", "Foundational."
+   "tau", "real", ":math:`r=\varepsilon`", "Numerical stability parameter used in working set selection when kernel is not positive semi definite.", ":math:`0 \le r`", "Foundational."
+   "kernel", "string", ":math:`s=` `rbf`", "Kernel function to use for the calculations.", ":math:`s=` `linear`, `poly`, `polynomial`, `rbf`, or `sigmoid`.", "Foundational."
+   "storage order", "string", ":math:`s=` `column-major`", "Whether data is supplied and returned in row- or column-major order.", ":math:`s=` `c`, `column-major`, `f`, `fortran`, or `row-major`.", "Foundational."
+   "n_folds", "integer", ":math:`i=5`", "Number of folds to use with cross validation. Only used when predict probabilities is enabled.", ":math:`1 \le i`", "Foundational."
+   "low precision max_iter", "integer", ":math:`i=80000`", "If mixed precision iterative refinement is enabled, maximum number of iterations for the low precision phase.", ":math:`0 \le i`", "Foundational."
+   "check data", "string", ":math:`s=` `no`", "Check input data for NaNs prior to performing computation.", ":math:`s=` `no`, or `yes`.", "Foundational."
+   "cache size", "real", ":math:`r=-1`", "Size of the kernel cache in MB. The default value is -1.0 which automatically sets it to a value which will enable storage of the sampled kernel matrix. Increasing value of this option will result in faster training time.", ":math:`-1 \le r`", "Foundational."
+   "degree", "integer", ":math:`i=3`", "Parameter for 'polynomial' kernel.", ":math:`1 \le i`", "Foundational."
+   "c", "real", ":math:`r=1`", "Regularization parameter. Controls the trade-off between maximizing the margin between classes and minimizing classification errors. A larger value means higher penalty to the loss function on misclassified observations. Applies to SVC, SVR and NuSVR.", ":math:`0 < r`", "Foundational."
+   "max_iter", "integer", ":math:`i=100000`", "Sets the maximum number of iterations. Use 0 to specify no limit.", ":math:`0 \le i`", "Foundational."
+   "nu", "real", ":math:`r=0.5`", "An upper bound on the fraction of margin errors and a lower bound of the fraction of support vectors. Applies to NuSVC and NuSVR.", ":math:`0 < r \le 1`", "Foundational."
+   "coef0", "real", ":math:`r=0`", "Constant in 'polynomial' and 'sigmoid' kernels.", "There are no constraints on :math:`r`.", "Foundational."
+   "tolerance", "real", ":math:`r=10^{-3}`", "Convergence tolerance.", ":math:`0 < r`", "Foundational."
+   "gamma", "real", ":math:`r=-1`", "Parameter for 'rbf', 'polynomial', and 'sigmoid' kernels. If the value is less than 0, it is set to 1/(n_features * Var(X)).", ":math:`-1 \le r`", "Foundational."
+   "max_ws_size", "integer", ":math:`i=-1`", "Specifies the maximum working set size. A value divisible by 64 is recommended for optimal performance. Setting -1 automatically selects the optimal size based on the input data.", ":math:`-1 \le i`", "Foundational."
+   "predict probabilities", "integer", ":math:`i=0`", "Evaluate class probabilities (in addition to class predictions).Needs to be 1 if calls to predict_proba or predict_log_probaare made after fit.", ":math:`0 \le i \le 1`", "Foundational."
+   "seed", "integer", ":math:`i=0`", "Seed for random number generation; set to -1 for non-deterministic results.", ":math:`-1 \le i`", "Foundational."
+   "epsilon", "real", ":math:`r=0.1`", "Defines the tolerance for errors in predictions by creating an acceptable margin (tube) within which errors are not penalized. Applies to SVR", ":math:`0 \le r`", "Foundational."
 
 
 .. _opts_interpolation:
@@ -325,9 +325,9 @@ The following options are supported.
    :escape: ~
    :header: "Option name", "Type", "Default", "Description", "Constraints", "Notes"
    
-   "check data", "string", ":math:`s=` `no`", "Check input data for NaNs prior to performing computation.", ":math:`s=` `no`, or `yes`.", Foundational.
-   "cubic spline type", "string", ":math:`s=` `natural`", "Type of cubic spline to construct. Options: 'natural' (zero second derivatives at endpoints), 'clamped zero' (zero first derivatives at endpoints), 'custom' (user-specified first or second derivatives at endpoints), 'Hermite' (piecewise cubic Hermite interpolation).", ":math:`s=` `clamped zero`, `custom`, `hermite`, or `natural`.", Foundational.
-   "storage order", "string", ":math:`s=` `column-major`", "Whether data is supplied and returned in row- or column-major order.", ":math:`s=` `c`, `column-major`, `f`, `fortran`, or `row-major`.", Foundational.
+   "check data", "string", ":math:`s=` `no`", "Check input data for NaNs prior to performing computation.", ":math:`s=` `no`, or `yes`.", "Foundational."
+   "cubic spline type", "string", ":math:`s=` `natural`", "Type of cubic spline to construct. Options: 'natural' (zero second derivatives at endpoints), 'clamped zero' (zero first derivatives at endpoints), 'custom' (user-specified first or second derivatives at endpoints), 'Hermite' (piecewise cubic Hermite interpolation).", ":math:`s=` `clamped zero`, `custom`, `hermite`, or `natural`.", "Foundational."
+   "storage order", "string", ":math:`s=` `column-major`", "Whether data is supplied and returned in row- or column-major order.", ":math:`s=` `c`, `column-major`, `f`, `fortran`, or `row-major`.", "Foundational."
 
 
 .. _opts_approximatenearestneighbors:
@@ -341,19 +341,19 @@ The following options are supported.
    :escape: ~
    :header: "Option name", "Type", "Default", "Description", "Constraints", "Notes"
    
-   "quantization_scheme", "string", ":math:`s=` `per_dimension`", "Scheme used by ivfsq to map values to integer codes. The direct schemes assume values already lie in the format's reconstructed range: int4 uses [-8, 7] signed or [0, 15] unsigned; int8 uses [-128, 127] signed or [0, 255] unsigned. Direct unsigned is unsuitable for residual encoding because IVF residuals may be negative. bfloat16 requires 'direct_signed', which performs direct round-to-nearest-even conversion without scaling.", ":math:`s=` `direct_signed`, `direct_unsigned`, `per_dimension`, or `uniform`.", Foundational.
-   "quantization_residual", "string", ":math:`s=` `yes`", "Whether ivfsq codes encode residuals (x - nearest centroid) rather than raw vectors.", ":math:`s=` `no`, or `yes`.", Foundational.
-   "quantization", "string", ":math:`s=` `bfloat16`", "Storage format used for the indexed database when algorithm is ivfsq.", ":math:`s=` `bfloat16`, `int4`, or `int8`.", Foundational.
-   "algorithm", "string", ":math:`s=` `auto`", "Algorithm used to compute the approximate nearest neighbors. Auto selects ivfflat.", ":math:`s=` `auto`, `ivfflat`, or `ivfsq`.", Foundational.
-   "train fraction", "real", ":math:`r=1`", "Fraction of training data to use for k-means clustering.", ":math:`0 < r \le 1`", Foundational.
-   "k-means_iter", "integer", ":math:`i=10`", "Maximum number of k-means iterations to perform at train time", ":math:`1 \le i`", Foundational.
-   "metric", "string", ":math:`s=` `sqeuclidean`", "Metric used to compute distances.", ":math:`s=` `cosine`, `euclidean`, `inner product`, or `sqeuclidean`.", Foundational.
-   "seed", "integer", ":math:`i=0`", "Seed for random number generation; set to -1 for non-deterministic results.", ":math:`-1 \le i`", Foundational.
-   "n_probe", "integer", ":math:`i=1`", "Number of lists to probe at search time for inverted file indices", ":math:`1 \le i`", Foundational.
-   "n_list", "integer", ":math:`i=1`", "Number of lists to construct for inverted file indices", ":math:`1 \le i`", Foundational.
-   "number of neighbors", "integer", ":math:`i=5`", "Number of neighbors considered for k-nearest neighbors.", ":math:`1 \le i`", Foundational.
-   "check data", "string", ":math:`s=` `no`", "Check input data for NaNs prior to performing computation.", ":math:`s=` `no`, or `yes`.", Foundational.
-   "storage order", "string", ":math:`s=` `column-major`", "Whether data is supplied and returned in row- or column-major order.", ":math:`s=` `c`, `column-major`, `f`, `fortran`, or `row-major`.", Foundational.
+   "quantization_scheme", "string", ":math:`s=` `per_dimension`", "Scheme used by ivfsq to map values to integer codes. The direct schemes assume values already lie in the format's reconstructed range: int4 uses [-8, 7] signed or [0, 15] unsigned; int8 uses [-128, 127] signed or [0, 255] unsigned. Direct unsigned is unsuitable for residual encoding because IVF residuals may be negative. bfloat16 requires 'direct_signed', which performs direct round-to-nearest-even conversion without scaling.", ":math:`s=` `direct_signed`, `direct_unsigned`, `per_dimension`, or `uniform`.", "Foundational."
+   "quantization_residual", "string", ":math:`s=` `yes`", "Whether ivfsq codes encode residuals (x - nearest centroid) rather than raw vectors.", ":math:`s=` `no`, or `yes`.", "Foundational."
+   "quantization", "string", ":math:`s=` `bfloat16`", "Storage format used for the indexed database when algorithm is ivfsq.", ":math:`s=` `bfloat16`, `int4`, or `int8`.", "Foundational."
+   "algorithm", "string", ":math:`s=` `auto`", "Algorithm used to compute the approximate nearest neighbors. Auto selects ivfflat.", ":math:`s=` `auto`, `ivfflat`, or `ivfsq`.", "Foundational."
+   "train fraction", "real", ":math:`r=1`", "Fraction of training data to use for k-means clustering.", ":math:`0 < r \le 1`", "Foundational."
+   "k-means_iter", "integer", ":math:`i=10`", "Maximum number of k-means iterations to perform at train time", ":math:`1 \le i`", "Foundational."
+   "metric", "string", ":math:`s=` `sqeuclidean`", "Metric used to compute distances.", ":math:`s=` `cosine`, `euclidean`, `inner product`, or `sqeuclidean`.", "Foundational."
+   "seed", "integer", ":math:`i=0`", "Seed for random number generation; set to -1 for non-deterministic results.", ":math:`-1 \le i`", "Foundational."
+   "n_probe", "integer", ":math:`i=1`", "Number of lists to probe at search time for inverted file indices", ":math:`1 \le i`", "Foundational."
+   "n_list", "integer", ":math:`i=1`", "Number of lists to construct for inverted file indices", ":math:`1 \le i`", "Foundational."
+   "number of neighbors", "integer", ":math:`i=5`", "Number of neighbors considered for k-nearest neighbors.", ":math:`1 \le i`", "Foundational."
+   "check data", "string", ":math:`s=` `no`", "Check input data for NaNs prior to performing computation.", ":math:`s=` `no`, or `yes`.", "Foundational."
+   "storage order", "string", ":math:`s=` `column-major`", "Whether data is supplied and returned in row- or column-major order.", ":math:`s=` `c`, `column-major`, `f`, `fortran`, or `row-major`.", "Foundational."
 
 
 .. _opts_kernelprincipalcomponentanalysis:
@@ -367,22 +367,22 @@ The following options are supported.
    :escape: ~
    :header: "Option name", "Type", "Default", "Description", "Constraints", "Notes"
    
-   "coef0", "real", ":math:`r=1`", "Independent term for polynomial and sigmoid kernels.", "There are no constraints on :math:`r`.", Foundational.
-   "kernel", "string", ":math:`s=` `linear`", "Kernel function to use.", ":math:`s=` `linear`, `poly`, `precomputed`, `rbf`, or `sigmoid`.", Foundational.
-   "storage order", "string", ":math:`s=` `column-major`", "Whether data is supplied and returned in row- or column-major order.", ":math:`s=` `c`, `column-major`, `f`, `fortran`, or `row-major`.", Foundational.
-   "n_oversamples", "integer", ":math:`i=10`", "Extra columns added to the random sample to reduce approximation error. This option is only used in the randomized solver.", ":math:`0 \le i`", Foundational.
-   "n_components", "integer", ":math:`i=0`", "Number of kernel principal components to compute.", ":math:`0 \le i`", Foundational.
-   "degree", "integer", ":math:`i=3`", "Degree for the polynomial kernel.", ":math:`1 \le i`", Foundational.
-   "check data", "string", ":math:`s=` `no`", "Check input data for NaNs prior to performing computation.", ":math:`s=` `no`, or `yes`.", Foundational.
-   "fit inverse transform", "string", ":math:`s=` `no`", "Whether to fit the inverse transform.", ":math:`s=` `no`, or `yes`.", Foundational.
-   "gamma", "real", ":math:`r=-1`", "Kernel coefficient for rbf, poly, and sigmoid kernels.", "There are no constraints on :math:`r`.", Foundational.
-   "remove zero eig", "string", ":math:`s=` `no`", "Whether to remove components whose eigenvalue is zero.", ":math:`s=` `no`, or `yes`.", Foundational.
-   "power normalization", "string", ":math:`s=` `qr`", "Normalization method used in the randomized solver power iteration.", ":math:`s=` `lu`, `none`, or `qr`.", Foundational.
-   "alpha", "real", ":math:`r=1`", "Ridge regularization parameter for the inverse transform linear solve.", ":math:`0 < r`", Foundational.
-   "copy data", "string", ":math:`s=` `yes`", "Whether or not to store a copy of the training data.", ":math:`s=` `no`, or `yes`.", Foundational.
-   "eigensolver", "string", ":math:`s=` `auto`", "Which method to use for computing the eigendecomposition of the kernel matrix", ":math:`s=` `auto`, `randomized`, or `syevd`.", Foundational.
-   "power iterations", "integer", ":math:`i=-1`", "Number of power iterations used in the randomized solver.", ":math:`-1 \le i`", Foundational.
-   "seed", "integer", ":math:`i=0`", "Seed for random number generation; set to -1 for non-deterministic results. This option is only used in the randomized solver.", ":math:`-1 \le i`", Foundational.
+   "coef0", "real", ":math:`r=1`", "Independent term for polynomial and sigmoid kernels.", "There are no constraints on :math:`r`.", "Foundational."
+   "kernel", "string", ":math:`s=` `linear`", "Kernel function to use.", ":math:`s=` `linear`, `poly`, `precomputed`, `rbf`, or `sigmoid`.", "Foundational."
+   "storage order", "string", ":math:`s=` `column-major`", "Whether data is supplied and returned in row- or column-major order.", ":math:`s=` `c`, `column-major`, `f`, `fortran`, or `row-major`.", "Foundational."
+   "n_oversamples", "integer", ":math:`i=10`", "Extra columns added to the random sample to reduce approximation error. This option is only used in the randomized solver.", ":math:`0 \le i`", "Foundational."
+   "n_components", "integer", ":math:`i=0`", "Number of kernel principal components to compute.", ":math:`0 \le i`", "Foundational."
+   "degree", "integer", ":math:`i=3`", "Degree for the polynomial kernel.", ":math:`1 \le i`", "Foundational."
+   "check data", "string", ":math:`s=` `no`", "Check input data for NaNs prior to performing computation.", ":math:`s=` `no`, or `yes`.", "Foundational."
+   "fit inverse transform", "string", ":math:`s=` `no`", "Whether to fit the inverse transform.", ":math:`s=` `no`, or `yes`.", "Foundational."
+   "gamma", "real", ":math:`r=-1`", "Kernel coefficient for rbf, poly, and sigmoid kernels.", "There are no constraints on :math:`r`.", "Foundational."
+   "remove zero eig", "string", ":math:`s=` `no`", "Whether to remove components whose eigenvalue is zero.", ":math:`s=` `no`, or `yes`.", "Foundational."
+   "power normalization", "string", ":math:`s=` `qr`", "Normalization method used in the randomized solver power iteration.", ":math:`s=` `lu`, `none`, or `qr`.", "Foundational."
+   "alpha", "real", ":math:`r=1`", "Ridge regularization parameter for the inverse transform linear solve.", ":math:`0 < r`", "Foundational."
+   "copy data", "string", ":math:`s=` `yes`", "Whether or not to store a copy of the training data.", ":math:`s=` `no`, or `yes`.", "Foundational."
+   "eigensolver", "string", ":math:`s=` `auto`", "Which method to use for computing the eigendecomposition of the kernel matrix", ":math:`s=` `auto`, `randomized`, or `syevd`.", "Foundational."
+   "power iterations", "integer", ":math:`i=-1`", "Number of power iterations used in the randomized solver.", ":math:`-1 \le i`", "Foundational."
+   "seed", "integer", ":math:`i=0`", "Seed for random number generation; set to -1 for non-deterministic results. This option is only used in the randomized solver.", ":math:`-1 \le i`", "Foundational."
 
 
 .. _opts_t-sne:
@@ -396,21 +396,21 @@ The following options are supported.
    :escape: ~
    :header: "Option name", "Type", "Default", "Description", "Constraints", "Notes"
    
-   "mixed precision", "string", ":math:`s=` `no`", "Whether to use mixed precision iterative refinement, in which lower precision arithmetic is used before switching to the working precision for the final iterations.", ":math:`s=` `no`, or `yes`.", Foundational.
-   "init", "string", ":math:`s=` `pca`", "Initialization method for the embedding.", ":math:`s=` `pca`, `random`, or `supplied`.", Foundational.
-   "low precision max_iter", "integer", ":math:`i=200`", "If mixed precision iterative refinement is enabled, maximum number of iterations for the low precision phase.", ":math:`1 \le i`", Foundational.
-   "check data", "string", ":math:`s=` `no`", "Check input data for NaNs prior to performing computation.", ":math:`s=` `no`, or `yes`.", Foundational.
-   "n_components", "integer", ":math:`i=2`", "Number of embedding dimensions.", ":math:`1 \le i \le 3`", Foundational.
-   "max_iter", "integer", ":math:`i=1000`", "Maximum number of gradient descent iterations.", ":math:`1 \le i`", Foundational.
-   "seed", "integer", ":math:`i=0`", "Seed for random number generation; set to -1 for non-deterministic results.", ":math:`-1 \le i`", Foundational.
-   "perplexity", "real", ":math:`r=30`", "Target perplexity for conditional probabilities.", ":math:`1 \le r`", Foundational.
-   "n_iter_without_progress", "integer", ":math:`i=300`", "Stop if no progress is made for this many iterations.", ":math:`0 \le i`", Foundational.
-   "early exaggeration", "real", ":math:`r=12`", "Exaggeration factor for early iterations.", ":math:`1 \le r`", Foundational.
-   "storage order", "string", ":math:`s=` `column-major`", "Whether data is supplied and returned in row- or column-major order.", ":math:`s=` `c`, `column-major`, `f`, `fortran`, or `row-major`.", Foundational.
-   "learning rate", "real", ":math:`r=-1`", "Gradient descent learning rate. Use any non-positive value for auto: max(N / early_exaggeration / 4, 50).", "There are no constraints on :math:`r`.", Foundational.
-   "min_grad_norm", "real", ":math:`r=1e-07`", "Stop if the gradient norm is below this threshold.", ":math:`0 \le r`", Foundational.
-   "theta", "real", ":math:`r=0.5`", "Barnes-Hut approximation parameter (0 for exact).", ":math:`0 \le r \le 1`", Foundational.
-   "low precision min_grad_norm", "real", ":math:`r=0.0001`", "If mixed precision iterative refinement is enabled, gradient norm convergence threshold for the low precision phase.", ":math:`0 \le r`", Foundational.
+   "mixed precision", "string", ":math:`s=` `no`", "Whether to use mixed precision iterative refinement, in which lower precision arithmetic is used before switching to the working precision for the final iterations.", ":math:`s=` `no`, or `yes`.", "Foundational."
+   "init", "string", ":math:`s=` `pca`", "Initialization method for the embedding.", ":math:`s=` `pca`, `random`, or `supplied`.", "Foundational."
+   "low precision max_iter", "integer", ":math:`i=200`", "If mixed precision iterative refinement is enabled, maximum number of iterations for the low precision phase.", ":math:`1 \le i`", "Foundational."
+   "check data", "string", ":math:`s=` `no`", "Check input data for NaNs prior to performing computation.", ":math:`s=` `no`, or `yes`.", "Foundational."
+   "n_components", "integer", ":math:`i=2`", "Number of embedding dimensions.", ":math:`1 \le i \le 3`", "Foundational."
+   "max_iter", "integer", ":math:`i=1000`", "Maximum number of gradient descent iterations.", ":math:`1 \le i`", "Foundational."
+   "seed", "integer", ":math:`i=0`", "Seed for random number generation; set to -1 for non-deterministic results.", ":math:`-1 \le i`", "Foundational."
+   "perplexity", "real", ":math:`r=30`", "Target perplexity for conditional probabilities.", ":math:`1 \le r`", "Foundational."
+   "n_iter_without_progress", "integer", ":math:`i=300`", "Stop if no progress is made for this many iterations.", ":math:`0 \le i`", "Foundational."
+   "early exaggeration", "real", ":math:`r=12`", "Exaggeration factor for early iterations.", ":math:`1 \le r`", "Foundational."
+   "storage order", "string", ":math:`s=` `column-major`", "Whether data is supplied and returned in row- or column-major order.", ":math:`s=` `c`, `column-major`, `f`, `fortran`, or `row-major`.", "Foundational."
+   "learning rate", "real", ":math:`r=-1`", "Gradient descent learning rate. Use any non-positive value for auto: max(N / early_exaggeration / 4, 50).", "There are no constraints on :math:`r`.", "Foundational."
+   "min_grad_norm", "real", ":math:`r=1e-07`", "Stop if the gradient norm is below this threshold.", ":math:`0 \le r`", "Foundational."
+   "theta", "real", ":math:`r=0.5`", "Barnes-Hut approximation parameter (0 for exact).", ":math:`0 \le r \le 1`", "Foundational."
+   "low precision min_grad_norm", "real", ":math:`r=0.0001`", "If mixed precision iterative refinement is enabled, gradient norm convergence threshold for the low precision phase.", ":math:`0 \le r`", "Foundational."
 
 
 .. _opts_nonnegativematrixfactorization:
@@ -424,16 +424,16 @@ The following options are supported.
    :escape: ~
    :header: "Option name", "Type", "Default", "Description", "Constraints", "Notes"
    
-   "init", "string", ":math:`s=` `auto`", "Procedure used to initialize W and H.", ":math:`s=` `auto`, `custom`, `nndsvd`, `nndsvda`, `nndsvdar`, or `random`.", Foundational.
-   "beta_loss", "string", ":math:`s=` `frobenius`", "Loss function to minimize. Currently only Frobenius norm.", ":math:`s=` `frobenius`.", Foundational.
-   "solver", "string", ":math:`s=` `mu`", "NMF solver to use. Currently only multiplicative update.", ":math:`s=` `mu`.", Foundational.
-   "check_every", "integer", ":math:`i=10`", "Number of MU iterations between successive convergence checks. The convergence criterion (relative change of the Frobenius residual against tol) is evaluated once every check_every iterations. Larger values reduce the overhead of the residual computation at the cost of potentially running extra iterations after the threshold is met. Only effective when tol > 0.", ":math:`1 \le i`", Foundational.
-   "max_iter", "integer", ":math:`i=200`", "Maximum number of MU iterations.", ":math:`1 \le i`", Foundational.
-   "tol", "real", ":math:`r=0.0001`", "Tolerance for the stopping condition: iterations stop when the relative improvement of the Frobenius residual falls below this value. Set to 0 to disable early stopping. The check frequency is controlled by the 'check_every' option.", ":math:`0 \le r`", Foundational.
-   "random_state", "integer", ":math:`i=-1`", "Random seed used to initialize W and H.", ":math:`-1 \le i`", Foundational.
-   "n_components", "integer", ":math:`i=0`", "Number of components to compute. If 0 (default), all components are kept.", ":math:`0 \le i`", Foundational.
-   "check data", "string", ":math:`s=` `no`", "Check input data for NaNs prior to performing computation.", ":math:`s=` `no`, or `yes`.", Foundational.
-   "storage order", "string", ":math:`s=` `column-major`", "Whether data is supplied and returned in row- or column-major order.", ":math:`s=` `c`, `column-major`, `f`, `fortran`, or `row-major`.", Foundational.
+   "init", "string", ":math:`s=` `auto`", "Procedure used to initialize W and H.", ":math:`s=` `auto`, `custom`, `nndsvd`, `nndsvda`, `nndsvdar`, or `random`.", "Foundational."
+   "beta_loss", "string", ":math:`s=` `frobenius`", "Loss function to minimize. Currently only Frobenius norm.", ":math:`s=` `frobenius`.", "Foundational."
+   "solver", "string", ":math:`s=` `mu`", "NMF solver to use. Currently only multiplicative update.", ":math:`s=` `mu`.", "Foundational."
+   "check_every", "integer", ":math:`i=10`", "Number of MU iterations between successive convergence checks. The convergence criterion (relative change of the Frobenius residual against tol) is evaluated once every check_every iterations. Larger values reduce the overhead of the residual computation at the cost of potentially running extra iterations after the threshold is met. Only effective when tol > 0.", ":math:`1 \le i`", "Foundational."
+   "max_iter", "integer", ":math:`i=200`", "Maximum number of MU iterations.", ":math:`1 \le i`", "Foundational."
+   "tol", "real", ":math:`r=0.0001`", "Tolerance for the stopping condition: iterations stop when the relative improvement of the Frobenius residual falls below this value. Set to 0 to disable early stopping. The check frequency is controlled by the 'check_every' option.", ":math:`0 \le r`", "Foundational."
+   "random_state", "integer", ":math:`i=-1`", "Random seed used to initialize W and H.", ":math:`-1 \le i`", "Foundational."
+   "n_components", "integer", ":math:`i=0`", "Number of components to compute. If 0 (default), all components are kept.", ":math:`0 \le i`", "Foundational."
+   "check data", "string", ":math:`s=` `no`", "Check input data for NaNs prior to performing computation.", ":math:`s=` `no`, or `yes`.", "Foundational."
+   "storage order", "string", ":math:`s=` `column-major`", "Whether data is supplied and returned in row- or column-major order.", ":math:`s=` `c`, `column-major`, `f`, `fortran`, or `row-major`.", "Foundational."
 
 
 .. _opts_datastore:
@@ -447,25 +447,25 @@ The following options are supported.
    :escape: ~
    :header: "Option name", "Type", "Default", "Description", "Constraints", "Notes"
    
-   "datastore precision", "string", ":math:`s=` `double`", "The precision used when reading floating point numbers using autodetection.", ":math:`s=` `double`, or `single`.", Foundational.
-   "datatype", "string", ":math:`s=` `auto`", "If a CSV file is known to be of a single datatype, set this option to disable autodetection and make reading the file quicker.", ":math:`s=` `auto`, `boolean`, `double`, `float`, `integer`, or `string`.", Foundational.
-   "use header row", "integer", ":math:`i=0`", "Whether or not to interpret the first row as a header.", ":math:`0 \le i \le 1`", Foundational.
-   "skip empty lines", "integer", ":math:`i=0`", "Whether or not to ignore empty lines in CSV files (note that caution should be used when using this in conjunction with options such as CSV skip rows since line numbers may no longer correspond to the original line numbers in the CSV file).", ":math:`0 \le i \le 1`", Foundational.
-   "delimiter", "string", ":math:`s=` `,`", "The delimiter used when reading CSV files.", "", Foundational.
-   "warn for missing data", "integer", ":math:`i=0`", "If set to 0, return error if missing data is encountered; if set to 1, issue a warning and store missing data as either a NaN (for floating point data) or the maximum value of the integer type being used.", ":math:`0 \le i \le 1`", Foundational.
-   "thousands", "string", "empty", "The character used to separate thousands when reading numeric values in CSV files.", "", Foundational.
-   "quote character", "string", ":math:`s=` `~"`", "The character used to denote quotations in CSV files.", "", Foundational.
-   "decimal", "string", ":math:`s=` `.`", "The character used to denote a decimal point in CSV files.", "", Foundational.
-   "scientific notation character", "string", ":math:`s=` `e`", "The character used to denote powers of 10 in floating point values in CSV files.", "", Foundational.
-   "skip footer", "integer", ":math:`i=0`", "Whether or not to ignore the last line when reading a CSV file.", ":math:`0 \le i \le 1`", Foundational.
-   "skip rows", "string", "empty", "A comma- or space-separated list of rows to ignore in CSV files.", "", Foundational.
-   "comment", "string", ":math:`s=` `#`", "The character used to denote comments in CSV files (note, if a line in a CSV file is to be interpreted as only containing a comment, the comment character should be the first character on the line).", "", Foundational.
-   "whitespace delimiter", "integer", ":math:`i=0`", "Whether or not to use whitespace as the delimiter when reading CSV files.", ":math:`0 \le i \le 1`", Foundational.
-   "escape character", "string", ":math:`s=` `\\`", "The escape character in CSV files.", "", Foundational.
-   "line terminator", "string", "empty", "The character used to denote line termination in CSV files (leave this empty to use the default).", "", Foundational.
-   "integers as floats", "integer", ":math:`i=0`", "Whether or not to interpret integers as floating point numbers when using autodetection.", ":math:`0 \le i \le 1`", Foundational.
-   "row start", "integer", ":math:`i=0`", "Ignore the specified number of lines from the top of the file (note that line numbers in CSV files start at 1).", ":math:`0 \le i`", Foundational.
-   "storage order", "string", ":math:`s=` `column-major`", "Whether to return data in row- or column-major format.", ":math:`s=` `column-major`, or `row-major`.", Foundational.
-   "skip initial space", "integer", ":math:`i=0`", "Whether or not to ignore initial spaces in CSV file lines.", ":math:`0 \le i \le 1`", Foundational.
-   "double quote", "integer", ":math:`i=0`", "Whether or not to interpret two consecutive quotechar characters within a field as a single quotechar character.", ":math:`0 \le i \le 1`", Foundational.
+   "datastore precision", "string", ":math:`s=` `double`", "The precision used when reading floating point numbers using autodetection.", ":math:`s=` `double`, or `single`.", "Foundational."
+   "datatype", "string", ":math:`s=` `auto`", "If a CSV file is known to be of a single datatype, set this option to disable autodetection and make reading the file quicker.", ":math:`s=` `auto`, `boolean`, `double`, `float`, `integer`, or `string`.", "Foundational."
+   "use header row", "integer", ":math:`i=0`", "Whether or not to interpret the first row as a header.", ":math:`0 \le i \le 1`", "Foundational."
+   "skip empty lines", "integer", ":math:`i=0`", "Whether or not to ignore empty lines in CSV files (note that caution should be used when using this in conjunction with options such as CSV skip rows since line numbers may no longer correspond to the original line numbers in the CSV file).", ":math:`0 \le i \le 1`", "Foundational."
+   "delimiter", "string", ":math:`s=` `,`", "The delimiter used when reading CSV files.", "", "Foundational."
+   "warn for missing data", "integer", ":math:`i=0`", "If set to 0, return error if missing data is encountered; if set to 1, issue a warning and store missing data as either a NaN (for floating point data) or the maximum value of the integer type being used.", ":math:`0 \le i \le 1`", "Foundational."
+   "thousands", "string", "empty", "The character used to separate thousands when reading numeric values in CSV files.", "", "Foundational."
+   "quote character", "string", ":math:`s=` `~"`", "The character used to denote quotations in CSV files.", "", "Foundational."
+   "decimal", "string", ":math:`s=` `.`", "The character used to denote a decimal point in CSV files.", "", "Foundational."
+   "scientific notation character", "string", ":math:`s=` `e`", "The character used to denote powers of 10 in floating point values in CSV files.", "", "Foundational."
+   "skip footer", "integer", ":math:`i=0`", "Whether or not to ignore the last line when reading a CSV file.", ":math:`0 \le i \le 1`", "Foundational."
+   "skip rows", "string", "empty", "A comma- or space-separated list of rows to ignore in CSV files.", "", "Foundational."
+   "comment", "string", ":math:`s=` `#`", "The character used to denote comments in CSV files (note, if a line in a CSV file is to be interpreted as only containing a comment, the comment character should be the first character on the line).", "", "Foundational."
+   "whitespace delimiter", "integer", ":math:`i=0`", "Whether or not to use whitespace as the delimiter when reading CSV files.", ":math:`0 \le i \le 1`", "Foundational."
+   "escape character", "string", ":math:`s=` `\\`", "The escape character in CSV files.", "", "Foundational."
+   "line terminator", "string", "empty", "The character used to denote line termination in CSV files (leave this empty to use the default).", "", "Foundational."
+   "integers as floats", "integer", ":math:`i=0`", "Whether or not to interpret integers as floating point numbers when using autodetection.", ":math:`0 \le i \le 1`", "Foundational."
+   "row start", "integer", ":math:`i=0`", "Ignore the specified number of lines from the top of the file (note that line numbers in CSV files start at 1).", ":math:`0 \le i`", "Foundational."
+   "storage order", "string", ":math:`s=` `column-major`", "Whether to return data in row- or column-major format.", ":math:`s=` `column-major`, or `row-major`.", "Foundational."
+   "skip initial space", "integer", ":math:`i=0`", "Whether or not to ignore initial spaces in CSV file lines.", ":math:`0 \le i \le 1`", "Foundational."
+   "double quote", "integer", ":math:`i=0`", "Whether or not to interpret two consecutive quotechar characters within a field as a single quotechar character.", ":math:`0 \le i \le 1`", "Foundational."
 

@@ -328,9 +328,7 @@ template <typename T> void driver(void) {
         y[i] = intercept + Amplitude * std::exp(-sigma[i] * t) + rnorm[i];
     }
 
-    struct usertype<T> params {
-        sigma, y
-    };
+    struct usertype<T> params{sigma, y};
 
     T x[n]{3.0, 0.1, 1.0};
     T gtol{1.0e-3};

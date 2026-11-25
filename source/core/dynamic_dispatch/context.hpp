@@ -1,23 +1,27 @@
 /* ************************************************************************
- * Copyright (c) 2025-2026 Advanced Micro Devices, Inc.
+ * Copyright (c) 2025-2026 Advanced Micro Devices, Inc. All rights reserved.
  *
- * Permission is hereby granted, free of charge, to any person obtaining a copy
- * of this software and associated documentation files (the "Software"), to deal
- * in the Software without restriction, including without limitation the rights
- * to use, copy, modify, merge, publish, distribute, sublicense, and/or sell
- * copies of the Software, and to permit persons to whom the Software is
- * furnished to do so, subject to the following conditions:
+ * Redistribution and use in source and binary forms, with or without modification,
+ * are permitted provided that the following conditions are met:
+ * 1. Redistributions of source code must retain the above copyright notice,
+ *    this list of conditions and the following disclaimer.
+ * 2. Redistributions in binary form must reproduce the above copyright notice,
+ *    this list of conditions and the following disclaimer in the documentation
+ *    and/or other materials provided with the distribution.
+ * 3. Neither the name of the copyright holder nor the names of its contributors
+ *    may be used to endorse or promote products derived from this software without
+ *    specific prior written permission.
  *
- * The above copyright notice and this permission notice shall be included in
- * all copies or substantial portions of the Software.
- *
- * THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
- * IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
- * FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
- * AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
- * LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
- * OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
- * THE SOFTWARE.
+ * THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS "AS IS" AND
+ * ANY EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED TO, THE IMPLIED
+ * WARRANTIES OF MERCHANTABILITY AND FITNESS FOR A PARTICULAR PURPOSE ARE DISCLAIMED.
+ * IN NO EVENT SHALL THE COPYRIGHT HOLDER OR CONTRIBUTORS BE LIABLE FOR ANY DIRECT,
+ * INDIRECT, INCIDENTAL, SPECIAL, EXEMPLARY, OR CONSEQUENTIAL DAMAGES (INCLUDING,
+ * BUT NOT LIMITED TO, PROCUREMENT OF SUBSTITUTE GOODS OR SERVICES; LOSS OF USE, DATA,
+ * OR PROFITS; OR BUSINESS INTERRUPTION) HOWEVER CAUSED AND ON ANY THEORY OF LIABILITY,
+ * WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE)
+ * ARISING IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE
+ * POSSIBILITY OF SUCH DAMAGE.
  *
  * ************************************************************************ */
 
@@ -29,11 +33,23 @@
 #pragma GCC diagnostic pop
 #include "aoclda_types.h"
 #include "macros.h"
+#include "telemetry.hpp"
 #include <algorithm>
 #include <iostream>
 #include <memory>
 #include <mutex>
 #include <unordered_map>
+
+#ifdef TELEMETRY
+// Add macros to ease the invocation of the context's telemetry instrumentation
+#define SCOPED_TIMER                                                                     \
+    SCOPED_TIMER_HELPER(context::get_context()->get_telemetry(), __PRETTY_FUNCTION__)
+#define SCOPED_TIMER_BLOCK(NAME)                                                         \
+    SCOPED_TIMER_HELPER(context::get_context()->get_telemetry(), NAME)
+#else
+#define SCOPED_TIMER
+#define SCOPED_TIMER_BLOCK(NAME)
+#endif
 
 enum dispatch_architecture {
     generic = 1,
@@ -104,39 +120,42 @@ class context {
 
     bool cpuflags[static_cast<int>(context_isa_t::LENGTH)];
 
+    static bool dynamic_dispatch_enabled();
+
     // Check environmental variable and update on-the-fly arch
-    // if build is dynamic (generic is not aliased)
+    // if this is a dynamic dispatch build
     void check_env() {
-        if (max_target_arch != generic) {
-            const std::string env_arch{env_get_var<std::string>("AOCL_DA_ARCH", "")};
-            if (!env_arch.empty()) {
-                // if requested arch is not build in the lib,
-                // expect a da_status_arch_not_supported
-                // Also, don't assign arch if the local arch can't handle the
-                // request, avoid illegal cpu instructions
-                if (env_arch == "zen1" || env_arch == "generic") {
-                    this->arch = generic;
-                } else if (env_arch == "generic_avx512" &&
-                           (local_arch == generic_avx512 || local_arch >= zen4)) {
-                    this->arch = generic_avx512;
-                } else if (env_arch == "zen2" && local_arch >= zen2) {
-                    this->arch = zen2;
-                } else if (env_arch == "zen3" && local_arch >= zen3) {
-                    this->arch = zen3;
-                } else if (env_arch == "zen4" && local_arch >= zen4) {
-                    this->arch = zen4;
-                } else if (env_arch == "zen5" && local_arch >= zen5) {
-                    this->arch = zen5;
-                } else if (env_arch == "zen6" && local_arch >= zen6) {
-                    this->arch = zen6;
-                }
-                // don't change if "invalid"
+        if (!is_dynamic)
+            return;
+
+        const std::string env_arch{env_get_var<std::string>("AOCL_DA_ARCH", "")};
+        if (!env_arch.empty()) {
+            // if requested arch is not build in the lib,
+            // expect a da_status_arch_not_supported
+            // Also, don't assign arch if the local arch can't handle the
+            // request, avoid illegal cpu instructions
+            if (env_arch == "zen1" || env_arch == "generic") {
+                this->arch = generic;
+            } else if (env_arch == "generic_avx512" &&
+                       (local_arch == generic_avx512 || local_arch >= zen4)) {
+                this->arch = generic_avx512;
+            } else if (env_arch == "zen2" && local_arch >= zen2) {
+                this->arch = zen2;
+            } else if (env_arch == "zen3" && local_arch >= zen3) {
+                this->arch = zen3;
+            } else if (env_arch == "zen4" && local_arch >= zen4) {
+                this->arch = zen4;
+            } else if (env_arch == "zen5" && local_arch >= zen5) {
+                this->arch = zen5;
+            } else if (env_arch == "zen6" && local_arch >= zen6) {
+                this->arch = zen6;
             }
+            // don't change if "invalid"
         }
     }
 
     // Private constructor ensures direct calls to constructor not possible
-    context() {
+    context() : is_dynamic(dynamic_dispatch_enabled()) {
 
         Au::X86Cpu Cpu = {0};
         Au::EUarch uarch = Cpu.getUarch();
@@ -194,6 +213,11 @@ class context {
         has_avx512_vnni =
             has_avx512 && this->cpuflags[static_cast<int>(context_isa_t::AVX512_VNNI)];
 
+        if (!is_dynamic) {
+            arch = max_target_arch;
+            return;
+        }
+
         //LCOV_EXCL_START
         switch (uarch) {
         case Au::EUarch::Zen:
@@ -230,11 +254,11 @@ class context {
         }
 
         /*
-max target arch can be:
-  generic, generic_avx512, zen2, zen3, zen4, zen5, zen6
-local arch can be:
-  generic, generic_avx512, zen2, zen3, zen4, zen5, zen6
-*/
+         * max target arch can be:
+         * generic, generic_avx512, zen2, zen3, zen4, zen5, zen6
+         * local arch can be:
+         * generic, generic_avx512, zen2, zen3, zen4, zen5, zen6
+         */
 
         // Deal with the special case of Zen 4+ with AVX-512 support disabled by treating it as Zen 3
         if ((local_arch >= zen4) && (has_avx512 == false)) {
@@ -262,17 +286,17 @@ local arch can be:
     // Delete the copy constructor of the context class to ensure it's a singleton
     context(context &t) = delete;
 
-    // shortcut to check if the architecture supports AVX512
+    // Runtime CPU capabilities used for kernel selection
     bool has_avx512 = false;
 
-    // shortcut to check if the architecture supports AVX512 BF16
     bool has_avx512_bf16 = false;
 
-    // shortcut to check if the architecture supports AVX512 FP16
     bool has_avx512_fp16 = false;
 
-    // shortcut to check if the architecture supports AVX512 VNNI
     bool has_avx512_vnni = false;
+
+    // True when multiple architecture namespaces were compiled for runtime dispatch
+    const bool is_dynamic;
 
     dispatch_architecture arch = generic;
 
@@ -283,7 +307,7 @@ local arch can be:
     static context *get_context();
 
     void refresh() {
-        check_env(); // Check AOCL_DA_ARCH and update arch if needed
+        check_env(); // Apply a dynamic-build AOCL_DA_ARCH override if present
     }
 
     // Dictionary to store hidden / debug settings
@@ -303,5 +327,8 @@ local arch can be:
 
     // access hidden settings
     static std::unordered_map<std::string, std::string> &get_hidden_settings();
+
+    // Access telemetry instrumentation
+    telemetry::Telemetry &get_telemetry() { return telemetry::get_telemetry("context"); }
 };
 #endif //context_HPP

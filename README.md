@@ -43,43 +43,43 @@ Building on Linux
 
 3. Configure cmake with `-T ClangCL -DOpenMP_libomp_LIBRARY=\Path\to\libomp.lib` and any of the following options:
 
-   * `-DASAN=On` for address sanitization
-
-   * `-DVALGRIND=On` for valgrind use
-
-   * `-DBUILD_ILP64=On` for 64-bit integer build
-
-   * `-DCMAKE_BUILD_TYPE=Debug` or `Release`
-
-   * `-DCOVERAGE=On` to build code coverage report. Use `cmake --build . --target coverage` to compile the coverage report itself
-
-   * `-DBUILD_EXAMPLES=On` and `–DBUILD_GTEST=On` both of which are `On` by default
-
-   * `-DBUILD_SHARED_LIBS=On` for a shared library build (`Off` by default)
-
-   * `-DARCH=<arch>` to set the `-march=<arch>` flag, where `<arch>` specifies the architecture to build for, e.g. znver4. <arch> must be a single word from "znver1", "znver2", "znver3", "znver4", ..., "native" or "dynamic". Setting `-DARCH=dynamic` will build the library using dynamic dispatch. Leaving it blank will create a native build.
-
-   * `-DBUILD_DOC=On` to build the documentation. Use `cmake --build . --target doc` to build all documentation formats (or `doc_pdf`, `doc_html` to build only PDF or only HTML formats)
-
-   * `-DINTERNAL_DOC=On` to build the internal documentation alongside the main one
-
-   * `-DBUILD_SMP=On` to build using OpenMP and threaded BLAS (`On` by default)
-
-   * `-DVECTORIZATION_REPORTS=On` to build with vectorization reports enabled
-
-   * `-DDA_LOGGING=On` to enable debug printing
-
-   * `-DBUILD_PYTHON=On` to build the Python interfaces
+   * `-DCMAKE_BUILD_TYPE=Debug` (default) or `Release`
 
    * `-DCMAKE_AOCL_ROOT=<path to AOCL>` to specify a location for AOCL libraries. This has precedence over the environment variable `$AOCL_ROOT`
 
    * `-DCMAKE_INSTALL_PREFIX=<install path>` to specify the install path for the library
 
+   * `-DBUILD_ILP64=On` for 64-bit integer build
+
+   * `-DBUILD_EXAMPLES=On` and `–DBUILD_GTEST=On` both of which are `On` by default
+
+   * `-DBUILD_PYTHON=On` to build the Python interfaces
+
+   * `-DBUILD_SHARED_LIBS=On` for a shared library build (`Off` by default)
+
+   * `-DARCH=<arch>` to set the `-march=<arch>` flag, where `<arch>` specifies the architecture to build for, e.g. znver4. <arch> must be a single word from "znver1", "znver2", "znver3", "znver4", ..., "native" or "dynamic". Setting `-DARCH=dynamic` will build the library using dynamic dispatch. Leaving it blank will create a native build.
+
+   * `-DBUILD_SMP=On` to build using OpenMP and threaded BLAS (`On` by default)
+
    * `-DBUILD_FORTRAN=On` to build those parts of the library that require Fortran code (`On` by default, but you can set it to `Off` if you do not have a Fortran compiler, in which case the LBFGSB linear model solver, and the nonlinear least squares solver will not be available)
+
+   * `-DBUILD_DOC=On` to build the documentation. Use `cmake --build . --target doc` to build all documentation formats (or `doc_pdf`, `doc_html` to build only PDF or only HTML formats)
+
+   * Any combination of `-DLAPACK_LIB`, `-DBLAS_LIB`, `-DSPARSE_LIB`, `-DUTILS_LIB`, `-DUTILS_CPUID_LIB`, `-DLAPACK_INCLUDE_DIR` and `-DBLAS_INCLUDE_DIR` if you wish to override the use of `AOCL_ROOT` with specific choices of BLAS/LAPACK/Sparse libraries and include directories. Care should be taken if you do this as there will be no checks for the correctness of the linked libraries.
 
    * `-DKT_PATH=<path>` to explicitly set the path that contains the Reusable Kernel Templates Library (KT). This path is expected to contain the subdirectory `kernel-templates/`.  By default it will point to the AOCL-Sparse library include path.
 
-   * Any combination of `-DLAPACK_LIB`, `-DBLAS_LIB`, `-DSPARSE_LIB`, `-DUTILS_LIB`, `-DUTILS_CPUID_LIB`, `-DLAPACK_INCLUDE_DIR` and `-DBLAS_INCLUDE_DIR` if you wish to override the use of `AOCL_ROOT` with specific choices of BLAS/LAPACK/Sparse libraries and include directories. Care should be taken if you do this as there will be no checks for the correctness of the linked libraries.
+   * `-DINTERNAL_DOC=On` to build the internal documentation alongside the main one
+
+   * `-DCOVERAGE=On` to build code coverage report. Use `cmake --build . --target coverage` to compile the coverage report itself
+
+   * `-DASAN=On` for address sanitization
+
+   * `-DVALGRIND=On` for valgrind use
+
+   * `-DVECTORIZATION_REPORTS=On` to build with vectorization reports enabled
+
+   * `-DTELEMETRY=On` to build with perfomance telemetry timers enabled
 
    **Note** that not all the options available in `Release` build mode.
 
@@ -99,23 +99,25 @@ Building on MS Windows
 
 3. Configure cmake using e.g. `cmake -T ClangCL -DCMAKE_Fortran_COMPILER=ifort`, with any of the following options:
 
+   * `-DCMAKE_AOCL_ROOT=<path to AOCL>` if you wish to specify a location for AOCL libraries without using environment variables
+
    * `-DBUILD_ILP64=On` for 64-bit integer build
-
-   * `-DBUILD_EXAMPLES=On` and `–DBUILD_GTEST=On` both of which are on by default
-
-   * `-DBUILD_SMP=On` to build using OpenMP and threaded BLAS (`On` by default)
 
    * `-DBUILD_SHARED_LIBS=On` for a shared library build (`Off` by default)
 
    * `-DARCH=<arch>` to set the `-march=<arch>` flag, where `<arch>` specifies the architecture to build for, e.g. znver4. <arch> must be a single word from "znver1", "znver2", "znver3", "znver4", ..., "native" or "dynamic". Setting `-DARCH=dynamic` will build the library using dynamic dispatch.
 
-   * `-DCMAKE_AOCL_ROOT=<path to AOCL>` if you wish to specify a location for AOCL libraries without using environment variables
+   * `-DBUILD_SMP=On` to build using OpenMP and threaded BLAS (`On` by default)
 
    * `-DBUILD_FORTRAN=On` to build those parts of the library that require Fortran code (`On` by default, but you can set it to `Off` if you do not have a Fortran compiler, in which case the LBFGSB linear model solver, and the nonlinear least squares solver will not be available)
 
-   * `-DKT_PATH=<path>` to explicitly set the path that contains the Reusable Kernel Templates Library (KT). This path is expected to contain the subdirectory `kernel-templates/`.  By default it will point to the AOCL-Sparse library include path.
+   * `-DBUILD_EXAMPLES=On` and `–DBUILD_GTEST=On` both of which are on by default
 
    * Any combination of `-DLAPACK_LIB`, `-DBLAS_LIB`, `-DSPARSE_LIB`, `-DUTILS_LIB`, `-DUTILS_CPUID_LIB`, `-DLAPACK_INCLUDE_DIR` and `-DBLAS_INCLUDE_DIR` if you wish to override the use of `AOCL_ROOT` with specific choices of BLAS/LAPACK/Sparse libraries and include directories. Care should be taken if you do this as there will be no checks for the correctness of the linked libraries.
+
+   * `-DKT_PATH=<path>` to explicitly set the path that contains the Reusable Kernel Templates Library (KT). This path is expected to contain the subdirectory `kernel-templates/`.  By default it will point to the AOCL-Sparse library include path.
+
+   * `-DTELEMETRY=On` to build with performance telemetry timers enabled. Durations are accumulated in nanoseconds and displayed in milliseconds with six decimal places.
 
     **Note** that not all the options available in Linux are available in Windows
 
@@ -135,6 +137,7 @@ You will need to install the required Python packages listed in the `requirement
 On Windows you may also need to set the `CMAKE_PREFIX_PATH` to point to the location of you pybind11 installation, e.g.  `C:\path\to\your\python-environment\site-packages\pybind11\share\cmake\pybind11`
 By default, cmake will compile the bindings but will not install them.
 If you set `-DCMAKE_INSTALL_PREFIX=<install path>` in your configure step and run `cmake --build . --target install`, then cmake will also create a Python wheel, `aoclda-*.whl`, where `*` depends on your system. This wheel can be installed using `pip install aoclda-*.whl`.
+The `WHEEL_POLICY` option controls wheel creation. On Linux, its default value, `auto`, lets `auditwheel` select a portable platform policy. Set it to an explicit policy such as `manylinux_2_28` to require that policy, or to `local` to bundle dependencies into a non-portable `linux_<arch>` wheel for development. On Windows, `auto` and `local` both build the wheel and bundle its dependencies using `delvewheel`; auditwheel platform policies do not apply. On either platform, set `WHEEL_POLICY` to `none` to skip wheel creation and access the installed package through `PYTHONPATH`.
 When using the bindings on Windows, the Intel Fortran runtime must be available. This can be done by setting the environment variable `INTEL_FCOMPILER`.
 
 Building the documentation on Linux

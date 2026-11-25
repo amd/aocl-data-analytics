@@ -194,6 +194,7 @@ template <typename T> da_status da_dbscan_compute(da_handle handle);
 
 /* Decision Forest declarations */
 /* Decision tree */
+template <typename T> da_status da_tree_select_model(da_handle handle, da_df_model model);
 template <typename T>
 da_status da_tree_set_training_data(da_handle handle, da_int n_samples, da_int n_features,
                                     da_int n_class, const T *X, da_int ldx,
@@ -217,6 +218,8 @@ da_status da_tree_score(da_handle handle, da_int n_samples, da_int n_features,
                         T *mean_accuracy);
 
 /* Random forest */
+template <typename T>
+da_status da_forest_select_model(da_handle handle, da_df_model model);
 template <typename T>
 da_status da_forest_set_training_data(da_handle handle, da_int n_samples,
                                       da_int n_features, da_int n_class, const T *X,

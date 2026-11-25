@@ -221,7 +221,7 @@ def test_approx_nn_functionality(numpy_precision, numpy_order, test_case):
     centroids = ann.cluster_centroids
     assert centroids.shape == (n_list, n_features)
 
-    tol = np.sqrt(np.finfo(numpy_precision).eps) * 100
+    tol = float(np.sqrt(np.finfo(numpy_precision).eps) * 100)
 
     km = kmeans(
         n_clusters=n_list,

@@ -61,7 +61,7 @@ def test_kmeans(precision):
     x = np.array([[0., 1.],
                   [0., -1.]], dtype=precision)
 
-    tol = np.sqrt(np.finfo(precision).eps)
+    tol = float(np.sqrt(np.finfo(precision).eps))
 
     # patch and import scikit-learn
     skpatch()

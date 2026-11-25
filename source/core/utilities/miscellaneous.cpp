@@ -41,7 +41,9 @@ da_status da_parallel_check() {
 
 // We could do anything here really - we just want to check we are linking omp.h correctly
 #pragma omp parallel reduction(max : n_threads) num_threads(max_threads) default(none)
-    { n_threads = omp_get_thread_num() + 1; }
+    {
+        n_threads = omp_get_thread_num() + 1;
+    }
 
     if (n_threads != max_threads)
         return da_status_internal_error;

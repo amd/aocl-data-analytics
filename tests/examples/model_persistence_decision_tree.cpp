@@ -64,6 +64,8 @@ int main() {
         da_handle handle_orig = nullptr;
         pass = pass && (da_handle_init_d(&handle_orig, da_handle_decision_tree) ==
                         da_status_success);
+        pass = pass &&
+               (da_tree_select_model_d(handle_orig, df_classifier) == da_status_success);
         pass = pass && (da_tree_set_training_data_d(
                             handle_orig, n_samples, n_features, n_classes, X_train,
                             n_samples, y_train, nullptr) == da_status_success);

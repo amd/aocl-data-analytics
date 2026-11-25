@@ -45,7 +45,8 @@ namespace da_decision_forest {
  * (e.g., all values in samples_idx below the split index will be set in the left node)
  */
 template <typename T>
-da_int decision_tree<T>::partition_samples_raw_continuous(const node<T> &nd) {
+da_int
+decision_tree_classification<T>::partition_samples_raw_continuous(const node<T> &nd) {
     /* raw data: look in main feature matrix directly
      * continuous feature: all samples below the node threshold are first
      */
@@ -68,7 +69,8 @@ da_int decision_tree<T>::partition_samples_raw_continuous(const node<T> &nd) {
 }
 
 template <typename T>
-da_int decision_tree<T>::partition_samples_raw_categorical(const node<T> &nd) {
+da_int
+decision_tree_classification<T>::partition_samples_raw_categorical(const node<T> &nd) {
     /* raw data: look in main feature matrix directly
      * categorical feature: all samples corresponding to the node category are first
      */
@@ -89,7 +91,8 @@ da_int decision_tree<T>::partition_samples_raw_categorical(const node<T> &nd) {
 }
 
 template <typename T>
-da_int decision_tree<T>::partition_samples_hist_ordered(const node<T> &nd) {
+da_int
+decision_tree_classification<T>::partition_samples_hist_ordered(const node<T> &nd) {
     /* hist: use the binned data X_binned
      * ordered feature: all samples below the node threshold are first
      */
@@ -113,7 +116,8 @@ da_int decision_tree<T>::partition_samples_hist_ordered(const node<T> &nd) {
 }
 
 template <typename T>
-da_int decision_tree<T>::partition_samples_hist_onevall(const node<T> &nd) {
+da_int
+decision_tree_classification<T>::partition_samples_hist_onevall(const node<T> &nd) {
     /* hist: use the binned data X_binned
      * categorical feature: all samples corresponding to the node category are first
      */

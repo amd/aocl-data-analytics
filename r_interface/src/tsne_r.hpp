@@ -57,8 +57,8 @@ class TSNE : public rda_handle {
             status = da_options_set(handle, "mixed precision", "yes");
             exception_check(status);
         }
-        status = da_options_set_int(handle, "low precision max_iter",
-                                    low_precision_max_iter);
+        status =
+            da_options_set_int(handle, "low precision max_iter", low_precision_max_iter);
         exception_check(status);
         if (check_data) {
             status = da_options_set(handle, "check data", "yes");
@@ -110,8 +110,7 @@ class TSNE : public rda_handle {
 
     NumericMatrix fit_transform(NumericMatrix X, double perplexity = 30.0,
                                 double learning_rate = -1.0,
-                                double early_exaggeration = 12.0,
-                                double theta = 0.5,
+                                double early_exaggeration = 12.0, double theta = 0.5,
                                 da_int n_iter_without_progress = 300,
                                 double min_grad_norm = 1e-7,
                                 Nullable<NumericMatrix> init_embedding = R_NilValue,
@@ -131,8 +130,7 @@ class TSNE : public rda_handle {
 
         da_int dim = n_samples * n_components;
         NumericMatrix result(n_samples, n_components);
-        status =
-            da_handle_get_result_d(handle, da_tsne_embedding, &dim, result.begin());
+        status = da_handle_get_result_d(handle, da_tsne_embedding, &dim, result.begin());
         exception_check(status);
         return result;
     }
@@ -176,9 +174,8 @@ class TSNE : public rda_handle {
     da_int get_lp_n_iter() {
         da_int n_samples, n_features, n_components, n_iter, lp_n_iter;
         double kl_div;
-        da_status status =
-            get_rinfo(&n_samples, &n_features, &n_components, &n_iter, &kl_div,
-                      &lp_n_iter);
+        da_status status = get_rinfo(&n_samples, &n_features, &n_components, &n_iter,
+                                     &kl_div, &lp_n_iter);
         exception_check(status);
         return lp_n_iter;
     }

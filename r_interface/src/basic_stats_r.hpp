@@ -34,7 +34,7 @@
 #include "aoclda.h"
 #include "internal_utilities_r.hpp"
 
-    using namespace Rcpp;
+using namespace Rcpp;
 
 // Helper function to get matrix dimensions, axis enum and output size
 inline void get_size_and_axis(const std::string &axis, da_axis &axis_enum,
@@ -55,7 +55,8 @@ inline void get_size_and_axis(const std::string &axis, da_axis &axis_enum,
 
     if (n == 1 && axis_enum != da_axis_all) {
         axis_enum = da_axis_all;
-        Rf_warning("Axes 'col' and 'row' are undefined for 1D arrays. Defaulting to 'all'.");
+        Rf_warning(
+            "Axes 'col' and 'row' are undefined for 1D arrays. Defaulting to 'all'.");
     }
 
     switch (axis_enum) {
@@ -227,8 +228,7 @@ inline da_quantile_type quantile_string_to_method(const std::string &method) {
 }
 
 inline SEXP da_quantile_wrapper(NumericMatrix X, NumericVector q,
-                                std::string method = "linear",
-                                std::string axis = "col") {
+                                std::string method = "linear", std::string axis = "col") {
     da_status status;
     da_int m, n;
     da_axis axis_enum;
@@ -239,8 +239,8 @@ inline SEXP da_quantile_wrapper(NumericMatrix X, NumericVector q,
     da_quantile_type method_enum = quantile_string_to_method(method);
 
     NumericMatrix result(n_q, quantile_sz);
-    status = da_quantile_d(column_major, axis_enum, m, n, X.begin(), m,
-                           q.begin(), n_q, result.begin(), method_enum);
+    status = da_quantile_d(column_major, axis_enum, m, n, X.begin(), m, q.begin(), n_q,
+                           result.begin(), method_enum);
     status_to_exception(status);
 
     if (n_q == 1 || quantile_sz == 1)

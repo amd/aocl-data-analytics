@@ -65,6 +65,17 @@ struct _da_handle {
     da_status get_current_opts(da_options::OptionRegistry **opts);
     da_status handle_refresh();
 
+    bool allows_deferred_allocation() const {
+        switch (handle_type) {
+        case da_handle_decision_tree:
+        case da_handle_decision_forest:
+        case da_handle_interpolation:
+            return true;
+        default:
+            return false;
+        }
+    }
+
     template <typename T> basic_handle<T> *get_alg_handle();
 
     // Serialize and save the complete handle state (model and options).

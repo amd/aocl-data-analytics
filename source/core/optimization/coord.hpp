@@ -28,6 +28,7 @@
 #include "aoclda_result.h"
 #include "callbacks.hpp"
 #include "da_error.hpp"
+#include "da_logger.hpp"
 #include "da_std.hpp"
 #include "da_utils.hpp"
 #include "fp16_helpers.hpp"
@@ -37,7 +38,6 @@
 #include <cmath>
 #include <functional>
 #include <iomanip>
-#include <iostream>
 #include <limits>
 #include <vector>
 
@@ -268,7 +268,7 @@ template <typename T> class coord_slv {
     // Assumes all inputs are valid
     coord_slv(size_t restart, size_t skipmin, size_t skipmax, T skiptol)
         : restart{restart}, skipmin{skipmin}, skipmax{skipmax}, skiptol{skiptol} {};
-    ~coord_slv(){};
+    ~coord_slv() {};
 
     /* Reset the ledger stored in the work array */
     void reset_skip_ledger(void) { skip.assign(skip.size(), 0U); };
@@ -489,13 +489,12 @@ da_status coord(da_options::OptionRegistry &opts, da_int n, std::vector<T> &x,
     // tol and optim have to specify the requested tolerances, these
     // are saved into the workspace of the solver
     auto clock = std::chrono::system_clock::now();
-    const size_t coutprec = std::cout.precision();
-    const auto coutflags = std::cout.flags();
+    da_logger::logger out;
 
     if (prnlvl >= 5) {
-        std::cout << "Initial coefficients:" << std::endl;
+        out << "Initial coefficients:" << std::endl;
         for (da_int i = 0; i < n; ++i) {
-            std::cout << " x[" << i << "] = " << x[i] << std::endl;
+            out << " x[" << i << "] = " << x[i] << std::endl;
         }
     }
 
@@ -583,27 +582,25 @@ da_status coord(da_options::OptionRegistry &opts, da_int n, std::vector<T> &x,
                  *        and the ledger was reset.
                  */
 
-                std::cout.precision(2);
-                std::cout << std::setw(10) << "iteration" << std::setw(1) << ""
-                          << std::setw(10) << "coordinate" << std::setw(1) << ""
-                          << std::setw(9) << "current" << std::setw(1) << ""
-                          << std::setw(9) << "new" << std::setw(1) << "" << std::setw(9)
-                          << "change" << std::setw(2) << "" << std::setw(9) << "skip";
+                out << std::setprecision(2) << std::setw(10) << "iteration"
+                    << std::setw(1) << "" << std::setw(10) << "coordinate" << std::setw(1)
+                    << "" << std::setw(9) << "current" << std::setw(1) << ""
+                    << std::setw(9) << "new" << std::setw(1) << "" << std::setw(9)
+                    << "change" << std::setw(2) << "" << std::setw(9) << "skip";
                 if (isskipmax)
-                    std::cout << "/" << std::setw(9) << "skipmax";
-                std::cout << std::endl;
+                    out << "/" << std::setw(9) << "skipmax";
+                out << std::endl;
                 T xkdiff = da_std::abs(x[k] - newxk);
-                std::cout << std::setw(10) << iter << std::setw(1) << "" << std::setw(10)
-                          << k << std::setw(1) << "" << std::scientific << std::setw(9)
-                          << x[k] << std::setw(1) << "" << std::setw(9) << newxk
-                          << std::setw(1) << "" << std::setw(9) << x[k] - newxk
-                          << std::setw(1) << (xkdiff > skiptol ? "" : "#") << std::setw(1)
-                          << "" << std::setw(9) << w.skip[k];
+                out << std::setw(10) << iter << std::setw(1) << "" << std::setw(10) << k
+                    << std::setw(1) << "" << std::scientific << std::setw(9) << x[k]
+                    << std::setw(1) << "" << std::setw(9) << newxk << std::setw(1) << ""
+                    << std::setw(9) << x[k] - newxk << std::setw(1)
+                    << (xkdiff > skiptol ? "" : "#") << std::setw(1) << "" << std::setw(9)
+                    << w.skip[k];
                 if (isskipmax)
-                    std::cout << "/" << std::setw(9) << skipmax;
-                std::cout << " " << flagss << std::endl << std::noshowpos;
-                std::cout.precision(coutprec);
-                std::cout.flags(coutflags);
+                    out << "/" << std::setw(9) << skipmax;
+                out << " " << flagss << std::endl << std::noshowpos;
+                out.reset();
             }
             break;
         case OPTIMCHK:
@@ -679,35 +676,32 @@ da_status coord(da_options::OptionRegistry &opts, da_int n, std::vector<T> &x,
             if (prnlvl > 1) {
                 if (hdr == 0 || prnlvl >= 4) {
                     hdr = HDRCNT;
-                    std::cout << std::setw(75) << std::setfill('-') << "" << std::endl
-                              << std::setfill(' ');
-                    std::cout << std::setw(10) << "iteration" << std::setw(1) << ""
-                              << std::setw(9) << std::scientific << "objective"
-                              << std::setw(1) << "" << std::setw(9) << "maxchange"
-                              << std::setw(12) << "neval" << std::setw(12) << "ngap"
-                              << std::setw(1) << "" << std::setw(9) << "optim"
-                              << std::setw(1) << "" << std::setw(9) << "optol"
-                              << std::endl;
-                    std::cout << std::setw(75) << std::setfill('-') << "" << std::endl
-                              << std::setfill(' ');
+                    out << std::setw(75) << std::setfill('-') << "" << std::endl
+                        << std::setfill(' ');
+                    out << std::setw(10) << "iteration" << std::setw(1) << ""
+                        << std::setw(9) << std::scientific << "objective" << std::setw(1)
+                        << "" << std::setw(9) << "maxchange" << std::setw(12) << "neval"
+                        << std::setw(12) << "ngap" << std::setw(1) << "" << std::setw(9)
+                        << "optim" << std::setw(1) << "" << std::setw(9) << "optol"
+                        << std::endl;
+                    out << std::setw(75) << std::setfill('-') << "" << std::endl
+                        << std::setfill(' ');
                 }
                 --hdr;
-                std::cout.precision(3);
-                std::cout << std::setw(10) << iter << std::setw(1) << ""
-                          << std::scientific << std::setw(9) << *f << std::setw(1) << ""
-                          << std::setw(9) << inorm << std::setw(12) << fcnt + lowrk
-                          << std::setw(12) << chkcnt;
+                out << std::setprecision(3) << std::setw(10) << iter << std::setw(1) << ""
+                    << std::scientific << std::setw(9) << *f << std::setw(1) << ""
+                    << std::setw(9) << inorm << std::setw(12) << fcnt + lowrk
+                    << std::setw(12) << chkcnt;
                 if (optim < da_std::numeric_limits<T>::infinity()) {
-                    std::cout << std::setw(1) << "" << std::setw(9) << optim;
-                    std::cout << std::setw(1) << "" << std::setw(9) << w.optim;
+                    out << std::setw(1) << "" << std::setw(9) << optim;
+                    out << std::setw(1) << "" << std::setw(9) << w.optim;
                 }
-                std::cout.precision(coutprec);
-                std::cout.flags(coutflags);
-                std::cout << std::endl;
+                out << std::endl;
+                out.reset();
                 if (prnlvl >= 5) {
-                    std::cout << "Current coefficients:" << std::endl;
+                    out << "Current coefficients:" << std::endl;
                     for (da_int i = 0; i < n; i++) {
-                        std::cout << " x[" << i << "] = " << x[i] << std::endl;
+                        out << " x[" << i << "] = " << x[i] << std::endl;
                     }
                 }
             }
@@ -787,49 +781,49 @@ da_status coord(da_options::OptionRegistry &opts, da_int n, std::vector<T> &x,
     }
     if (prnlvl > 0) {
         // Exit summary message
-        std::cout << std::endl << "Solver summary" << std::endl;
-        std::cout << " Objective value (scaled problem): " << *f << std::endl;
+        out << std::endl << "Solver summary" << std::endl;
+        out << " Objective value (scaled problem): " << *f << std::endl;
         if (optim < da_std::numeric_limits<T>::infinity()) {
-            std::cout << " Optimality measure:               " << optim << std::endl;
+            out << " Optimality measure:               " << optim << std::endl;
         } else {
-            std::cout << " Optimality measure:               Infinity" << std::endl;
+            out << " Optimality measure:               Infinity" << std::endl;
         }
-        std::cout << " Number of optimality checks:  " << chkcnt << std::endl;
-        std::cout << " Total number of step calls (cheap):   " << fcnt + lowrk << " ("
-                  << lowrk << ")" << std::endl;
-        std::cout << " Total solve time: " << *time << " sec" << std::endl;
-        std::cout << " Total number of iterations: " << iter << std::endl;
+        out << " Number of optimality checks:  " << chkcnt << std::endl;
+        out << " Total number of step calls (cheap):   " << fcnt + lowrk << " (" << lowrk
+            << ")" << std::endl;
+        out << " Total solve time: " << *time << " sec" << std::endl;
+        out << " Total number of iterations: " << iter << std::endl;
         if (prnlvl >= 4) {
-            std::cout << " Solver internal settings " << std::endl;
-            std::cout << "   Safe machine epsilon: " << w.macheps_safe << std::endl;
-            std::cout << "   Step tolerance:       " << w.tol << std::endl;
-            std::cout << "   Optimality tolerance: " << w.optim << std::endl;
-            std::cout << "   Slow progress factor: " << slow_progress_factor
-                      << " [count: " << slow_cnt_max << "]" << std::endl;
+            out << " Solver internal settings " << std::endl;
+            out << "   Safe machine epsilon: " << w.macheps_safe << std::endl;
+            out << "   Step tolerance:       " << w.tol << std::endl;
+            out << "   Optimality tolerance: " << w.optim << std::endl;
+            out << "   Slow progress factor: " << slow_progress_factor
+                << " [count: " << slow_cnt_max << "]" << std::endl;
         }
         if (status == da_status_success) {
-            std::cout << " Convergence status: ";
+            out << " Convergence status: ";
             if (optim_usr < da_std::numeric_limits<T>::infinity()) {
-                std::cout << "dual gap is less than tolerance.";
+                out << "dual gap is less than tolerance.";
             } else {
-                std::cout << "distance between two consecutive iterates is "
-                          << "less than tolerance.";
+                out << "distance between two consecutive iterates is "
+                    << "less than tolerance.";
             }
-            std::cout << std::endl;
+            out << std::endl;
         } else {
             std::string errmsg;
             err.print(errmsg);
-            std::cout << " Exit status: " << errmsg << std::endl;
+            out << " Exit status: " << errmsg << std::endl;
         }
-        std::cout << std::endl;
+        out << std::endl;
     }
     if (debug) {
-        std::cout << "coord_debug_telem: S=" << std::setw(3) << status
-                  << " $=" << std::scientific << std::setprecision(3) << std::setw(12)
-                  << *f << " O=" << std::scientific << std::setprecision(3)
-                  << std::setw(12) << optim << " D=" << std::setw(8) << chkcnt
-                  << " F=" << std::setw(8) << fcnt << " L=" << std::setw(8) << lowrk
-                  << " I=" << std::setw(6) << iter << std::endl;
+        out << "coord_debug_telem: S=" << std::setw(3) << status
+            << " $=" << std::scientific << std::setprecision(3) << std::setw(12) << *f
+            << " O=" << std::scientific << std::setprecision(3) << std::setw(12) << optim
+            << " D=" << std::setw(8) << chkcnt << " F=" << std::setw(8) << fcnt
+            << " L=" << std::setw(8) << lowrk << " I=" << std::setw(6) << iter
+            << std::endl;
     }
     return status; // Error message already loaded
 }

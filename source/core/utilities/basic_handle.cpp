@@ -31,8 +31,13 @@
 #include "aoclda_types.h"
 #include "basic_handle_options.hpp"
 #include "da_error.hpp"
+#include "da_logger.hpp"
 #include "model_persistence.hpp"
 #include "options.hpp"
+#include <iomanip>
+
+#include <map>
+#include <variant>
 
 /*
  * Base handle class (basic_handle) that contains members that
@@ -120,19 +125,115 @@ void basic_handle<T>::copy_2D_results_array(da_int n_rows, da_int n_cols, const 
 
 template <typename T>
 da_status
+basic_handle<T>::serialize_registry(da_model_persistence::serialization_buffer &buffer) {
+    if (buffer.get_mode() != da_model_persistence::buffer_mode::serialize &&
+        buffer.get_mode() != da_model_persistence::buffer_mode::reserve)
+        return da_status_serialization_error;
+
+    std::map<std::string, da_options::option_variant_t> options = {};
+
+    try {
+        this->opts.export_registry(
+            [&](const std::string &key, da_options::option_variant_t value) {
+                options[key] = value;
+            });
+    } catch (std::bad_alloc const &) {
+        return da_status_memory_error; // LCOV_EXCL_LINE
+    }
+
+    // Save number of options to be serialized.
+    da_int n = static_cast<da_int>(options.size());
+    da_status status = buffer.dispatch_buffer_io(n);
+    if (status != da_status_success)
+        return status;
+
+    for (auto &[key, value] : options) {
+        // Copy needed: map keys are const, but dispatch_buffer_io takes a non-const ref.
+        std::string name;
+        try {
+            name = key;
+        } catch (std::bad_alloc const &) {
+            return da_status_memory_error; // LCOV_EXCL_LINE
+        }
+        status = buffer.dispatch_buffer_io(name);
+        if (status != da_status_success)
+            return status;
+
+        status =
+            std::visit([&](auto &&v) { return buffer.dispatch_buffer_io(v); }, value);
+        if (status != da_status_success)
+            return status;
+    }
+
+    return status;
+}
+
+template <typename T>
+da_status basic_handle<T>::deserialize_registry(
+    da_model_persistence::serialization_buffer &buffer) {
+    if (buffer.get_mode() != da_model_persistence::buffer_mode::deserialize)
+        return da_status_serialization_error;
+
+    // Load number of options that have been serialized.
+    da_int n;
+    da_status status = buffer.dispatch_buffer_io(n);
+    if (status != da_status_success)
+        return status;
+
+    std::map<std::string, da_options::option_variant_t> current;
+
+    try {
+        this->opts.export_registry(
+            [&](const std::string &key, da_options::option_variant_t value) {
+                current[key] = value;
+            });
+    } catch (std::bad_alloc const &) {
+        return da_status_memory_error; // LCOV_EXCL_LINE
+    }
+
+    if (n < 0 || n > (da_int)current.size())
+        return da_status_invalid_file_data;
+
+    for (da_int i = 0; i < n; ++i) {
+        std::string key;
+        status = buffer.dispatch_buffer_io(key);
+        if (status != da_status_success)
+            return status;
+
+        auto it = current.find(key);
+        if (it == current.end())
+            return da_status_invalid_file_data;
+
+        status = std::visit(
+            [&](auto &&default_value) {
+                using V = std::decay_t<decltype(default_value)>;
+                V stored_value;
+                da_status s = buffer.dispatch_buffer_io(stored_value);
+                if (s != da_status_success)
+                    return s;
+                return this->opts.set(key, stored_value);
+            },
+            it->second);
+        if (status != da_status_success)
+            return status;
+    }
+
+    return status;
+}
+
+template <typename T>
+da_status
 basic_handle<T>::preallocate_buffer(da_model_persistence::serialization_buffer &buffer) {
     buffer.set_mode(da_model_persistence::buffer_mode::reserve);
 
-    da_status status = this->serialize(buffer);
+    da_status status = this->serialize_registry(buffer);
+    if (status != da_status_success)
+        return da_error_trace(this->err, status, "Failure while getting registry size.");
+
+    status = this->serialize(buffer);
     if (status != da_status_success)
         return da_error_trace(this->err, status, "Failure while getting model size.");
 
-    try {
-        status = buffer.add_size(this->opts.compute_serialized_size());
-    } catch (...) {
-        return da_error(this->err, da_status_internal_error,
-                        "Failure while adding registry size.");
-    }
     status = buffer.reserve();
     if (status != da_status_success)
         return da_error_trace(this->err, status, "Failure while resizing buffer.");
@@ -148,6 +249,7 @@ basic_handle<T>::save_model(da_model_persistence::serialization_buffer &buffer) 
     if (status != da_status_success)
         return da_error_trace(this->err, status, "Failure clearing buffer.");
 
+    // Gets exact size needed to serialize the whole model and allocates it.
     status = preallocate_buffer(buffer);
     if (status != da_status_success)
         return da_error_trace(this->err, status, "Failure resizing buffer.");
@@ -158,7 +260,7 @@ basic_handle<T>::save_model(da_model_persistence::serialization_buffer &buffer) 
     if (status != da_status_success)
         return da_error(this->err, status, "Failure serializing metadata.");
 
-    status = this->opts.save_registry(buffer);
+    status = this->serialize_registry(buffer);
     if (status != da_status_success)
         return da_error_trace(this->err, status, "Failure serializing registry.");
 
@@ -180,7 +282,7 @@ basic_handle<T>::load_model(da_model_persistence::serialization_buffer &buffer) 
 
     this->saved_aoclda_version = buffer.get_saved_aoclda_version();
 
-    da_status status = this->opts.load_registry(buffer);
+    da_status status = this->deserialize_registry(buffer);
     if (status != da_status_success)
         return da_error_trace(this->err, status, "Failure deserializing registry.");
 
@@ -201,13 +303,14 @@ template <typename T> da_status basic_handle<T>::print_model_versions() {
                         "The handle doesn't contain a valid loaded model.");
     }
 
-    std::cout << "===== Loaded Model Versions =====\n";
-    std::cout << std::setw(30) << "Serialization version:" << this->serialization_version
-              << "\n";
-    std::cout << std::setw(30)
-              << "Saved AOCL-DA build version:" << this->saved_aoclda_version << "\n";
-    std::cout << "=================================\n";
-    std::cout << std::flush;
+    da_logger::logger out;
+    out << "===== Loaded Model Versions =====\n";
+    out << std::setw(30) << "Serialization version:" << this->serialization_version
+        << "\n";
+    out << std::setw(30) << "Saved AOCL-DA build version:" << this->saved_aoclda_version
+        << "\n";
+    out << "=================================\n";
+    out << std::flush;
     return da_status_success;
 };
 

@@ -45,6 +45,7 @@ void test_decision_tree_positive(std::string csvname, std::vector<option_t<da_in
     da_handle tree_handle = nullptr;
     EXPECT_EQ(da_handle_init<T>(&tree_handle, da_handle_decision_tree),
               da_status_success);
+    ASSERT_EQ(da_tree_select_model<T>(tree_handle, df_classifier), da_status_success);
     for (auto &op : sopts)
         EXPECT_EQ(da_options_set_string(tree_handle, op.name.c_str(), op.value.c_str()),
                   da_status_success);

@@ -36,7 +36,7 @@
 namespace ARCH {
 namespace da_decision_forest {
 
-template <typename T> da_status decision_tree<T>::read_options() {
+template <typename T> da_status decision_tree_classification<T>::read_options() {
     if (read_public_options) {
 
         std::string opt_val;
@@ -72,7 +72,7 @@ template <typename T> da_status decision_tree<T>::read_options() {
     return da_status_success;
 }
 
-template <typename T> da_status decision_tree<T>::read_storage_order() {
+template <typename T> da_status decision_tree_classification<T>::read_storage_order() {
     // In-forest trees receive their order from the forest via set_storage_order
     if (!read_public_options)
         return da_status_success;
@@ -87,8 +87,8 @@ template <typename T> da_status decision_tree<T>::read_storage_order() {
 }
 
 template <class T>
-void decision_tree<T>::count_class_occurences(std::vector<da_int> &class_occ,
-                                              da_int start_idx, da_int end_idx) {
+void decision_tree_classification<T>::count_class_occurences(
+    std::vector<da_int> &class_occ, da_int start_idx, da_int end_idx) {
     /* Count the number of occurence of each response class from y in the samples marked in
      * samples_idx[start_idx, end_idx] */
     da_std::fill(class_occ.begin(), class_occ.end(), 0);
@@ -99,9 +99,9 @@ void decision_tree<T>::count_class_occurences(std::vector<da_int> &class_occ,
     }
 }
 template <class T>
-void decision_tree<T>::count_class_occurences(std::vector<da_int> &class_occ,
-                                              da_int start_idx, da_int end_idx,
-                                              std::vector<da_int> &weights) {
+void decision_tree_classification<T>::count_class_occurences(
+    std::vector<da_int> &class_occ, da_int start_idx, da_int end_idx,
+    std::vector<da_int> &weights) {
     /* Same as above with weights for each sample index */
     da_std::fill(class_occ.begin(), class_occ.end(), 0);
     for (da_int i = start_idx; i <= end_idx; i++) {
@@ -113,8 +113,8 @@ void decision_tree<T>::count_class_occurences(std::vector<da_int> &class_occ,
 }
 
 template <class T>
-da_status decision_tree<T>::add_node(da_int parent_idx, bool is_left, T score,
-                                     da_int split_idx) {
+da_status decision_tree_classification<T>::add_node(da_int parent_idx, bool is_left,
+                                                    T score, da_int split_idx) {
 
     da_status status = da_status_success;
     if (tree.size() <= (size_t)n_nodes) {
@@ -168,7 +168,7 @@ da_status decision_tree<T>::add_node(da_int parent_idx, bool is_left, T score,
     return status;
 }
 
-template <class T> da_int decision_tree<T>::get_next_node_idx() {
+template <class T> da_int decision_tree_classification<T>::get_next_node_idx() {
     // Get the next node index to treat.
     // LIFO: depth-first
     da_int node_idx = nodes_to_treat.back();
@@ -178,8 +178,9 @@ template <class T> da_int decision_tree<T>::get_next_node_idx() {
 }
 
 template <typename T>
-da_status decision_tree<T>::split_node_and_add_children(da_int node_idx,
-                                                        split<T> &best_split) {
+da_status
+decision_tree_classification<T>::split_node_and_add_children(da_int node_idx,
+                                                             split<T> &best_split) {
     node<T> &current_node = tree[node_idx];
 
     // Project back the discovered constant features to the parent
@@ -241,7 +242,7 @@ da_status decision_tree<T>::split_node_and_add_children(da_int node_idx,
     return da_status_success;
 }
 
-template <typename T> da_status decision_tree<T>::fit_serial() {
+template <typename T> da_status decision_tree_classification<T>::fit_serial() {
     da_status status = da_status_success;
     split<T> best_split;
     split<T> sp;
@@ -307,7 +308,7 @@ template <typename T> da_status decision_tree<T>::fit_serial() {
     return status;
 }
 
-template <typename T> da_status decision_tree<T>::fit_parallel() {
+template <typename T> da_status decision_tree_classification<T>::fit_parallel() {
     /* Fit the tree in a single persistent parallel region
      * One fork/join per tree instead of per node: reduce thread synchronization overhead in nested parallel regions from forests.
      * Sequential parts use omp single, parallel feature evaluation uses omp for.
@@ -447,7 +448,7 @@ template <typename T> da_status decision_tree<T>::fit_parallel() {
     return status;
 }
 
-template <typename T> da_status decision_tree<T>::fit() {
+template <typename T> da_status decision_tree_classification<T>::fit() {
     da_status status = da_status_success;
 
     if (!this->init_done)
@@ -590,7 +591,7 @@ template <typename T> da_status decision_tree<T>::fit() {
     return status;
 }
 
-template <typename T> da_status decision_tree<T>::build_compact_tree() {
+template <typename T> da_status decision_tree_classification<T>::build_compact_tree() {
 
     // The training tree already stores children contiguously (see add_node),
     // so we can copy node-by-node and reuse `left_child_idx` directly.
@@ -638,7 +639,8 @@ template <typename T> da_status decision_tree<T>::build_compact_tree() {
 // LCOV_EXCL_START
 // Depth first build for the compact tree.
 // It is faster on some benchmarks problem but only marginally. Keeping it there for now if more refined benchmarking shows a clear advantage on some use cases
-template <typename T> da_status decision_tree<T>::build_compact_tree_depth_first() {
+template <typename T>
+da_status decision_tree_classification<T>::build_compact_tree_depth_first() {
 
     try {
         compact_tree.resize(n_nodes);

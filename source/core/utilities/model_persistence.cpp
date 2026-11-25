@@ -28,6 +28,7 @@
 #include "model_persistence.hpp"
 #include "approximate_neighbors_types.hpp"
 #include "common/tree_options_types.hpp"
+#include "da_logger.hpp"
 #include "da_vector.hpp"
 #include "linmod_types.hpp"
 #include "miscellaneous.hpp"
@@ -36,7 +37,6 @@
 #include <cstring>
 #include <fstream>
 #include <iomanip>
-#include <iostream>
 #include <limits>
 #include <new>
 #include <string>
@@ -202,17 +202,18 @@ da_status print_model_metadata(const std::vector<char> &file_data) {
 
     std::string int_size = saved_int_size == 4 ? "LP64" : "ILP64";
 
-    std::cout << "===== Serialized Model Metadata =====\n";
-    std::cout << std::setw(30) << "Header keyword:" << loaded_header_keyword << "\n";
-    std::cout << std::setw(30) << "Integer size:" << int_size << "\n";
-    std::cout << std::setw(30) << "Serialization version:" << saved_serialization_version
-              << "\n";
-    std::cout << std::setw(30) << "Handle type:" << handle_type << "\n";
-    std::cout << std::setw(30) << "Precision: Float" << precision * 8 << "\n";
-    std::cout << std::setw(30) << "Saved AOCL-DA build version:" << saved_aoclda_version
-              << "\n";
-    std::cout << "=====================================\n";
-    std::cout << std::flush;
+    da_logger::logger out;
+    out << "===== Serialized Model Metadata =====\n";
+    out << std::setw(30) << "Header keyword:" << loaded_header_keyword << "\n";
+    out << std::setw(30) << "Integer size:" << int_size << "\n";
+    out << std::setw(30) << "Serialization version:" << saved_serialization_version
+        << "\n";
+    out << std::setw(30) << "Handle type:" << handle_type << "\n";
+    out << std::setw(30) << "Precision: Float" << precision * 8 << "\n";
+    out << std::setw(30) << "Saved AOCL-DA build version:" << saved_aoclda_version
+        << "\n";
+    out << "=====================================\n";
+    out << std::flush;
 
     return da_status_success;
 }

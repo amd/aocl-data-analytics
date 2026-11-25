@@ -34,7 +34,7 @@ namespace ARCH {
 
 namespace da_decision_forest {
 
-template <typename T> da_status decision_forest<T>::read_storage_order() {
+template <typename T> da_status decision_forest_classification<T>::read_storage_order() {
     std::string opt_order;
     da_int iorder;
     da_status status = this->opts.get("storage order", opt_order, iorder);
@@ -45,7 +45,8 @@ template <typename T> da_status decision_forest<T>::read_storage_order() {
 }
 
 template <typename T>
-da_int decision_forest<T>::inference_block_nsamp(da_int nsamp, da_int n_threads) const {
+da_int decision_forest_classification<T>::inference_block_nsamp(da_int nsamp,
+                                                                da_int n_threads) const {
     da_int budget = da_utils::hidden_settings_query(
         "decision_forest.inference_block_elems", DF_INFERENCE_BUDGET);
     // n_threads * block_nsamp * n_class <= budget, with at least one sample per block.
@@ -60,11 +61,12 @@ da_int decision_forest<T>::inference_block_nsamp(da_int nsamp, da_int n_threads)
 }
 
 template <typename T>
-void decision_forest<T>::parallel_sum_proba(const T *X_test, da_int ldx_test,
-                                            da_int nsamp, const da_int &n_threads,
-                                            std::vector<T> &sum_proba,
-                                            std::vector<T> &thread_proba,
-                                            std::vector<T> &y_proba_tree) {
+void decision_forest_classification<T>::parallel_sum_proba(const T *X_test,
+                                                           da_int ldx_test, da_int nsamp,
+                                                           const da_int &n_threads,
+                                                           std::vector<T> &sum_proba,
+                                                           std::vector<T> &thread_proba,
+                                                           std::vector<T> &y_proba_tree) {
 
 #pragma omp parallel num_threads(n_threads)                                              \
     shared(X_test, ldx_test, nsamp, thread_proba, y_proba_tree) default(none)
@@ -107,10 +109,9 @@ void decision_forest<T>::parallel_sum_proba(const T *X_test, da_int ldx_test,
 }
 
 template <typename T>
-da_status
-decision_forest<T>::transpose_input_if_needed(da_int nsamp, const T *X_test,
-                                              da_int ldx_test, std::vector<T> &X_row,
-                                              const T *&X_eval, da_int &ldx_eval) {
+da_status decision_forest_classification<T>::transpose_input_if_needed(
+    da_int nsamp, const T *X_test, da_int ldx_test, std::vector<T> &X_row,
+    const T *&X_eval, da_int &ldx_eval) {
 
     X_eval = X_test;
     ldx_eval = ldx_test;
@@ -136,8 +137,9 @@ decision_forest<T>::transpose_input_if_needed(da_int nsamp, const T *X_test,
 }
 
 template <typename T>
-da_status decision_forest<T>::predict(da_int nsamp, da_int nfeat, const T *X_test,
-                                      da_int ldx_test, da_int *y_pred) {
+da_status decision_forest_classification<T>::predict(da_int nsamp, da_int nfeat,
+                                                     const T *X_test, da_int ldx_test,
+                                                     da_int *y_pred) {
 
     if (y_pred == nullptr) {
         return da_error(this->err, da_status_invalid_input,
@@ -220,9 +222,10 @@ da_status decision_forest<T>::predict(da_int nsamp, da_int nfeat, const T *X_tes
 }
 
 template <typename T>
-da_status decision_forest<T>::predict_proba(da_int nsamp, da_int nfeat, const T *X_test,
-                                            da_int ldx_test, T *y_proba, da_int nclass,
-                                            da_int ldy) {
+da_status decision_forest_classification<T>::predict_proba(da_int nsamp, da_int nfeat,
+                                                           const T *X_test,
+                                                           da_int ldx_test, T *y_proba,
+                                                           da_int nclass, da_int ldy) {
 
     if (nfeat != n_features) {
         return da_error(this->err, da_status_invalid_input,
@@ -340,10 +343,9 @@ da_status decision_forest<T>::predict_proba(da_int nsamp, da_int nfeat, const T 
 }
 
 template <typename T>
-da_status decision_forest<T>::predict_log_proba(da_int nsamp, da_int nfeat,
-                                                const T *X_test, da_int ldx_test,
-                                                T *y_log_proba, da_int nclass,
-                                                da_int ldy) {
+da_status decision_forest_classification<T>::predict_log_proba(
+    da_int nsamp, da_int nfeat, const T *X_test, da_int ldx_test, T *y_log_proba,
+    da_int nclass, da_int ldy) {
 
     da_status status =
         predict_proba(nsamp, nfeat, X_test, ldx_test, y_log_proba, nclass, ldy);
@@ -368,8 +370,9 @@ da_status decision_forest<T>::predict_log_proba(da_int nsamp, da_int nfeat,
 }
 
 template <typename T>
-da_status decision_forest<T>::score(da_int nsamp, da_int nfeat, const T *X_test,
-                                    da_int ldx_test, const da_int *y_test, T *score) {
+da_status decision_forest_classification<T>::score(da_int nsamp, da_int nfeat,
+                                                   const T *X_test, da_int ldx_test,
+                                                   const da_int *y_test, T *score) {
 
     if (score == nullptr) {
         return da_error_bypass(this->err, da_status_invalid_input,

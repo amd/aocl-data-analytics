@@ -251,13 +251,11 @@ class NLLSModel : public rda_handle {
     }
 
     void fit(NumericVector x, Function fun, Nullable<Function> jac = R_NilValue,
-                      Nullable<Function> hes = R_NilValue,
-                      Nullable<Function> hp = R_NilValue, SEXP data = R_NilValue,
-                      double ftol = 1.0e-8, double abs_ftol = 1.0e-8,
-                      double gtol = 1.0e-8, double abs_gtol = 1.0e-5,
-                      double xtol = 2.22e-16, double reg_term = 0.0, da_int maxit = 100,
-                      double fd_step = 1.0e-7, double fd_ttol = 1.0e-4,
-                      double maxtime = 1.0e6) {
+             Nullable<Function> hes = R_NilValue, Nullable<Function> hp = R_NilValue,
+             SEXP data = R_NilValue, double ftol = 1.0e-8, double abs_ftol = 1.0e-8,
+             double gtol = 1.0e-8, double abs_gtol = 1.0e-5, double xtol = 2.22e-16,
+             double reg_term = 0.0, da_int maxit = 100, double fd_step = 1.0e-7,
+             double fd_ttol = 1.0e-4, double maxtime = 1.0e6) {
 
         if (!handle)
             exception_check(da_status_handle_not_initialized,

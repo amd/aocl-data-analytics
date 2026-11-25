@@ -307,9 +307,8 @@ class BaseSVM : public rda_handle {
         da_int n_classifiers = nclass * (nclass - 1) / 2;
 
         IntegerVector lp_n_iterations(n_classifiers);
-        da_status status = da_handle_get_result_int(handle, da_svm_lp_n_iterations,
-                                                    &n_classifiers,
-                                                    lp_n_iterations.begin());
+        da_status status = da_handle_get_result_int(
+            handle, da_svm_lp_n_iterations, &n_classifiers, lp_n_iterations.begin());
         exception_check(status);
 
         return lp_n_iterations;

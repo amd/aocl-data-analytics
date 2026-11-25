@@ -29,8 +29,54 @@
 #include "aoclda.h"
 #include "da_handle.hpp"
 #include "macros.h"
+#include <memory>
 
 using namespace decision_tree_public;
+
+/**
+ * @brief Select and transactionally allocate a classification tree.
+ * @param[inout] handle Tree handle of precision T.
+ * @param[in] model Must be df_classifier.
+ * @return Success, or a handle, precision, model selection or allocation error.
+ */
+template <typename T>
+da_status da_tree_select_model(da_handle handle, da_df_model model) {
+    if (!handle)
+        return da_status_handle_not_initialized;
+    handle->clear();
+
+    da_status status = handle->check_precision<T>();
+    if (status != da_status_success)
+        return da_error_trace(handle->err, status, "Wrong precision type.");
+    if (handle->handle_type != da_handle_decision_tree)
+        return da_error(handle->err, da_status_invalid_handle_type,
+                        "handle was not initialized with da_handle_decision_tree.");
+    if (handle->get_alg_handle<T>() != nullptr)
+        return da_error(handle->err, da_status_invalid_input,
+                        "Cannot change the decision tree model once it has been set.");
+    if (model != df_classifier)
+        return da_error(handle->err, da_status_invalid_input,
+                        "The model selected is invalid.");
+
+    try {
+        std::unique_ptr<basic_handle<T>> candidate;
+        DISPATCHER(
+            handle->err,
+            candidate =
+                std::make_unique<da_decision_forest::decision_tree_classification<T>>(
+                    *handle->err))
+        status = handle->err->get_status();
+        if (status != da_status_success)
+            return status;
+        if constexpr (std::is_same_v<T, double>)
+            handle->alg_handle_d = candidate.release();
+        else
+            handle->alg_handle_s = candidate.release();
+    } catch (const std::bad_alloc &) {
+        return da_error(handle->err, da_status_memory_error, "Memory allocation error");
+    }
+    return da_status_success;
+}
 
 template <typename T>
 da_status da_tree_set_training_data(da_handle handle, da_int n_samples, da_int n_features,
@@ -46,8 +92,10 @@ da_status da_tree_set_training_data(da_handle handle, da_int n_samples, da_int n
 
     DISPATCHER(
         handle->err,
-        return (decision_tree_set_data<da_decision_forest::decision_tree<T>, T>(
-            handle, n_samples, n_features, n_class, X, ldx, y, categorical_features)));
+        return (
+            decision_tree_set_data<da_decision_forest::decision_tree_classification<T>,
+                                   T>(handle, n_samples, n_features, n_class, X, ldx, y,
+                                      categorical_features)));
 }
 
 template <typename T> da_status da_tree_fit(da_handle handle) {
@@ -75,9 +123,11 @@ da_status da_tree_predict(da_handle handle, da_int n_obs, da_int n_features,
     if (status != da_status_success)
         return da_error_trace(handle->err, status, "Wrong precision type.");
 
-    DISPATCHER(handle->err,
-               return (decision_tree_predict<da_decision_forest::decision_tree<T>, T>(
-                   handle, n_obs, n_features, X_test, ldx_test, y_pred)));
+    DISPATCHER(
+        handle->err,
+        return (
+            decision_tree_predict<da_decision_forest::decision_tree_classification<T>, T>(
+                handle, n_obs, n_features, X_test, ldx_test, y_pred)));
 }
 
 template <typename T>
@@ -92,10 +142,10 @@ da_status da_tree_predict_proba(da_handle handle, da_int n_obs, da_int n_feature
     if (status != da_status_success)
         return da_error_trace(handle->err, status, "Wrong precision type.");
 
-    DISPATCHER(
-        handle->err,
-        return (decision_tree_predict_proba<da_decision_forest::decision_tree<T>, T>(
-            handle, n_obs, n_features, X_test, ldx_test, y_pred, n_class, ldy)));
+    DISPATCHER(handle->err,
+               return (decision_tree_predict_proba<
+                       da_decision_forest::decision_tree_classification<T>, T>(
+                   handle, n_obs, n_features, X_test, ldx_test, y_pred, n_class, ldy)));
 }
 
 template <typename T>
@@ -110,10 +160,10 @@ da_status da_tree_predict_log_proba(da_handle handle, da_int n_obs, da_int n_fea
     if (status != da_status_success)
         return da_error_trace(handle->err, status, "Wrong precision type.");
 
-    DISPATCHER(
-        handle->err,
-        return (decision_tree_predict_log_proba<da_decision_forest::decision_tree<T>, T>(
-            handle, n_obs, n_features, X_test, ldx_test, y_pred, n_class, ldy)));
+    DISPATCHER(handle->err,
+               return (decision_tree_predict_log_proba<
+                       da_decision_forest::decision_tree_classification<T>, T>(
+                   handle, n_obs, n_features, X_test, ldx_test, y_pred, n_class, ldy)));
 }
 
 template <typename T>
@@ -130,10 +180,13 @@ da_status da_tree_score(da_handle handle, da_int n_samples, da_int n_features,
 
     DISPATCHER(
         handle->err,
-        return (decision_tree_score<da_decision_forest::decision_tree<T>, T>(
-            handle, n_samples, n_features, X_test, ldx_test, y_test, mean_accuracy)));
+        return (
+            decision_tree_score<da_decision_forest::decision_tree_classification<T>, T>(
+                handle, n_samples, n_features, X_test, ldx_test, y_test, mean_accuracy)));
 }
 
+template da_status da_tree_select_model<float>(da_handle, da_df_model);
+template da_status da_tree_select_model<double>(da_handle, da_df_model);
 template da_status da_tree_set_training_data<float>(da_handle, da_int, da_int, da_int,
                                                     const float *, da_int, const da_int *,
                                                     const da_int *);

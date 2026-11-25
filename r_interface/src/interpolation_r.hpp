@@ -36,7 +36,6 @@
 
 using namespace Rcpp;
 
-
 class CubicSpline : public rda_handle {
     // Number of interpolation sites used in the most recent fit.
     da_int n_sites = 0;
@@ -120,8 +119,8 @@ class CubicSpline : public rda_handle {
 
         NumericVector y(n_orders * dim_y * n_eval);
         std::vector<da_int> ord(orders.begin(), orders.end());
-        da_status status = da_interpolation_evaluate_d(
-            handle, n_eval, x_eval.begin(), y.begin(), n_orders, ord.data());
+        da_status status = da_interpolation_evaluate_d(handle, n_eval, x_eval.begin(),
+                                                       y.begin(), n_orders, ord.data());
         exception_check(status);
 
         y.attr("dim") = Dimension(n_eval, dim_y, n_orders);

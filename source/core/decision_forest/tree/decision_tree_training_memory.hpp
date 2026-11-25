@@ -36,7 +36,8 @@
 namespace ARCH {
 namespace da_decision_forest {
 
-template <typename T> da_status decision_tree<T>::init_working_memory_raw() {
+template <typename T>
+da_status decision_tree_classification<T>::init_working_memory_raw() {
 
     if (usr_categorical_feat != nullptr) {
         max_cat =
@@ -62,7 +63,8 @@ template <typename T> da_status decision_tree<T>::init_working_memory_raw() {
     return da_status_success;
 }
 
-template <typename T> da_status decision_tree<T>::init_working_memory_hist() {
+template <typename T>
+da_status decision_tree_classification<T>::init_working_memory_hist() {
     if (X_binned != nullptr && internal_bins) {
         delete X_binned;
         X_binned = nullptr;
@@ -93,7 +95,7 @@ template <typename T> da_status decision_tree<T>::init_working_memory_hist() {
     return da_status_success;
 }
 
-template <typename T> da_status decision_tree<T>::init_working_memory() {
+template <typename T> da_status decision_tree_classification<T>::init_working_memory() {
     da_status status = da_status_success;
 
     // Initialize common memory
@@ -146,7 +148,8 @@ template <typename T> da_status decision_tree<T>::init_working_memory() {
     return status;
 }
 
-template <typename T> da_status decision_tree<T>::resize_tree(size_t new_size) {
+template <typename T>
+da_status decision_tree_classification<T>::resize_tree(size_t new_size) {
     try {
         tree.resize(new_size);
         class_props.resize(new_size * this->n_class);

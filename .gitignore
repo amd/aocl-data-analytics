@@ -12,12 +12,27 @@ tags
 *.mod
 # Compiled Python
 *.pyc
+# Python packaging metadata
+*.egg-info/
 
 # Compiled R wrappers
 RcppExports.cpp
 
+# AI related files and directories
 AI_plans/
-.github/agents
+.plans/
+.github/plans/
+AI Tracker/
+.github/agents/
+.github/instructions/work-ledger-reminder.instructions.md
+.github/skills/submit-to-tracker/
+.github/skills/work-ledger/
+.github/skills/pipeline
 .handoff
-paper
 
+# Papers
+paper/
+
+# Temp
+tmp/
+temp/

@@ -68,6 +68,20 @@ const static std::map<da_handle_type, std::string> htypes{
 void options_print(da_handle_type htype) {
     da_handle handle = nullptr;
     EXPECT_EQ(da_handle_init_d(&handle, htype), da_status_success);
+    switch (htype) {
+    case da_handle_decision_tree:
+        ASSERT_EQ(da_tree_select_model_d(handle, df_classifier), da_status_success);
+        break;
+    case da_handle_decision_forest:
+        ASSERT_EQ(da_forest_select_model_d(handle, df_classifier), da_status_success);
+        break;
+    case da_handle_interpolation:
+        EXPECT_EQ(da_interpolation_select_model_d(handle, interpolation_cubic_spline),
+                  da_status_success);
+        break;
+    default:
+        break;
+    }
     EXPECT_EQ(da_options_print(handle), da_status_success);
     // Also print in other formats
     da_options::OptionRegistry *opts;
@@ -80,6 +94,20 @@ void options_print(da_handle_type htype) {
 void options_print_rst(da_handle_type htype, const std::string caption) {
     da_handle handle = nullptr;
     EXPECT_EQ(da_handle_init_d(&handle, htype), da_status_success);
+    switch (htype) {
+    case da_handle_decision_tree:
+        ASSERT_EQ(da_tree_select_model_d(handle, df_classifier), da_status_success);
+        break;
+    case da_handle_decision_forest:
+        ASSERT_EQ(da_forest_select_model_d(handle, df_classifier), da_status_success);
+        break;
+    case da_handle_interpolation:
+        EXPECT_EQ(da_interpolation_select_model_d(handle, interpolation_cubic_spline),
+                  da_status_success);
+        break;
+    default:
+        break;
+    }
     da_options::OptionRegistry *opts;
     EXPECT_EQ(handle->get_current_opts(&opts), da_status_success);
     // ReStructuredText

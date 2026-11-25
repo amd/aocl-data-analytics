@@ -39,14 +39,17 @@ using namespace da_tree_options_types;
 using namespace da_errors;
 
 template <typename T>
-decision_forest<T>::decision_forest(da_errors::da_error_t &err) : basic_handle<T>(err) {
+decision_forest_classification<T>::decision_forest_classification(
+    da_errors::da_error_t &err)
+    : decision_forest<T>(err) {
     // Initialize the options registry
     // Any error is stored err->status[.] and this NEEDS to be checked
     // by the caller.
     register_forest_options<T>(this->opts, *this->err);
 }
 
-template <typename T> decision_forest<T>::~decision_forest() {
+template <typename T>
+decision_forest_classification<T>::~decision_forest_classification() {
     // Destructor needs to handle arrays that were allocated due to row major storage of input data
     if (X_temp)
         delete[] (X_temp);
@@ -55,7 +58,8 @@ template <typename T> decision_forest<T>::~decision_forest() {
 }
 
 template <typename T>
-da_status decision_forest<T>::get_result(da_result query, da_int *dim, da_int *result) {
+da_status decision_forest_classification<T>::get_result(da_result query, da_int *dim,
+                                                        da_int *result) {
     // check to see if user needs common stuff from the basic handle first
     da_status status = this->get_result_common(query, dim, result);
     if (status != da_status_unknown_query) {
@@ -67,7 +71,8 @@ da_status decision_forest<T>::get_result(da_result query, da_int *dim, da_int *r
 };
 
 template <typename T>
-da_status decision_forest<T>::get_result(da_result query, da_int *dim, T *result) {
+da_status decision_forest_classification<T>::get_result(da_result query, da_int *dim,
+                                                        T *result) {
 
     if (!this->model_trained)
         return da_warn_bypass(
@@ -101,10 +106,9 @@ da_status decision_forest<T>::get_result(da_result query, da_int *dim, T *result
 }
 
 template <typename T>
-da_status decision_forest<T>::set_training_data(da_int n_samples, da_int n_features,
-                                                const T *X, da_int ldx, const da_int *y,
-                                                da_int n_class,
-                                                const da_int *usr_cat_feat) {
+da_status decision_forest_classification<T>::set_training_data(
+    da_int n_samples, da_int n_features, const T *X, da_int ldx, const da_int *y,
+    da_int n_class, const da_int *usr_cat_feat) {
 
     // Guard against errors due to multiple calls using the same class instantiation
     if (X_temp) {

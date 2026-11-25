@@ -27,28 +27,12 @@
 # attribute-defined-outside-init
 
 import os
-from setuptools import setup, find_packages
-from setuptools.command.bdist_wheel import bdist_wheel
-from packaging.tags import sys_tags
-
-# Create a specific bdist_wheel to signal to setup.py that the wheel is not pure python
+from setuptools import Distribution, setup, find_packages
 
 
-class spec_bdist_wheel(bdist_wheel):
-    def get_tag(self):
-        python_tag, abi_tag, platform_tag = None, None, None
-
-        for tag in sys_tags():
-            if abi_tag is None:
-                abi_tag = str(tag.abi)
-            if platform_tag is None:
-                platform_tag = str(tag.platform)
-            if python_tag is None:
-                python_tag = str(tag.interpreter)
-            if abi_tag is not None and platform_tag is not None:
-                break
-
-        return python_tag, abi_tag, platform_tag
+class BinaryDistribution(Distribution):
+    def has_ext_modules(self):
+        return True
 
 
 # List of all dependent libraries that were copied in the python_package install
@@ -59,7 +43,7 @@ for lib in os.listdir('aoclda'):
         dep_libs.append(lib)
 
 setup(
-    cmdclass={'bdist_wheel': spec_bdist_wheel},
+    distclass=BinaryDistribution,
     packages=find_packages(),
     include_package_data=True,
     package_data={'aoclda': dep_libs + ['License', 'Notices']},

@@ -51,7 +51,8 @@ typedef enum da_interpolation_model_ da_interpolation_model;
  * \brief Select the interpolation model.
  *
  * Choose the type of interpolation model to use.
- * This function must be called before setting interpolation sites. At the moment, only cubic spline is supported ( \ref interpolation_cubic_spline).
+ * This function must be called before accessing interpolation options or setting interpolation sites. 
+ * At the moment, only cubic spline is supported ( \ref interpolation_cubic_spline).
  *
  * The interpolation model can only be set once. After calling this function, the model cannot be changed.
  *
@@ -62,7 +63,8 @@ typedef enum da_interpolation_model_ da_interpolation_model;
  * - \ref da_status_invalid_handle_type - the handle was not initialized with da_handle_interpolation.
  * - \ref da_status_wrong_type - the handle may have been initialized with the wrong precision.
  * - \ref da_status_handle_not_initialized - the handle has not been initialized.
- * - \ref da_status_invalid_input - the model has already been set.
+ * - \ref da_status_invalid_input - the model is invalid or has already been set.
+ * - \ref da_status_memory_error - memory allocation failed.
  */
 da_status da_interpolation_select_model_d(da_handle handle, da_interpolation_model model);
 da_status da_interpolation_select_model_s(da_handle handle, da_interpolation_model model);

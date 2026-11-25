@@ -86,9 +86,10 @@ traversal_mode traversal_dispatcher(size_t tree_footprint, da_order order,
 }
 
 template <typename T>
-da_status decision_tree<T>::compact_traverse(da_int nsamp, da_int nfeat, const T *X_test,
-                                             da_int ldx_test, da_int *y_pred,
-                                             bool validate_input) {
+da_status
+decision_tree_classification<T>::compact_traverse(da_int nsamp, da_int nfeat,
+                                                  const T *X_test, da_int ldx_test,
+                                                  da_int *y_pred, bool validate_input) {
 
     if (validate_input) {
         if (y_pred == nullptr) {
@@ -172,9 +173,11 @@ da_status decision_tree<T>::compact_traverse(da_int nsamp, da_int nfeat, const T
 }
 
 template <typename T>
-da_status decision_tree<T>::compact_traverse(da_int nsamp, da_int nfeat, const T *X_test,
-                                             da_int ldx_test, T *y_proba, da_int n_class,
-                                             da_int ldy, bool validate_input) {
+da_status decision_tree_classification<T>::compact_traverse(da_int nsamp, da_int nfeat,
+                                                            const T *X_test,
+                                                            da_int ldx_test, T *y_proba,
+                                                            da_int n_class, da_int ldy,
+                                                            bool validate_input) {
     da_status status;
     if (validate_input) {
         if (y_proba == nullptr) {
@@ -208,6 +211,12 @@ da_status decision_tree<T>::compact_traverse(da_int nsamp, da_int nfeat, const T
         }
 
         // call the da_utils version directly to never check the data even if the option is set
+        status = da_utils::check_2D_array(false, this->order, this->err, nsamp, n_class,
+                                          y_proba, ldy, "n_samples", "n_class", "y_proba",
+                                          "ldy", 1, 1);
+        if (status != da_status_success) {
+            return status;
+        }
         status = da_utils::check_2D_array(false, this->order, this->err, nsamp, nfeat,
                                           X_test, ldx_test, "n_samples", "n_features",
                                           "X_test", "ldx_test", 1, 1);
@@ -265,8 +274,10 @@ da_status decision_tree<T>::compact_traverse(da_int nsamp, da_int nfeat, const T
 
 template <typename T>
 template <da_order ORDER, bool HAS_CAT_FEAT>
-da_status decision_tree<T>::compact_traverse_sequential(da_int nsamp, const T *X_test,
-                                                        da_int ldx_test, da_int *y_pred) {
+da_status decision_tree_classification<T>::compact_traverse_sequential(da_int nsamp,
+                                                                       const T *X_test,
+                                                                       da_int ldx_test,
+                                                                       da_int *y_pred) {
     for (da_int i = 0; i < nsamp; i++) {
         da_int current_idx = 0;
         const T *row = nullptr;
@@ -308,9 +319,9 @@ da_status decision_tree<T>::compact_traverse_sequential(da_int nsamp, const T *X
 
 template <typename T>
 template <da_order ORDER, bool HAS_CAT_FEAT>
-da_status decision_tree<T>::compact_traverse_sequential(da_int nsamp, const T *X_test,
-                                                        da_int ldx_test, T *y_proba,
-                                                        da_int n_class, da_int ldy) {
+da_status decision_tree_classification<T>::compact_traverse_sequential(
+    da_int nsamp, const T *X_test, da_int ldx_test, T *y_proba, da_int n_class,
+    da_int ldy) {
 
     for (da_int i = 0; i < nsamp; i++) {
         da_int current_idx = 0;
@@ -358,7 +369,7 @@ da_status decision_tree<T>::compact_traverse_sequential(da_int nsamp, const T *X
 }
 
 template <typename T>
-da_status decision_tree<T>::compact_traverse_sequential_vectorized(
+da_status decision_tree_classification<T>::compact_traverse_sequential_vectorized(
     da_int nsamp, const T *X_test, da_int ldx, da_int *y_pred, vectorization_type isa) {
 
     da_int block_size;
@@ -407,7 +418,7 @@ da_status decision_tree<T>::compact_traverse_sequential_vectorized(
 }
 
 template <typename T>
-da_status decision_tree<T>::compact_traverse_sequential_vectorized(
+da_status decision_tree_classification<T>::compact_traverse_sequential_vectorized(
     da_int nsamp, const T *X_test, da_int ldx, T *y_proba, da_int n_class, da_int ldy,
     vectorization_type isa) {
 
@@ -477,9 +488,8 @@ da_status decision_tree<T>::compact_traverse_sequential_vectorized(
  */
 template <typename T>
 template <bool LEAF_RET>
-da_status decision_tree<T>::compact_traverse_sequential_avx512(const T *X_block,
-                                                               da_int ldx,
-                                                               da_int *y_pred) {
+da_status decision_tree_classification<T>::compact_traverse_sequential_avx512(
+    const T *X_block, da_int ldx, da_int *y_pred) {
 
     __m512i row_start = _mm512_set_epi32(
         15 * (int32_t)ldx, 14 * (int32_t)ldx, 13 * (int32_t)ldx, 12 * (int32_t)ldx,
@@ -559,8 +569,8 @@ da_status decision_tree<T>::compact_traverse_sequential_avx512(const T *X_block,
  */
 template <typename T>
 template <bool LEAF_RET>
-da_status decision_tree<T>::compact_traverse_sequential_avx2(const T *X_block, da_int ldx,
-                                                             da_int *y_pred) {
+da_status decision_tree_classification<T>::compact_traverse_sequential_avx2(
+    const T *X_block, da_int ldx, da_int *y_pred) {
 
     __m256i row_start = _mm256_set_epi32(7 * ldx, 6 * ldx, 5 * ldx, 4 * ldx, 3 * ldx,
                                          2 * ldx, 1 * ldx, 0);
@@ -641,8 +651,9 @@ da_status decision_tree<T>::compact_traverse_sequential_avx2(const T *X_block, d
 
 template <typename T>
 template <da_order ORDER, bool HAS_CAT_FEAT>
-da_status decision_tree<T>::compact_traverse_BFS(da_int nsamp, const T *X_test,
-                                                 da_int ldx_test, da_int *y_pred) {
+da_status
+decision_tree_classification<T>::compact_traverse_BFS(da_int nsamp, const T *X_test,
+                                                      da_int ldx_test, da_int *y_pred) {
     std::vector<da_int> idx_src(nsamp);
 
     da_std::iota(idx_src.begin(), idx_src.end(), (da_int)0);
@@ -731,9 +742,10 @@ da_status decision_tree<T>::compact_traverse_BFS(da_int nsamp, const T *X_test,
 
 template <typename T>
 template <da_order ORDER, bool HAS_CAT_FEAT>
-da_status decision_tree<T>::compact_traverse_BFS(da_int nsamp, const T *X_test,
-                                                 da_int ldx_test, T *y_proba,
-                                                 da_int n_class, da_int ldy) {
+da_status
+decision_tree_classification<T>::compact_traverse_BFS(da_int nsamp, const T *X_test,
+                                                      da_int ldx_test, T *y_proba,
+                                                      da_int n_class, da_int ldy) {
     std::vector<da_int> idx_src(nsamp);
 
     da_std::iota(idx_src.begin(), idx_src.end(), (da_int)0);
@@ -827,8 +839,9 @@ da_status decision_tree<T>::compact_traverse_BFS(da_int nsamp, const T *X_test,
 }
 
 template <typename T>
-da_status decision_tree<T>::predict(da_int nsamp, da_int nfeat, const T *X_test,
-                                    da_int ldx_test, da_int *y_pred) {
+da_status decision_tree_classification<T>::predict(da_int nsamp, da_int nfeat,
+                                                   const T *X_test, da_int ldx_test,
+                                                   da_int *y_pred) {
     da_status status = read_storage_order();
     if (status != da_status_success)
         return status;
@@ -871,9 +884,10 @@ da_status decision_tree<T>::predict(da_int nsamp, da_int nfeat, const T *X_test,
 }
 
 template <typename T>
-da_status decision_tree<T>::predict_proba(da_int nsamp, da_int nfeat, const T *X_test,
-                                          da_int ldx_test, T *y_proba_pred, da_int nclass,
-                                          da_int ldy) {
+da_status decision_tree_classification<T>::predict_proba(da_int nsamp, da_int nfeat,
+                                                         const T *X_test, da_int ldx_test,
+                                                         T *y_proba_pred, da_int nclass,
+                                                         da_int ldy) {
     da_status status = read_storage_order();
     if (status != da_status_success)
         return status;
@@ -910,7 +924,10 @@ da_status decision_tree<T>::predict_proba(da_int nsamp, da_int nfeat, const T *X
                                   "n_features", "X_test", "ldx_test");
     if (status != da_status_success)
         return status;
-
+    status = this->check_2D_array(user_order, nsamp, nclass, y_proba_pred, ldy,
+                                  "n_samples", "n_class", "y_proba", "ldy");
+    if (status != da_status_success)
+        return status;
     std::vector<T> X_row, y_row;
     try {
         X_row.resize((size_t)nsamp * nfeat);
@@ -939,9 +956,11 @@ da_status decision_tree<T>::predict_proba(da_int nsamp, da_int nfeat, const T *X
 }
 
 template <typename T>
-da_status decision_tree<T>::predict_log_proba(da_int nsamp, da_int nfeat, const T *X_test,
-                                              da_int ldx_test, T *y_log_proba,
-                                              da_int nclass, da_int ldy) {
+da_status decision_tree_classification<T>::predict_log_proba(da_int nsamp, da_int nfeat,
+                                                             const T *X_test,
+                                                             da_int ldx_test,
+                                                             T *y_log_proba,
+                                                             da_int nclass, da_int ldy) {
     da_status status = da_status_success;
 
     status = predict_proba(nsamp, nfeat, X_test, ldx_test, y_log_proba, nclass, ldy);
@@ -968,8 +987,9 @@ da_status decision_tree<T>::predict_log_proba(da_int nsamp, da_int nfeat, const 
 }
 
 template <typename T>
-da_status decision_tree<T>::score(da_int nsamp, da_int nfeat, const T *X_test,
-                                  da_int ldx_test, const da_int *y_test, T *accuracy) {
+da_status decision_tree_classification<T>::score(da_int nsamp, da_int nfeat,
+                                                 const T *X_test, da_int ldx_test,
+                                                 const da_int *y_test, T *accuracy) {
 
     da_status status;
     if (accuracy == nullptr) {
@@ -1039,9 +1059,8 @@ da_status decision_tree<T>::score(da_int nsamp, da_int nfeat, const T *X_test,
 
 /* training tree based inference functions -- Kept as a baseline */
 template <typename T>
-da_status decision_tree<T>::predict_training_tree(da_int nsamp, da_int nfeat,
-                                                  const T *X_test, da_int ldx_test,
-                                                  da_int *y_pred) {
+da_status decision_tree_classification<T>::predict_training_tree(
+    da_int nsamp, da_int nfeat, const T *X_test, da_int ldx_test, da_int *y_pred) {
     if (y_pred == nullptr) {
         return da_error_bypass(this->err, da_status_invalid_pointer,
                                "y_pred is not a valid pointer.");
@@ -1116,10 +1135,9 @@ da_status decision_tree<T>::predict_training_tree(da_int nsamp, da_int nfeat,
 }
 
 template <typename T>
-da_status decision_tree<T>::predict_proba_training_tree(da_int nsamp, da_int nfeat,
-                                                        const T *X_test, da_int ldx_test,
-                                                        T *y_proba_pred, da_int nclass,
-                                                        da_int ldy) {
+da_status decision_tree_classification<T>::predict_proba_training_tree(
+    da_int nsamp, da_int nfeat, const T *X_test, da_int ldx_test, T *y_proba_pred,
+    da_int nclass, da_int ldy) {
 
     const T *X_test_temp;
     T *utility_ptr1 = nullptr;
@@ -1229,9 +1247,10 @@ da_status decision_tree<T>::predict_proba_training_tree(da_int nsamp, da_int nfe
 }
 
 template <typename T>
-da_status decision_tree<T>::score_training_tree(da_int nsamp, da_int nfeat,
-                                                const T *X_test, da_int ldx_test,
-                                                const da_int *y_test, T *accuracy) {
+da_status
+decision_tree_classification<T>::score_training_tree(da_int nsamp, da_int nfeat,
+                                                     const T *X_test, da_int ldx_test,
+                                                     const da_int *y_test, T *accuracy) {
 
     const T *X_test_temp;
     T *utility_ptr1 = nullptr;

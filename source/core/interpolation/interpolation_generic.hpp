@@ -38,7 +38,7 @@
 namespace ARCH {
 
 namespace da_interpolation {
-template <typename T> class interpolation_generic {
+template <typename T> class interpolation_generic : public basic_handle<T> {
   protected:
     // Interpolation data
     // Dimensions
@@ -75,21 +75,21 @@ template <typename T> class interpolation_generic {
     bool sites_set = false;
     bool values_set = false;
     bool derivatives_set = false;
-    bool model_trained = false;
-
-    // Handle data
-    da_errors::da_error_t *err = nullptr;
-    da_options::OptionRegistry *opts = nullptr;
 
   public:
-    interpolation_generic(da_errors::da_error_t &err, da_options::OptionRegistry &opts)
-        : err(&err), opts(&opts){};
+    explicit interpolation_generic(da_errors::da_error_t &err) : basic_handle<T>(err) {};
     virtual ~interpolation_generic() {
         if (x_internal != nullptr)
             delete[] x_internal;
         x_sites = nullptr;
     };
-    void refresh();
+    void refresh() override;
+    da_status save_model(
+        [[maybe_unused]] da_model_persistence::serialization_buffer &buffer) override {
+        return da_error(this->err, da_status_not_implemented,
+                        "Interpolation models cannot be saved in this release.");
+    }
+
     da_status set_sites_1d(da_int n, const T *x);
     da_status set_sites_uniform_1d(da_int n, T x_start, T x_end);
     da_status set_values_1d(da_int n, da_int dim, const T *y_data, da_int ldy_data,
@@ -103,15 +103,21 @@ template <typename T> class interpolation_generic {
     virtual da_status evaluate(da_int n_eval, const T *x_eval, T *y_eval,
                                da_int n_orders = 1, const da_int *order = 0);
 
-    virtual da_status get_result(da_result query, da_int *dim, T *result);
-    virtual da_status get_result(da_result query, da_int *dim, da_int *result);
+    da_status get_result(da_result query, da_int *dim, T *result) override;
+    da_status get_result(da_result query, da_int *dim, da_int *result) override;
     da_status get_result_common(da_result query, da_int *dim, da_int *result);
 };
 
-template <typename T> void interpolation_generic<T>::refresh() { model_trained = false; }
+template <typename T> void interpolation_generic<T>::refresh() {
+    this->model_trained = false;
+}
 
 template <typename T>
 da_status interpolation_generic<T>::set_sites_1d(da_int n, const T *x) {
+    if (x == nullptr)
+        return da_error(this->err, da_status_invalid_pointer,
+                        "Interpolation site array cannot be null.");
+
     if (sites_set)
         return da_error(this->err, da_status_invalid_input,
                         "Cannot change the interpolation sites.");
@@ -186,7 +192,7 @@ da_status interpolation_generic<T>::set_sites_1d(da_int n, const T *x) {
     interval_index_up[index_size - 2] = n_sites - 1;
     interval_index_up[index_size - 1] = n_sites - 1;
 
-    model_trained = false;
+    this->model_trained = false;
     sites_set = true;
     return da_status_success;
 }
@@ -232,7 +238,7 @@ da_status interpolation_generic<T>::set_sites_uniform_1d(da_int n, T x_start, T 
     this->x_start = x_start;
     this->x_end = x_end;
 
-    model_trained = false;
+    this->model_trained = false;
     sites_set = true;
 
     return da_status_success;
@@ -261,8 +267,8 @@ da_status interpolation_generic<T>::set_values_1d(da_int n, da_int dim, const T 
 
     std::string opt_order, check_data_str;
     da_int check_data, sto;
-    this->opts->get("storage order", opt_order, sto);
-    this->opts->get("check data", check_data_str, check_data);
+    this->opts.get("storage order", opt_order, sto);
+    this->opts.get("check data", check_data_str, check_data);
     this->storage_order = da_order(sto);
 
     da_status status = ARCH::da_utils::check_2D_array(

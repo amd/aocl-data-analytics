@@ -49,6 +49,9 @@
 #include <stdio.h>
 #include <stdlib.h>
 
+namespace ARCH {
+namespace da_kmeans {
+
 template <typename T>
 void kmns(const T a[], da_int m, da_int n, da_int lda, T c[], da_int k, da_int ic1[],
           da_int nc[], da_int iter, T wss[], da_int *ifault, da_int *n_iter, da_int ic2[],
@@ -799,10 +802,6 @@ T r8_huge()
 
     return value;
 }
-
-namespace ARCH {
-
-namespace da_kmeans {
 
 using namespace da_kmeans_types;
 

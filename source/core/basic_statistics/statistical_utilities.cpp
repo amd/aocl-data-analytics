@@ -27,9 +27,11 @@
 
 #include "aoclda.h"
 #include "basic_statistics.hpp"
+#include "context.hpp"
 #include "da_std.hpp"
 #include "fp16_helpers.hpp"
 #include "macros.h"
+#include "telemetry.hpp"
 #include <algorithm>
 #include <cmath>
 #include <vector>
@@ -53,6 +55,7 @@ template <typename T> bool is_zero(T *arr, da_int len) {
 template <typename T>
 da_status standardize(da_order order, da_axis axis_in, da_int n_in, da_int p_in, T *x,
                       da_int ldx, da_int dof, da_int mode, T *shift, T *scale) {
+    SCOPED_TIMER; // Time this function
 
     da_int n, p;
     da_axis axis;

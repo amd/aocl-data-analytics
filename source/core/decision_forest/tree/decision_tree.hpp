@@ -45,8 +45,18 @@
 #include <random>
 
 namespace ARCH {
-
 namespace da_decision_forest {
+
+/** Model-neutral tree interface; classifier state remains in the concrete model. */
+template <typename T> class decision_tree : public basic_handle<T> {
+  public:
+    decision_tree() = default;
+    decision_tree(da_errors::da_error_t &err) : basic_handle<T>(err) {}
+    ~decision_tree() override = default;
+
+    virtual da_status fit() = 0;
+};
+
 using namespace da_tree_options_types;
 
 template <typename T> class node {
@@ -155,10 +165,7 @@ template <typename T> struct split_workspace {
 template <class T>
 using score_fun_t = typename std::function<T(da_int, da_int, std::vector<da_int> &)>;
 
-// Forward declaration so compact_tree can refer to decision_tree.
-template <typename T> class decision_tree;
-
-template <typename T> class decision_tree : public basic_handle<T> {
+template <typename T> class decision_tree_classification : public decision_tree<T> {
 
     bool init_done = false;
     da_int predict_proba_opt = true;
@@ -263,17 +270,19 @@ template <typename T> class decision_tree : public basic_handle<T> {
 
   public:
     // Constructor for public interfaces
-    decision_tree(da_errors::da_error_t &err);
+    decision_tree_classification(da_errors::da_error_t &err);
     // Constructor for forest model loading
-    decision_tree() = default;
+    decision_tree_classification() = default;
     // Constructor bypassing the optional parameters for internal forest use
     // Values will NOT be checked
-    decision_tree(bins<T> *X_binned, da_int max_depth, da_int min_node_sample,
-                  da_int method, da_int nfeat_split, da_int seed, T min_split_score,
-                  T feat_thresh, T min_improvement, bool bootstrap, da_int use_hist,
-                  da_int usr_max_bins, da_int cat_split_strat, da_int max_threads,
-                  da_order order);
-    ~decision_tree();
+    decision_tree_classification(bins<T> *X_binned, da_int max_depth,
+                                 da_int min_node_sample, da_int method,
+                                 da_int nfeat_split, da_int seed, T min_split_score,
+                                 T feat_thresh, T min_improvement, bool bootstrap,
+                                 da_int use_hist, da_int usr_max_bins,
+                                 da_int cat_split_strat, da_int max_threads,
+                                 da_order order);
+    ~decision_tree_classification() override;
     // manual options setters
     void set_storage_order(da_order order) { this->order = order; }
 
@@ -295,7 +304,7 @@ template <typename T> class decision_tree : public basic_handle<T> {
                                 da_int n_obs = 0, da_int *samples_subset = nullptr,
                                 const da_int *usr_cat_feat = nullptr,
                                 bool internal_tree = false);
-    da_status fit();
+    da_status fit() override;
 
     // Scoring utilities
     void count_class_occurences(std::vector<da_int> &class_occ, da_int start_idx,
@@ -440,4 +449,5 @@ template <typename T> class decision_tree : public basic_handle<T> {
 
 } // namespace da_decision_forest
 } // namespace ARCH
-#endif
+
+#endif // DECISION_TREE_HPP

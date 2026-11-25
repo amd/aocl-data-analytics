@@ -32,51 +32,64 @@
  * Get pointer to the option member of the currently active sub-handle.
  */
 da_status _da_handle::get_current_opts(da_options::OptionRegistry **opts) {
-    const std::string msg = "handle seems to be corrupted.";
+    *opts = nullptr;
 
     switch (precision) {
     case da_double:
-        if (alg_handle_d == nullptr)
-            return da_error(this->err, da_status_invalid_pointer, msg);
-        *opts = &alg_handle_d->opts;
+        if (alg_handle_d)
+            *opts = &alg_handle_d->opts;
         break;
     case da_single:
-        if (alg_handle_s == nullptr)
-            return da_error(this->err, da_status_invalid_pointer, msg);
-        *opts = &alg_handle_s->opts;
+        if (alg_handle_s)
+            *opts = &alg_handle_s->opts;
         break;
     default:
         return da_error(this->err, da_status_internal_error, // LCOV_EXCL_LINE
                         "handle precision was not correctly set");
         break;
     }
+    if (*opts == nullptr)
+        return da_error(this->err, da_status_invalid_input,
+                        "No algorithm implementation is available. "
+                        "Select a model before accessing options.");
+
     return da_status_success;
 }
 
 da_status _da_handle::handle_refresh() {
-    da_status status = da_status_success;
+    bool missing_implementation = false;
+
     switch (precision) {
     case da_double:
-        if (alg_handle_d == nullptr)
-            return da_error(this->err, da_status_invalid_pointer,
-                            "handle seems to be corrupted.");
-        alg_handle_d->refresh();
+        if (alg_handle_d)
+            alg_handle_d->refresh();
+        else
+            missing_implementation = true;
         break;
     case da_single:
-        if (alg_handle_s == nullptr)
-            return da_error(this->err, da_status_invalid_pointer,
-                            "handle seems to be corrupted.");
-        alg_handle_s->refresh();
+        if (alg_handle_s)
+            alg_handle_s->refresh();
+        else
+            missing_implementation = true;
         break;
     default:
         return da_error(this->err, da_status_internal_error, // LCOV_EXCL_LINE
                         "handle precision was not correctly set");
-        break;
     }
-    return status;
+
+    if (missing_implementation && !allows_deferred_allocation())
+        return da_error(this->err, da_status_invalid_pointer,
+                        "handle seems to be corrupted.");
+
+    return da_status_success;
 }
 
 da_status _da_handle::save_handle(std::vector<char> &buffer_data) {
+    if (alg_handle_s == nullptr && alg_handle_d == nullptr)
+        return da_error(this->err, da_status_invalid_input,
+                        "No algorithm implementation is available. "
+                        "Select a model before saving.");
+
     da_model_persistence::serialization_buffer buffer(this->handle_type);
     da_status status = buffer.set_buffer_data(&buffer_data);
     if (status != da_status_success)
@@ -129,16 +142,35 @@ da_status _da_handle::load_handle(da_handle &handle, const char *buffer_data,
     if (status != da_status_success)
         return status;
 
+    if (buffer.get_handle_type() == da_handle_interpolation) // LCOV_EXCL_BR_LINE
+        return da_status_internal_error;                     // LCOV_EXCL_LINE
+
     if (precision == (da_int)sizeof(float)) {
         status = da_handle_init_s(&handle, buffer.get_handle_type());
         if (status != da_status_success)
             return status;
+
+        if (handle->handle_type == da_handle_decision_tree)
+            status = da_tree_select_model_s(handle, df_classifier);
+        else if (handle->handle_type == da_handle_decision_forest)
+            status = da_forest_select_model_s(handle, df_classifier);
+        if (status != da_status_success)
+            return da_error_trace(handle->err, status,
+                                  "Failed to select classification while loading.");
 
         status = handle->alg_handle_s->load_model(buffer);
     } else if (precision == (da_int)sizeof(double)) {
         status = da_handle_init_d(&handle, buffer.get_handle_type());
         if (status != da_status_success)
             return status;
+
+        if (handle->handle_type == da_handle_decision_tree)
+            status = da_tree_select_model_d(handle, df_classifier);
+        else if (handle->handle_type == da_handle_decision_forest)
+            status = da_forest_select_model_d(handle, df_classifier);
+        if (status != da_status_success)
+            return da_error_trace(handle->err, status,
+                                  "Failed to select classification while loading.");
 
         status = handle->alg_handle_d->load_model(buffer);
     }

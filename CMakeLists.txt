@@ -1,25 +1,26 @@
 # Copyright (C) 2025-2026 Advanced Micro Devices, Inc. All rights reserved.
 #
-# Redistribution and use in source and binary forms, with or without
-# modification, are permitted provided that the following conditions are met: 1.
-# Redistributions of source code must retain the above copyright notice, this
-# list of conditions and the following disclaimer. 2. Redistributions in binary
-# form must reproduce the above copyright notice, this list of conditions and
-# the following disclaimer in the documentation and/or other materials provided
-# with the distribution. 3. Neither the name of the copyright holder nor the
-# names of its contributors may be used to endorse or promote products derived
-# from this software without specific prior written permission.
+# Redistribution and use in source and binary forms, with or without modification,
+# are permitted provided that the following conditions are met:
+# 1. Redistributions of source code must retain the above copyright notice,
+#    this list of conditions and the following disclaimer.
+# 2. Redistributions in binary form must reproduce the above copyright notice,
+#    this list of conditions and the following disclaimer in the documentation
+#    and/or other materials provided with the distribution.
+# 3. Neither the name of the copyright holder nor the names of its contributors
+#    may be used to endorse or promote products derived from this software without
+#    specific prior written permission.
 #
-# THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS "AS IS"
-# AND ANY EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED TO, THE
-# IMPLIED WARRANTIES OF MERCHANTABILITY AND FITNESS FOR A PARTICULAR PURPOSE ARE
-# DISCLAIMED. IN NO EVENT SHALL THE COPYRIGHT HOLDER OR CONTRIBUTORS BE LIABLE
-# FOR ANY DIRECT, INDIRECT, INCIDENTAL, SPECIAL, EXEMPLARY, OR CONSEQUENTIAL
-# DAMAGES (INCLUDING, BUT NOT LIMITED TO, PROCUREMENT OF SUBSTITUTE GOODS OR
-# SERVICES; LOSS OF USE, DATA, OR PROFITS; OR BUSINESS INTERRUPTION) HOWEVER
-# CAUSED AND ON ANY THEORY OF LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY,
-# OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE
-# OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
+# THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS "AS IS" AND
+# ANY EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED TO, THE IMPLIED
+# WARRANTIES OF MERCHANTABILITY AND FITNESS FOR A PARTICULAR PURPOSE ARE DISCLAIMED.
+# IN NO EVENT SHALL THE COPYRIGHT HOLDER OR CONTRIBUTORS BE LIABLE FOR ANY DIRECT,
+# INDIRECT, INCIDENTAL, SPECIAL, EXEMPLARY, OR CONSEQUENTIAL DAMAGES (INCLUDING,
+# BUT NOT LIMITED TO, PROCUREMENT OF SUBSTITUTE GOODS OR SERVICES; LOSS OF USE, DATA,
+# OR PROFITS; OR BUSINESS INTERRUPTION) HOWEVER CAUSED AND ON ANY THEORY OF LIABILITY,
+# WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE)
+# ARISING IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE
+# POSSIBILITY OF SUCH DAMAGE.
 #
 cmake_minimum_required(VERSION 3.26 FATAL_ERROR)
 if(POLICY CMP0167)
@@ -123,7 +124,7 @@ mark_as_advanced(INTERNAL_DOC)
 mark_as_advanced(UPDATE_OPTIONS_DOC)
 option(BUILD_SMP "Build using OpenMP and link to threaded BLAS and LAPACK" ON)
 option(VECTORIZATION_REPORTS "Generate vectorization reports" OFF)
-option(DA_LOGGING "Compile with debug printing" OFF)
+option(TELEMETRY "Compile with telemetry instrumentation" OFF)
 option(BUILD_SHARED_LIBS "Shared library build" OFF)
 # ARCH can be set as shown below, with default "native". If "dynamic" is set,
 # then a list of target architectures will be built and returned in BUILD_ARCHS.
@@ -251,10 +252,6 @@ endif()
 if(${CMAKE_BUILD_TYPE} MATCHES "Debug")
   # Be verbose about da_error trace on Debug builds
   list(APPEND AOCLDA_DEFS -DVERBOSE_ERROR)
-endif()
-
-if(DA_LOGGING)
-  add_compile_definitions(DA_LOGGING)
 endif()
 
 # modules directory for easy include
@@ -505,15 +502,20 @@ if(UPDATE_OPTIONS_DOC OR CMAKE_BUILD_TYPE MATCHES "Debug")
 endif()
 message(NOTICE
   "Building for ILP64        BUILD_ILP64..........: ${BUILD_ILP64}")
-message(NOTICE
-  "Building Python bindings  BUILD_PYTHON.........: ${BUILD_PYTHON}")
+if(BUILD_PYTHON)
+  message(NOTICE
+    "Building Python bindings  BUILD_PYTHON.........: ${BUILD_PYTHON} (WHEEL_POLICY=${WHEEL_POLICY})")
+else()
+  message(NOTICE
+    "Building Python bindings  BUILD_PYTHON.........: ${BUILD_PYTHON}")
+endif()
 message(NOTICE
   "Building Fortran code     BUILD_FORTRAN........: ${BUILD_FORTRAN}")
 message(NOTICE "Building with OpenMP      BUILD_SMP............: ${BUILD_SMP}")
 message(NOTICE
   "Shared library build      BUILD_SHARED_LIBS....: ${BUILD_SHARED_LIBS}")
 message(NOTICE "Building with Coverage    COVERAGE.............: ${COVERAGE}")
-message(NOTICE "Debug printing            DA_LOGGING...........: ${DA_LOGGING}")
+message(NOTICE "Telemetry instrumentation TELEMETRY............: ${TELEMETRY}")
 message(NOTICE "Building with Valgrind    VALGRIND.............: ${VALGRIND}")
 if(${VALGRIND})
   message(

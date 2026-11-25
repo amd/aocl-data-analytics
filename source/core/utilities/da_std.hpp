@@ -39,14 +39,14 @@
 #include <type_traits>
 
 // Provide an ostream insertion for _Float16 because libstdc++ does not supply
-// one and an unqualified `std::cout << val` for _Float16 would otherwise be
+// one and an unqualified `logger << val` for _Float16 would otherwise be
 // ambiguous between the integer/floating overloads. Promote to float for
 // formatting; this is the canonical representation for human-readable output.
 // Use a separate (non-undef'd) guard so it is defined exactly once per TU even
 // though DA_STD_HPP itself is undef'd between ARCH includes.
 #ifndef DA_STD_FLOAT16_OSTREAM_GUARD
 #define DA_STD_FLOAT16_OSTREAM_GUARD
-inline std::ostream &operator<<(std::ostream &os, _Float16 v) {
+static inline std::ostream &operator<<(std::ostream &os, _Float16 v) {
     return os << static_cast<float>(v);
 }
 #endif

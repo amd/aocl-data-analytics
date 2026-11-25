@@ -41,11 +41,10 @@ namespace da_decision_forest {
                 Initialiazation & destruction
  **************************************************************/
 template <typename T>
-da_status
-decision_tree<T>::set_training_data(da_int n_samples, da_int n_features, const T *X,
-                                    da_int ldx, const da_int *y, da_int n_class,
-                                    da_int n_obs, da_int *samples_subset,
-                                    const da_int *usr_cat_feat, bool internal_tree) {
+da_status decision_tree_classification<T>::set_training_data(
+    da_int n_samples, da_int n_features, const T *X, da_int ldx, const da_int *y,
+    da_int n_class, da_int n_obs, da_int *samples_subset, const da_int *usr_cat_feat,
+    bool internal_tree) {
 
     // Guard against errors due to multiple calls using the same class instantiation
     if (X_temp) {
@@ -120,7 +119,8 @@ decision_tree<T>::set_training_data(da_int n_samples, da_int n_features, const T
 }
 
 template <typename T>
-decision_tree<T>::decision_tree(da_errors::da_error_t &err) : basic_handle<T>(err) {
+decision_tree_classification<T>::decision_tree_classification(da_errors::da_error_t &err)
+    : decision_tree<T>(err) {
     // Initialize the options registry
     // Any error is stored err->status[.] and this needs to be checked
     // by the caller.
@@ -130,12 +130,11 @@ decision_tree<T>::decision_tree(da_errors::da_error_t &err) : basic_handle<T>(er
 // Constructor bypassing the optional parameters for internal forest use
 // Values will NOT be checked
 template <typename T>
-decision_tree<T>::decision_tree(bins<T> *X_binned, da_int max_depth,
-                                da_int min_node_sample, da_int method, da_int nfeat_split,
-                                da_int seed, T min_split_score, T feat_thresh,
-                                T min_improvement, bool bootstrap, da_int use_hist,
-                                da_int usr_max_bins, da_int cat_split_strat,
-                                da_int max_threads, da_order order)
+decision_tree_classification<T>::decision_tree_classification(
+    bins<T> *X_binned, da_int max_depth, da_int min_node_sample, da_int method,
+    da_int nfeat_split, da_int seed, T min_split_score, T feat_thresh, T min_improvement,
+    bool bootstrap, da_int use_hist, da_int usr_max_bins, da_int cat_split_strat,
+    da_int max_threads, da_order order)
     : X_binned(X_binned), max_depth(max_depth), min_node_sample(min_node_sample),
       method(method), nfeat_split(nfeat_split), seed(seed),
       min_split_score(min_split_score), feat_thresh(feat_thresh),
@@ -147,7 +146,7 @@ decision_tree<T>::decision_tree(bins<T> *X_binned, da_int max_depth,
     this->order = order;
 }
 
-template <typename T> decision_tree<T>::~decision_tree() {
+template <typename T> decision_tree_classification<T>::~decision_tree_classification() {
     // Destructor needs to handle arrays that were allocated due to row major storage of input data
     if (X_temp)
         delete[] (X_temp);
@@ -155,13 +154,13 @@ template <typename T> decision_tree<T>::~decision_tree() {
         delete X_binned;
 }
 
-template <typename T> void decision_tree<T>::refresh() {
+template <typename T> void decision_tree_classification<T>::refresh() {
     this->model_trained = false;
     if (tree.capacity() > 0)
         tree = std::vector<node<T>>();
 }
 
-template <typename T> void decision_tree<T>::clear_working_memory() {
+template <typename T> void decision_tree_classification<T>::clear_working_memory() {
 
     // Internal user data
     if (X_temp) {
@@ -183,7 +182,7 @@ template <typename T> void decision_tree<T>::clear_working_memory() {
     thread_workspaces = std::vector<split_workspace<T>>();
 }
 
-template <typename T> void decision_tree<T>::clear_training_tree() {
+template <typename T> void decision_tree_classification<T>::clear_training_tree() {
     tree = std::vector<node<T>>();
 }
 /*************************************************************************
@@ -191,7 +190,8 @@ template <typename T> void decision_tree<T>::clear_training_tree() {
  *************************************************************************/
 
 template <typename T>
-da_status decision_tree<T>::get_result(da_result query, da_int *dim, da_int *result) {
+da_status decision_tree_classification<T>::get_result(da_result query, da_int *dim,
+                                                      da_int *result) {
     // check to see if user needs common stuff from the basic handle first
     da_status status = this->get_result_common(query, dim, result);
     if (status != da_status_unknown_query) {
@@ -202,7 +202,8 @@ da_status decision_tree<T>::get_result(da_result query, da_int *dim, da_int *res
 };
 
 template <typename T>
-da_status decision_tree<T>::get_result(da_result query, da_int *dim, T *result) {
+da_status decision_tree_classification<T>::get_result(da_result query, da_int *dim,
+                                                      T *result) {
 
     if (!this->model_trained)
         return da_error_bypass(
@@ -238,14 +239,16 @@ da_status decision_tree<T>::get_result(da_result query, da_int *dim, T *result) 
 }
 
 // Getters for testing purposes
-template <typename T> std::vector<da_int> const &decision_tree<T>::get_samples_idx() {
+template <typename T>
+std::vector<da_int> const &decision_tree_classification<T>::get_samples_idx() {
     return samples_idx;
 }
-template <typename T> void decision_tree<T>::init_samples_idx() {
+template <typename T> void decision_tree_classification<T>::init_samples_idx() {
     samples_idx.resize(n_samples);
     da_std::iota(samples_idx.begin(), samples_idx.end(), 0);
 }
-template <typename T> void decision_tree<T>::init_feature_values(da_int feat_idx) {
+template <typename T>
+void decision_tree_classification<T>::init_feature_values(da_int feat_idx) {
     da_int col_idx = ldx * feat_idx;
     if (thread_workspaces.empty() ||
         thread_workspaces[0].feature_values.size() < (size_t)n_samples) {
@@ -259,36 +262,41 @@ template <typename T> void decision_tree<T>::init_feature_values(da_int feat_idx
         thread_workspaces[0].feature_values[i] = X[col_idx + samples_idx[i]];
     }
 }
-template <typename T> std::vector<T> const &decision_tree<T>::get_features_values() {
+template <typename T>
+std::vector<T> const &decision_tree_classification<T>::get_features_values() {
     return thread_workspaces[0].feature_values;
 }
-template <typename T> std::vector<da_int> const &decision_tree<T>::get_count_classes() {
+template <typename T>
+std::vector<da_int> const &decision_tree_classification<T>::get_count_classes() {
     return count_classes;
 }
 template <typename T>
-std::vector<da_int> const &decision_tree<T>::get_count_left_classes() {
+std::vector<da_int> const &decision_tree_classification<T>::get_count_left_classes() {
     return thread_workspaces[0].count_left_classes;
 }
 template <typename T>
-std::vector<da_int> const &decision_tree<T>::get_count_right_classes() {
+std::vector<da_int> const &decision_tree_classification<T>::get_count_right_classes() {
     return thread_workspaces[0].count_right_classes;
 }
-template <typename T> std::vector<da_int> const &decision_tree<T>::get_features_idx() {
+template <typename T>
+std::vector<da_int> const &decision_tree_classification<T>::get_features_idx() {
     return features_idx;
 }
 template <typename T>
-std::vector<split_workspace<T>> const &decision_tree<T>::get_thread_workspaces() {
+std::vector<split_workspace<T>> const &
+decision_tree_classification<T>::get_thread_workspaces() {
     return thread_workspaces;
 }
-template <typename T> bool decision_tree<T>::model_is_trained() {
+template <typename T> bool decision_tree_classification<T>::model_is_trained() {
     return this->model_trained;
 }
-template <typename T> std::vector<node<T>> const &decision_tree<T>::get_tree() {
+template <typename T>
+std::vector<node<T>> const &decision_tree_classification<T>::get_tree() {
     return tree;
 }
 
 // Setters for testing purposes
-template <typename T> void decision_tree<T>::set_bootstrap(bool bs) {
+template <typename T> void decision_tree_classification<T>::set_bootstrap(bool bs) {
     this->bootstrap = bs;
 }
 
@@ -312,8 +320,8 @@ template <typename T> da_status compact_node<T>::serialize(serialization_buffer 
 }
 
 template <typename T>
-da_status
-decision_tree<T>::tree_serialization(da_model_persistence::serialization_buffer &buffer) {
+da_status decision_tree_classification<T>::tree_serialization(
+    da_model_persistence::serialization_buffer &buffer) {
     da_status status = da_status_success;
 
     if (buffer.get_mode() == deserialize) {
@@ -339,7 +347,7 @@ decision_tree<T>::tree_serialization(da_model_persistence::serialization_buffer 
 
 /* Model persistence functions */
 template <typename T>
-da_status decision_tree<T>::serialize(serialization_buffer &buffer) {
+da_status decision_tree_classification<T>::serialize(serialization_buffer &buffer) {
     da_status status = da_status_success;
     auto io_dispatch = [&buffer, &status](auto &data) -> void {
         if (status != da_status_success) {
@@ -395,7 +403,7 @@ da_status decision_tree<T>::serialize(serialization_buffer &buffer) {
 }
 
 template <typename T>
-da_status decision_tree<T>::save_model(serialization_buffer &buffer) {
+da_status decision_tree_classification<T>::save_model(serialization_buffer &buffer) {
 
     if (!this->model_trained) {
         return da_error(this->err, da_status_no_data,
@@ -411,7 +419,7 @@ da_status decision_tree<T>::save_model(serialization_buffer &buffer) {
 }
 
 template <typename T>
-da_status decision_tree<T>::load_model(serialization_buffer &buffer) {
+da_status decision_tree_classification<T>::load_model(serialization_buffer &buffer) {
     da_status status = basic_handle<T>::load_model(buffer);
     if (status != da_status_success)
         return da_error_trace(this->err, status, "Failure deserializing model.");

@@ -1,33 +1,39 @@
 /* ************************************************************************
- * Copyright (c) 2024-2026 Advanced Micro Devices, Inc.
+ * Copyright (c) 2024-2026 Advanced Micro Devices, Inc. All rights reserved.
  *
- * Permission is hereby granted, free of charge, to any person obtaining a copy
- * of this software and associated documentation files (the "Software"), to deal
- * in the Software without restriction, including without limitation the rights
- * to use, copy, modify, merge, publish, distribute, sublicense, and/or sell
- * copies of the Software, and to permit persons to whom the Software is
- * furnished to do so, subject to the following conditions:
+ * Redistribution and use in source and binary forms, with or without modification,
+ * are permitted provided that the following conditions are met:
+ * 1. Redistributions of source code must retain the above copyright notice,
+ *    this list of conditions and the following disclaimer.
+ * 2. Redistributions in binary form must reproduce the above copyright notice,
+ *    this list of conditions and the following disclaimer in the documentation
+ *    and/or other materials provided with the distribution.
+ * 3. Neither the name of the copyright holder nor the names of its contributors
+ *    may be used to endorse or promote products derived from this software without
+ *    specific prior written permission.
  *
- * The above copyright notice and this permission notice shall be included in
- * all copies or substantial portions of the Software.
- *
- * THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
- * IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
- * FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
- * AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
- * LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
- * OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
- * THE SOFTWARE.
+ * THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS "AS IS" AND
+ * ANY EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED TO, THE IMPLIED
+ * WARRANTIES OF MERCHANTABILITY AND FITNESS FOR A PARTICULAR PURPOSE ARE DISCLAIMED.
+ * IN NO EVENT SHALL THE COPYRIGHT HOLDER OR CONTRIBUTORS BE LIABLE FOR ANY DIRECT,
+ * INDIRECT, INCIDENTAL, SPECIAL, EXEMPLARY, OR CONSEQUENTIAL DAMAGES (INCLUDING,
+ * BUT NOT LIMITED TO, PROCUREMENT OF SUBSTITUTE GOODS OR SERVICES; LOSS OF USE, DATA,
+ * OR PROFITS; OR BUSINESS INTERRUPTION) HOWEVER CAUSED AND ON ANY THEORY OF LIABILITY,
+ * WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE)
+ * ARISING IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE
+ * POSSIBILITY OF SUCH DAMAGE.
  *
  * ************************************************************************ */
 
 #include "aoclda.h"
 #include "context.hpp"
 #include "da_error.hpp"
+#include "da_logger.hpp"
 #include "da_utils.hpp"
 #include "dynamic_dispatch.hpp"
 #include "macros.h"
 #include "train_test_split.hpp"
+#include <iomanip>
 
 da_errors::error_bypass_t *nosave_utils(nullptr);
 
@@ -120,8 +126,9 @@ da_status da_get_arch_info(da_int *len = nullptr, char *arch = nullptr,
         std::copy(Arch.begin(), Arch.end(), arch);
         arch[Arch.size()] = '\0';
     } else {
-        std::cout << "AOCL-DA local architecture: " << Arch << std::endl;
-        std::cout << "AOCL-DA running architecture: " << NS << std::endl;
+        da_logger::logger out;
+        out << "AOCL-DA local architecture: " << Arch << std::endl;
+        out << "AOCL-DA running architecture: " << NS << std::endl;
     }
     return da_status_success;
 }
@@ -211,16 +218,17 @@ da_status da_debug_get(const char *key, da_int lvalue, char *value) {
     auto &settings = context::get_context()->get_hidden_settings();
     if (!key || !value) {
         // print all the dictionary
+        da_logger::logger out;
         if (settings.empty()) {
-            std::cout << "\nNo context settings registered.\n" << std::endl;
+            out << "\nNo context settings registered.\n" << std::endl;
             return da_status_success;
         }
-        std::cout << "\nBegin Context Settings" << '\n';
+        out << "\nBegin Context Settings" << '\n';
         for (const auto &n : settings) {
-            std::cout << "    " << std::left << std::setw(30) << n.first << " : "
-                      << n.second << '\n';
+            out << "    " << std::left << std::setw(30) << n.first << " : " << n.second
+                << '\n';
         }
-        std::cout << "End Context Settings\n" << std::endl;
+        out << "End Context Settings\n" << std::endl;
         return da_status_success;
     }
     if (lvalue < 100) {

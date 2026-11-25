@@ -147,6 +147,7 @@ void dtree_serialization_test(const dtree_serial_params &pr, da_int n_samples_tr
         da_handle handle_orig = nullptr;
         EXPECT_EQ(da_handle_init<T>(&handle_orig, da_handle_decision_tree),
                   da_status_success);
+        ASSERT_EQ(da_tree_select_model<T>(handle_orig, df_classifier), da_status_success);
 
         EXPECT_EQ(da_options_set_string(handle_orig, "scoring function",
                                         pr.scoring_function.c_str()),
@@ -301,6 +302,7 @@ class DTreeSerializationErrorTest : public testing::Test {
 TEST_F(DTreeSerializationErrorTest, SaveBeforeFitFails) {
     da_handle handle = nullptr;
     EXPECT_EQ(da_handle_init_d(&handle, da_handle_decision_tree), da_status_success);
+    ASSERT_EQ(da_tree_select_model_d(handle, df_classifier), da_status_success);
     EXPECT_EQ(da_handle_save_model(handle, model_file.c_str()), da_status_no_data);
     da_handle_destroy(&handle);
 }
@@ -310,6 +312,7 @@ TEST_F(DTreeSerializationErrorTest, FitAfterLoadWithoutSetDataFails) {
     da_handle handle_train = nullptr;
     EXPECT_EQ(da_handle_init_d(&handle_train, da_handle_decision_tree),
               da_status_success);
+    ASSERT_EQ(da_tree_select_model_d(handle_train, df_classifier), da_status_success);
     std::vector<double> X_train = {1.0, 0.0, 0.0, 1.0, 1.0, 1.0, 0.0, 0.0};
     std::vector<da_int> y_train = {0, 1, 1, 0};
     EXPECT_EQ(da_tree_set_training_data_d(handle_train, 4, 2, 2, X_train.data(), 4,

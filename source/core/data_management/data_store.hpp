@@ -131,7 +131,7 @@ class block {
     da_int m, n;
     block_type btype = block_none;
     da_errors::da_error_t *err = nullptr;
-    virtual ~block(){};
+    virtual ~block() {};
     /* mark in a boolean vector which rows contain missing
      * the vector is expected to be initialized, rows marked as containing missing values will be skipped
      * Input:

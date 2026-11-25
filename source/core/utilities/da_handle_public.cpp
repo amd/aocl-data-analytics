@@ -100,26 +100,6 @@ da_status da_handle_init(da_handle *handle, da_handle_type handle_type) {
                 return status;
             }
             break;
-        case da_handle_decision_tree:
-            DISPATCHER((*handle)->err,
-                       alg_handle =
-                           new da_decision_forest::decision_tree<T>(*(*handle)->err));
-            status = (*handle)->err->get_status();
-            if (status != da_status_success) {
-                alg_handle = nullptr;
-                return status;
-            }
-            break;
-        case da_handle_decision_forest:
-            DISPATCHER((*handle)->err,
-                       alg_handle =
-                           new da_decision_forest::decision_forest<T>(*(*handle)->err));
-            status = (*handle)->err->get_status();
-            if (status != da_status_success) {
-                alg_handle = nullptr;
-                return status;
-            }
-            break;
         case da_handle_nlls:
 #ifdef NO_FORTRAN
             return da_error((*handle)->err, da_status_not_implemented, // LCOV_EXCL_LINE
@@ -150,15 +130,9 @@ da_status da_handle_init(da_handle *handle, da_handle_type handle_type) {
                 return status;
             }
             break;
+        case da_handle_decision_tree:
+        case da_handle_decision_forest:
         case da_handle_interpolation:
-            DISPATCHER((*handle)->err,
-                       alg_handle =
-                           new da_interpolation::interpolation_p<T>(*(*handle)->err));
-            status = (*handle)->err->get_status();
-            if (status != da_status_success) {
-                alg_handle = nullptr;
-                return status;
-            }
             break;
         case da_handle_approx_nn:
             DISPATCHER((*handle)->err,

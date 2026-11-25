@@ -238,7 +238,7 @@ def test_nearest_neighbors_functionality(numpy_precision, numpy_order, algo):
     expected_targets_radius = np.array([1.6, 1.46666667, 1.])
 
     # Check we have the right answer
-    tol = np.sqrt(np.finfo(numpy_precision).eps)
+    tol = float(np.sqrt(np.finfo(numpy_precision).eps))
 
     assert k_dist == pytest.approx(expected_dist, tol)
     assert not np.any(k_ind - expected_ind)
@@ -322,7 +322,7 @@ def test_nearest_neighbors_outlier_functionality(numpy_precision, numpy_order, o
         expected_labels = np.array([[1, 0, 2,]])
         expected_targets = np.array([1.5999999999999999, 1.05, 2.233333333333335])
     # Check we have the right answer
-    tol = np.sqrt(np.finfo(numpy_precision).eps)
+    tol = float(np.sqrt(np.finfo(numpy_precision).eps))
 
     nn = nearest_neighbors(radius=4.0, outlier_handling=outlier)
     nn.fit(x_train, y_train_labels)
@@ -454,7 +454,7 @@ def test_knn_tree_functionality(
     brute_knn_y_test = brute_knn.classifier_predict(x_test)
 
     # Check we have the right answer
-    tol = np.sqrt(np.finfo(numpy_precision).eps)
+    tol = float(np.sqrt(np.finfo(numpy_precision).eps))
 
     assert kdtree_knn_k_dist == pytest.approx(brute_knn_k_dist, tol)
     assert not np.any(kdtree_knn_k_ind - brute_knn_k_ind)

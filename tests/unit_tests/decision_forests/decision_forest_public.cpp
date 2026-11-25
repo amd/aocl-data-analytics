@@ -161,6 +161,8 @@ TYPED_TEST(decision_forest_test, trivial_forests) {
         da_handle forest_handle = nullptr;
         EXPECT_EQ(da_handle_init<TypeParam>(&forest_handle, da_handle_decision_forest),
                   da_status_success);
+        ASSERT_EQ(da_forest_select_model<TypeParam>(forest_handle, df_classifier),
+                  da_status_success);
         EXPECT_EQ(da_forest_set_training_data(forest_handle, data.n_samples_train,
                                               data.n_feat, 0, data.X_train.data(),
                                               data.ldx_train, data.y_train.data()),
@@ -195,6 +197,8 @@ TYPED_TEST(decision_forest_test, categorical_features) {
     set_test_data_6x2_categorical(data);
     da_handle forest_handle = nullptr;
     EXPECT_EQ(da_handle_init<TypeParam>(&forest_handle, da_handle_decision_forest),
+              da_status_success);
+    ASSERT_EQ(da_forest_select_model<TypeParam>(forest_handle, df_classifier),
               da_status_success);
     EXPECT_EQ(da_forest_set_training_data(forest_handle, data.n_samples_train,
                                           data.n_feat, 0, data.X_train.data(),
@@ -237,6 +241,7 @@ TYPED_TEST(decision_forest_test, small_bins) {
     da_handle forest_handle = nullptr;
     EXPECT_EQ(da_handle_init<T>(&forest_handle, da_handle_decision_forest),
               da_status_success);
+    ASSERT_EQ(da_forest_select_model<T>(forest_handle, df_classifier), da_status_success);
     EXPECT_EQ(da_forest_set_training_data(forest_handle, n_samples_train, n_features, 3,
                                           X_train.data(), n_samples_train,
                                           y_train.data()),
@@ -298,6 +303,7 @@ TYPED_TEST(decision_forest_test, onevall) {
     da_handle forest_handle = nullptr;
     EXPECT_EQ(da_handle_init<T>(&forest_handle, da_handle_decision_forest),
               da_status_success);
+    ASSERT_EQ(da_forest_select_model<T>(forest_handle, df_classifier), da_status_success);
     EXPECT_EQ(da_options_set(forest_handle, "histogram", "yes"), da_status_success);
     EXPECT_EQ(da_options_set(forest_handle, "category split strategy", "one-vs-all"),
               da_status_success);
@@ -337,6 +343,8 @@ TYPED_TEST(decision_forest_test, get_results) {
     // Train the default tree on the small data set
     da_handle forest_handle = nullptr;
     EXPECT_EQ(da_handle_init<TypeParam>(&forest_handle, da_handle_decision_forest),
+              da_status_success);
+    ASSERT_EQ(da_forest_select_model<TypeParam>(forest_handle, df_classifier),
               da_status_success);
     EXPECT_EQ(da_forest_set_training_data(forest_handle, data.n_samples_train,
                                           data.n_feat, 0, data.X_train.data(),
@@ -410,12 +418,29 @@ TYPED_TEST(decision_forest_test, invalid_input) {
 
     // Initialize the decision forest class and fit model
     da_handle forest_handle = nullptr;
-    EXPECT_EQ(da_handle_init<TypeParam>(&forest_handle, da_handle_decision_forest),
+    da_handle forest_handle_unselected = nullptr;
+    da_handle linmod_handle = nullptr;
+    ASSERT_EQ(da_handle_init<TypeParam>(&forest_handle, da_handle_decision_forest),
+              da_status_success);
+    ASSERT_EQ(
+        da_handle_init<TypeParam>(&forest_handle_unselected, da_handle_decision_forest),
+        da_status_success);
+    ASSERT_EQ(da_forest_select_model<TypeParam>(forest_handle, df_classifier),
+              da_status_success);
+    ASSERT_EQ(da_handle_init<TypeParam>(&linmod_handle, da_handle_linmod),
               da_status_success);
 
     // call set_training_data with invalid values
     da_int n_samples = 2, n_features = 2, n_class = 0;
     TypeParam accuracy;
+
+    // select_model
+    ASSERT_EQ(da_forest_select_model<TypeParam>(forest_handle, df_classifier),
+              da_status_invalid_input);
+    ASSERT_EQ(da_forest_select_model<TypeParam>(forest_handle_unselected, df_unset),
+              da_status_invalid_input);
+    ASSERT_EQ(da_forest_select_model<TypeParam>(linmod_handle, df_classifier),
+              da_status_invalid_handle_type);
 
     // set_training_data
     // Invalid pointers
@@ -430,6 +455,12 @@ TYPED_TEST(decision_forest_test, invalid_input) {
     EXPECT_EQ(da_forest_set_training_data(nullptr, n_samples, n_features, n_class,
                                           X_invalid, n_samples, y.data()),
               da_status_handle_not_initialized);
+    EXPECT_EQ(da_forest_set_training_data(forest_handle_unselected, n_samples, n_features,
+                                          n_class, X_invalid, n_samples, y.data()),
+              da_status_invalid_input);
+    EXPECT_EQ(da_forest_set_training_data(linmod_handle, n_samples, n_features, n_class,
+                                          X_invalid, n_samples, y.data()),
+              da_status_invalid_handle_type);
     // wrong dimensions
     EXPECT_EQ(da_forest_set_training_data(forest_handle, 0, n_features, n_class,
                                           X_invalid, n_samples, y.data()),
@@ -444,19 +475,34 @@ TYPED_TEST(decision_forest_test, invalid_input) {
                                           X.data(), n_samples, y.data()),
               da_status_success);
 
+    // fit
+    EXPECT_EQ(da_forest_fit<TypeParam>(nullptr), da_status_handle_not_initialized);
+    EXPECT_EQ(da_forest_fit<TypeParam>(linmod_handle), da_status_invalid_handle_type);
+    EXPECT_EQ(da_forest_fit<TypeParam>(forest_handle_unselected),
+              da_status_invalid_input);
     // Number of samples too small for histogram option
     EXPECT_EQ(da_options_set(forest_handle, "histogram", "yes"), da_status_success);
     EXPECT_EQ(da_forest_fit<TypeParam>(forest_handle), da_status_invalid_option);
     EXPECT_EQ(da_options_set(forest_handle, "histogram", "no"), da_status_success);
+    EXPECT_EQ(da_options_set(forest_handle_unselected, "histogram", "no"),
+              da_status_invalid_input);
 
     // model out of date for evaluation
+    const da_int n_classes = 2;
+    std::vector<TypeParam> y_proba(n_samples * n_classes);
+    EXPECT_EQ(da_forest_predict_proba(forest_handle, n_samples, n_features, X.data(),
+                                      n_samples, y_proba.data(), n_classes, n_samples),
+              da_status_out_of_date);
+    EXPECT_EQ(da_forest_predict_log_proba(forest_handle, n_samples, n_features, X.data(),
+                                          n_samples, y_proba.data(), n_classes,
+                                          n_samples),
+              da_status_out_of_date);
     EXPECT_EQ(da_forest_predict(forest_handle, n_samples, n_features, X.data(), n_samples,
                                 y.data()),
               da_status_out_of_date);
     EXPECT_EQ(da_forest_score(forest_handle, n_samples, n_features, X.data(), n_samples,
                               y.data(), &accuracy),
               da_status_out_of_date);
-    EXPECT_EQ(da_forest_fit<TypeParam>(nullptr), da_status_handle_not_initialized);
     EXPECT_EQ(da_forest_fit<TypeParam>(forest_handle), da_status_success);
 
     // predict
@@ -470,6 +516,9 @@ TYPED_TEST(decision_forest_test, invalid_input) {
     EXPECT_EQ(
         da_forest_predict(nullptr, n_samples, n_features, X.data(), n_samples, y.data()),
         da_status_handle_not_initialized);
+    EXPECT_EQ(da_forest_predict(forest_handle_unselected, n_samples, n_features, X.data(),
+                                n_samples, y.data()),
+              da_status_invalid_input);
     // Wrong dimensions
     EXPECT_EQ(
         da_forest_predict(forest_handle, 0, n_features, X.data(), n_samples, y.data()),
@@ -498,6 +547,9 @@ TYPED_TEST(decision_forest_test, invalid_input) {
     EXPECT_EQ(da_forest_score<TypeParam>(nullptr, n_samples, n_features, X.data(),
                                          n_samples, y.data(), &accuracy),
               da_status_handle_not_initialized);
+    EXPECT_EQ(da_forest_score<TypeParam>(forest_handle_unselected, n_samples, n_features,
+                                         X.data(), n_samples, y.data(), &accuracy),
+              da_status_invalid_input);
     // Wrong dimensions
     EXPECT_EQ(da_forest_score(forest_handle, 0, n_features, X.data(), n_samples, y.data(),
                               &accuracy),
@@ -512,7 +564,163 @@ TYPED_TEST(decision_forest_test, invalid_input) {
                               &accuracy),
               da_status_invalid_leading_dimension);
 
+    // predict_proba
+    // Invalid pointers and handles
+    EXPECT_EQ(da_forest_predict_proba(forest_handle, n_samples, n_features, X_invalid,
+                                      n_samples, y_proba.data(), n_classes, n_samples),
+              da_status_invalid_pointer);
+    EXPECT_EQ(da_forest_predict_proba<TypeParam>(forest_handle, n_samples, n_features,
+                                                 X.data(), n_samples, nullptr, n_classes,
+                                                 n_samples),
+              da_status_invalid_pointer);
+    EXPECT_EQ(da_forest_predict_proba(nullptr, n_samples, n_features, X.data(), n_samples,
+                                      y_proba.data(), n_classes, n_samples),
+              da_status_handle_not_initialized);
+    EXPECT_EQ(da_forest_predict_proba(forest_handle_unselected, n_samples, n_features,
+                                      X.data(), n_samples, y_proba.data(), n_classes,
+                                      n_samples),
+              da_status_invalid_input);
+    EXPECT_EQ(da_forest_predict_proba(linmod_handle, n_samples, n_features, X.data(),
+                                      n_samples, y_proba.data(), n_classes, n_samples),
+              da_status_invalid_handle_type);
+    // Wrong dimensions
+    EXPECT_EQ(da_forest_predict_proba(forest_handle, 0, n_features, X.data(), n_samples,
+                                      y_proba.data(), n_classes, n_samples),
+              da_status_invalid_array_dimension);
+    EXPECT_EQ(da_forest_predict_proba(forest_handle, n_samples, 0, X.data(), n_samples,
+                                      y_proba.data(), n_classes, n_samples),
+              da_status_invalid_input);
+    EXPECT_EQ(da_forest_predict_proba(forest_handle, n_samples, 4, X.data(), n_samples,
+                                      y_proba.data(), n_classes, n_samples),
+              da_status_invalid_input);
+    EXPECT_EQ(da_forest_predict_proba(forest_handle, n_samples, n_features, X.data(), 1,
+                                      y_proba.data(), n_classes, n_samples),
+              da_status_invalid_leading_dimension);
+    EXPECT_EQ(da_forest_predict_proba(forest_handle, n_samples, n_features, X.data(),
+                                      n_samples, y_proba.data(), n_classes, 1),
+              da_status_invalid_leading_dimension);
+    EXPECT_EQ(da_forest_predict_proba(forest_handle, n_samples, n_features, X.data(),
+                                      n_samples, y_proba.data(), 0, n_samples),
+              da_status_invalid_input);
+    EXPECT_EQ(da_forest_predict_proba(forest_handle, n_samples, n_features, X.data(),
+                                      n_samples, y_proba.data(), 1, n_samples),
+              da_status_invalid_input);
+
+    // predict_log_proba
+    // Invalid pointers and handles
+    EXPECT_EQ(da_forest_predict_log_proba(forest_handle, n_samples, n_features, X_invalid,
+                                          n_samples, y_proba.data(), n_classes,
+                                          n_samples),
+              da_status_invalid_pointer);
+    EXPECT_EQ(da_forest_predict_log_proba<TypeParam>(forest_handle, n_samples, n_features,
+                                                     X.data(), n_samples, nullptr,
+                                                     n_classes, n_samples),
+              da_status_invalid_pointer);
+    EXPECT_EQ(da_forest_predict_log_proba(nullptr, n_samples, n_features, X.data(),
+                                          n_samples, y_proba.data(), n_classes,
+                                          n_samples),
+              da_status_handle_not_initialized);
+    EXPECT_EQ(da_forest_predict_log_proba(forest_handle_unselected, n_samples, n_features,
+                                          X.data(), n_samples, y_proba.data(), n_classes,
+                                          n_samples),
+              da_status_invalid_input);
+    EXPECT_EQ(da_forest_predict_log_proba(linmod_handle, n_samples, n_features, X.data(),
+                                          n_samples, y_proba.data(), n_classes,
+                                          n_samples),
+              da_status_invalid_handle_type);
+    // Wrong dimensions
+    EXPECT_EQ(da_forest_predict_log_proba(forest_handle, 0, n_features, X.data(),
+                                          n_samples, y_proba.data(), n_classes,
+                                          n_samples),
+              da_status_invalid_array_dimension);
+    EXPECT_EQ(da_forest_predict_log_proba(forest_handle, n_samples, 0, X.data(),
+                                          n_samples, y_proba.data(), n_classes,
+                                          n_samples),
+              da_status_invalid_input);
+    EXPECT_EQ(da_forest_predict_log_proba(forest_handle, n_samples, 4, X.data(),
+                                          n_samples, y_proba.data(), n_classes,
+                                          n_samples),
+              da_status_invalid_input);
+    EXPECT_EQ(da_forest_predict_log_proba(forest_handle, n_samples, n_features, X.data(),
+                                          1, y_proba.data(), n_classes, n_samples),
+              da_status_invalid_leading_dimension);
+    EXPECT_EQ(da_forest_predict_log_proba(forest_handle, n_samples, n_features, X.data(),
+                                          n_samples, y_proba.data(), n_classes, 1),
+              da_status_invalid_leading_dimension);
+    EXPECT_EQ(da_forest_predict_log_proba(forest_handle, n_samples, n_features, X.data(),
+                                          n_samples, y_proba.data(), 0, n_samples),
+              da_status_invalid_input);
+    EXPECT_EQ(da_forest_predict_log_proba(forest_handle, n_samples, n_features, X.data(),
+                                          n_samples, y_proba.data(), 1, n_samples),
+              da_status_invalid_input);
+
     da_handle_destroy(&forest_handle);
+    da_handle_destroy(&forest_handle_unselected);
+    da_handle_destroy(&linmod_handle);
+}
+
+TEST(decision_forest, incorrect_handle_precision) {
+
+    da_handle handle_d = nullptr;
+    da_handle handle_s = nullptr;
+
+    EXPECT_EQ(da_handle_init_d(&handle_d, da_handle_decision_forest), da_status_success);
+    EXPECT_EQ(da_handle_init_s(&handle_s, da_handle_decision_forest), da_status_success);
+
+    std::vector<da_int> y{0};
+    da_int n_samples = 0, n_features = 0;
+    std::vector<double> X_d{0.0};
+    double accuracy_d = 0.0;
+    std::vector<float> X_s{0.0};
+    float accuracy_s = 0.0;
+
+    ASSERT_EQ(da_forest_select_model_s(handle_d, df_classifier), da_status_wrong_type);
+    ASSERT_EQ(da_forest_select_model_d(handle_s, df_classifier), da_status_wrong_type);
+
+    ASSERT_EQ(da_forest_select_model_d(handle_d, df_classifier), da_status_success);
+    ASSERT_EQ(da_forest_select_model_s(handle_s, df_classifier), da_status_success);
+
+    EXPECT_EQ(da_forest_set_training_data_s(handle_d, n_samples, n_features, 0,
+                                            X_s.data(), n_samples, y.data(), nullptr),
+              da_status_wrong_type);
+    EXPECT_EQ(da_forest_set_training_data_d(handle_s, n_samples, n_features, 0,
+                                            X_d.data(), n_samples, y.data(), nullptr),
+              da_status_wrong_type);
+
+    EXPECT_EQ(da_forest_fit_s(handle_d), da_status_wrong_type);
+    EXPECT_EQ(da_forest_fit_d(handle_s), da_status_wrong_type);
+
+    EXPECT_EQ(da_forest_predict_s(handle_d, n_samples, n_features, X_s.data(), n_samples,
+                                  y.data()),
+              da_status_wrong_type);
+    EXPECT_EQ(da_forest_predict_d(handle_s, n_samples, n_features, X_d.data(), n_samples,
+                                  y.data()),
+              da_status_wrong_type);
+
+    EXPECT_EQ(da_forest_score_s(handle_d, n_samples, n_features, X_s.data(), n_samples,
+                                y.data(), &accuracy_s),
+              da_status_wrong_type);
+    EXPECT_EQ(da_forest_score_d(handle_s, n_samples, n_features, X_d.data(), n_samples,
+                                y.data(), &accuracy_d),
+              da_status_wrong_type);
+
+    std::vector<double> y_proba_d(1);
+    std::vector<float> y_proba_s(1);
+    EXPECT_EQ(da_forest_predict_proba_s(handle_d, n_samples, n_features, X_s.data(),
+                                        n_samples, y_proba_s.data(), 1, n_samples),
+              da_status_wrong_type);
+    EXPECT_EQ(da_forest_predict_proba_d(handle_s, n_samples, n_features, X_d.data(),
+                                        n_samples, y_proba_d.data(), 1, n_samples),
+              da_status_wrong_type);
+    EXPECT_EQ(da_forest_predict_log_proba_s(handle_d, n_samples, n_features, X_s.data(),
+                                            n_samples, y_proba_s.data(), 1, n_samples),
+              da_status_wrong_type);
+    EXPECT_EQ(da_forest_predict_log_proba_d(handle_s, n_samples, n_features, X_d.data(),
+                                            n_samples, y_proba_d.data(), 1, n_samples),
+              da_status_wrong_type);
+
+    da_handle_destroy(&handle_d);
+    da_handle_destroy(&handle_s);
 }
 
 /***********************************
@@ -654,6 +862,8 @@ TEST(decision_forest, row_major) {
     da_handle forest_handle = nullptr;
     EXPECT_EQ(da_handle_init<float>(&forest_handle, da_handle_decision_forest),
               da_status_success);
+    ASSERT_EQ(da_forest_select_model<float>(forest_handle, df_classifier),
+              da_status_success);
     EXPECT_EQ(da_options_set_int(forest_handle, "maximum depth", 5), da_status_success);
     EXPECT_EQ(da_options_set_int(forest_handle, "seed", 77), da_status_success);
     EXPECT_EQ(da_options_set_string(forest_handle, "scoring function", "gini"),
@@ -687,6 +897,8 @@ TEST(decision_forest, row_major) {
     datest_blas::imatcopy('T', n_samples, n_features, 1.0, X_test.data(), n_samples,
                           n_features);
     EXPECT_EQ(da_handle_init<float>(&forest_handle, da_handle_decision_forest),
+              da_status_success);
+    ASSERT_EQ(da_forest_select_model<float>(forest_handle, df_classifier),
               da_status_success);
     EXPECT_EQ(da_options_set_int(forest_handle, "maximum depth", 5), da_status_success);
     EXPECT_EQ(da_options_set_int(forest_handle, "seed", 77), da_status_success);

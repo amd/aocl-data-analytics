@@ -717,9 +717,9 @@ da_status neighbors<T>::kneighbors_compute_brute_force(da_int n_queries,
                             }
                         }
                     } // End of per-query update
-                }     // End of error check
-            }         // End of xtrain blocks
-        }             // End of xtest blocks
+                } // End of error check
+            } // End of xtrain blocks
+        } // End of xtest blocks
 
         this_D = std::vector<T>{};
 
@@ -923,10 +923,9 @@ da_status neighbors<T>::kneighbors_compute_ball_tree(da_int n_queries, da_int n_
  *   its neighbors.
  */
 template <typename T>
-inline __attribute__((__always_inline__)) da_status
-neighbors<T>::kneighbors_compute(da_int n_queries, da_int n_features, const T *X_test,
-                                 da_int ldx_test, da_int *n_ind, T *n_dist,
-                                 da_int n_neigh, bool return_distance) {
+inline __attribute__((__always_inline__)) da_status neighbors<T>::kneighbors_compute(
+    da_int n_queries, da_int n_features, const T *X_test, da_int ldx_test, da_int *n_ind,
+    T *n_dist, da_int n_neigh, bool return_distance) {
 
     if (this->working_algo == da_neighbors_types::nn_algorithm::brute) {
         return neighbors<T>::kneighbors_compute_brute_force(n_queries, n_features, X_test,
@@ -1693,9 +1692,8 @@ da_status neighbors<T>::predict(da_int n_queries, da_int n_features, const T *X_
  * Compute the nearest neighbors and return the corresponding target according to the target of the neighbors.
  */
 template <typename T>
-inline __attribute__((__always_inline__)) da_status
-neighbors<T>::predict_targets_knn(da_int n_queries, da_int n_features, const T *X_test,
-                                  da_int ldx_test, T *y_test) {
+inline __attribute__((__always_inline__)) da_status neighbors<T>::predict_targets_knn(
+    da_int n_queries, da_int n_features, const T *X_test, da_int ldx_test, T *y_test) {
 
     da_status status = da_status_success;
 
@@ -1780,9 +1778,8 @@ neighbors<T>::predict_targets_knn(da_int n_queries, da_int n_features, const T *
  * Compute the nearest neighbors and return the corresponding target according to the target of the neighbors.
  */
 template <typename T>
-inline __attribute__((__always_inline__)) da_status
-neighbors<T>::predict_targets_rnn(da_int n_queries, da_int n_features, const T *X_test,
-                                  da_int ldx_test, T *y_test) {
+inline __attribute__((__always_inline__)) da_status neighbors<T>::predict_targets_rnn(
+    da_int n_queries, da_int n_features, const T *X_test, da_int ldx_test, T *y_test) {
 
     da_status status = da_status_success;
 
@@ -2224,9 +2221,9 @@ da_status neighbors<T>::radius_neighbors_compute_brute_force(
                             }
                         }
                     } // End of distance matrix iteration to compute local neighbors
-                }     // end of local_error check
-            }         // End of xtrain blocks
-        }             // End of xtest blocks
+                } // end of local_error check
+            } // End of xtrain blocks
+        } // End of xtest blocks
 
         this_D = std::vector<T>{};
 

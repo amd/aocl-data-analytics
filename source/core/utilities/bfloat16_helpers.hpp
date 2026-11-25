@@ -1,23 +1,28 @@
 /******************************************************************************
 * Copyright (c) 2026 Advanced Micro Devices, Inc. All rights reserved.
 *
-* Permission is hereby granted, free of charge, to any person obtaining a copy
-* of this software and associated documentation files (the "Software"), to deal
-* in the Software without restriction, including without limitation the rights
-* to use, copy, modify, merge, publish, distribute, sublicense, and/or sell
-* copies of the Software, and to permit persons to whom the Software is
-* furnished to do so, subject to the following conditions:
+* Redistribution and use in source and binary forms, with or without modification,
+* are permitted provided that the following conditions are met:
+* 1. Redistributions of source code must retain the above copyright notice,
+*    this list of conditions and the following disclaimer.
+* 2. Redistributions in binary form must reproduce the above copyright notice,
+*    this list of conditions and the following disclaimer in the documentation
+*    and/or other materials provided with the distribution.
+* 3. Neither the name of the copyright holder nor the names of its contributors
+*    may be used to endorse or promote products derived from this software without
+*    specific prior written permission.
 *
-* The above copyright notice and this permission notice shall be included in
-* all copies or substantial portions of the Software.
+* THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS "AS IS" AND
+* ANY EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED TO, THE IMPLIED
+* WARRANTIES OF MERCHANTABILITY AND FITNESS FOR A PARTICULAR PURPOSE ARE DISCLAIMED.
+* IN NO EVENT SHALL THE COPYRIGHT HOLDER OR CONTRIBUTORS BE LIABLE FOR ANY DIRECT,
+* INDIRECT, INCIDENTAL, SPECIAL, EXEMPLARY, OR CONSEQUENTIAL DAMAGES (INCLUDING,
+* BUT NOT LIMITED TO, PROCUREMENT OF SUBSTITUTE GOODS OR SERVICES; LOSS OF USE, DATA,
+* OR PROFITS; OR BUSINESS INTERRUPTION) HOWEVER CAUSED AND ON ANY THEORY OF LIABILITY,
+* WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE)
+* ARISING IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE
+* POSSIBILITY OF SUCH DAMAGE.
 *
-* THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
-* IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
-* FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT.  IN NO EVENT SHALL THE
-* AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
-* LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
-* OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
-* THE SOFTWARE.
 *******************************************************************************/
 
 #ifndef BFLOAT16_HELPERS_HPP
@@ -45,7 +50,7 @@ namespace da_bf16 {
 // stored buffers pass directly to DLP without casts or a second representation.
 using storage_type = int16_t;
 
-inline uint16_t f32_to_bf16_bits(float value) {
+static inline uint16_t f32_to_bf16_bits(float value) {
     uint32_t bits;
     std::memcpy(&bits, &value, sizeof(bits));
 
@@ -65,27 +70,29 @@ inline uint16_t f32_to_bf16_bits(float value) {
     return static_cast<uint16_t>((bits + 0x7fffu + retained_lsb) >> 16);
 }
 
-inline float bf16_bits_to_f32(uint16_t bits) {
+static inline float bf16_bits_to_f32(uint16_t bits) {
     const uint32_t f32_bits = static_cast<uint32_t>(bits) << 16;
     float value;
     std::memcpy(&value, &f32_bits, sizeof(value));
     return value;
 }
 
-inline storage_type from_float(float value) {
+static inline storage_type from_float(float value) {
     const uint16_t bits = f32_to_bf16_bits(value);
     storage_type result;
     std::memcpy(&result, &bits, sizeof(result));
     return result;
 }
 
-inline uint16_t to_bits(storage_type value) {
+static inline uint16_t to_bits(storage_type value) {
     uint16_t bits;
     std::memcpy(&bits, &value, sizeof(bits));
     return bits;
 }
 
-inline float to_float(storage_type value) { return bf16_bits_to_f32(to_bits(value)); }
+static inline float to_float(storage_type value) {
+    return bf16_bits_to_f32(to_bits(value));
+}
 
 } // namespace da_bf16
 
@@ -93,11 +100,11 @@ namespace da_blas {
 
 // bfloat16 (A) x bfloat16 (B) -> f32 (C). AOCL-DA's bfloat16 representation matches
 // the storage expected by AOCL-DLP, so typed buffers pass directly to this boundary.
-inline void cblas_gemm(CBLAS_ORDER layout, CBLAS_TRANSPOSE transA, CBLAS_TRANSPOSE transB,
-                       da_int m, da_int n, da_int k, float alpha,
-                       const da_bf16::storage_type *A, da_int lda,
-                       const da_bf16::storage_type *B, da_int ldb, float beta, float *C,
-                       da_int ldc) {
+static inline void cblas_gemm(CBLAS_ORDER layout, CBLAS_TRANSPOSE transA,
+                              CBLAS_TRANSPOSE transB, da_int m, da_int n, da_int k,
+                              float alpha, const da_bf16::storage_type *A, da_int lda,
+                              const da_bf16::storage_type *B, da_int ldb, float beta,
+                              float *C, da_int ldc) {
 #ifndef _WIN32
     const char order = (layout == CblasRowMajor) ? 'r' : 'c';
     const char transa = (transA == CblasNoTrans) ? 'n' : 't';

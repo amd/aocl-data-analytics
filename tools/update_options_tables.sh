@@ -1,27 +1,31 @@
 #!/bin/bash
 # Copyright (c) 2023-2025 Advanced Micro Devices, Inc. All rights reserved.
 #
-# Permission is hereby granted, free of charge, to any person obtaining a copy
-# of this software and associated documentation files (the "Software"), to deal
-# in the Software without restriction, including without limitation the rights
-# to use, copy, modify, merge, publish, distribute, sublicense, and/or sell
-# copies of the Software, and to permit persons to whom the Software is
-# furnished to do so, subject to the following conditions:
+# Redistribution and use in source and binary forms, with or without modification,
+# are permitted provided that the following conditions are met:
+# 1. Redistributions of source code must retain the above copyright notice,
+#    this list of conditions and the following disclaimer.
+# 2. Redistributions in binary form must reproduce the above copyright notice,
+#    this list of conditions and the following disclaimer in the documentation
+#    and/or other materials provided with the distribution.
+# 3. Neither the name of the copyright holder nor the names of its contributors
+#    may be used to endorse or promote products derived from this software without
+#    specific prior written permission.
 #
-# The above copyright notice and this permission notice shall be included in
-# all copies or substantial portions of the Software.
+# THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS "AS IS" AND
+# ANY EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED TO, THE IMPLIED
+# WARRANTIES OF MERCHANTABILITY AND FITNESS FOR A PARTICULAR PURPOSE ARE DISCLAIMED.
+# IN NO EVENT SHALL THE COPYRIGHT HOLDER OR CONTRIBUTORS BE LIABLE FOR ANY DIRECT,
+# INDIRECT, INCIDENTAL, SPECIAL, EXEMPLARY, OR CONSEQUENTIAL DAMAGES (INCLUDING,
+# BUT NOT LIMITED TO, PROCUREMENT OF SUBSTITUTE GOODS OR SERVICES; LOSS OF USE, DATA,
+# OR PROFITS; OR BUSINESS INTERRUPTION) HOWEVER CAUSED AND ON ANY THEORY OF LIABILITY,
+# WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE)
+# ARISING IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE
+# POSSIBILITY OF SUCH DAMAGE.
 #
-# THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
-# IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
-# FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
-# AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
-# LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
-# OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
-# THE SOFTWARE.
-############################################################
-#
+
 # Awk incantation to find and update sprinkled options in the documentation.
-# Usage $0 file1.rst [file2.rst [...]], optionally it is possible to point
+# Usage $0 file1.rst [file2.h [...]], optionally it is possible to point
 # to the database file using
 # $0 --db=path/to/all_table.rst file1.rst [...]
 # --db=file MUST be the first argument
@@ -34,14 +38,14 @@ PROG="$(basename "$0")"
 
 usage() {
   cat <<EOF
-Usage: $PROG [--db=path/to/all_table.rst] file1.rst [file2.rst ...]
+Usage: $PROG [--db=path/to/all_table.rst] file1.rst [file2.h ...]
        $PROG -h | --help
 
-Find and update the sprinkled options tables in the documentation .rst files,
-refreshing each option's "type", "default", "description" and "constraints"
-columns from the central options database (all_table.rst).
+Find and update the sprinkled options tables in the documentation .rst or
+.h and .hpp files, refreshing each option's "type", "default", "description",
+"constraints" and other columns from the central options database (all_table.rst).
 
-For every input .rst file the script scans for blocks introduced by a
+For every input .rst, .h, or .hpp file the script scans for blocks introduced by a
   .. update options using table <_tabletag_>
 comment followed by a CSV table whose header contains:
   :header: "option name", "type", "default", "description", "constraints"
@@ -51,9 +55,9 @@ found in the database are flagged with a "NOT FOUND~" marker and reported on
 stderr.
 
 Arguments:
-  file1.rst [file2.rst ...]  One or more .rst files to update in place. Files
+  file1.rst [file2.h ...]    One or more .rst, .h, or .hpp files to update in place. Files
                              that are the database itself, are not regular
-                             files, or do not end in .rst are skipped.
+                             files, or have another extension are skipped.
 
 Options:
   --db=PATH   Path to the options database file all_table.rst.
@@ -133,10 +137,13 @@ for f in $* ; do
     echo "$f" is not a regular file, skipping.
     continue
   fi
-  if [ ! "${f: -4}" == ".rst" ] ; then
-    echo "$f" does not have .rst extension, skipping.
-    continue
-  fi
+  case "$f" in
+    *.rst|*.h|*.hpp) ;;
+    *)
+      echo "$f" does not have .rst, .h, or .hpp extension, skipping.
+      continue
+      ;;
+  esac
 
   echo processing "$f"...
 
@@ -179,7 +186,7 @@ tolower($0) ~ /^[[:blank:]]*:header: "option name", "type", "default", "descript
         next
 }
 
-/^[[:blank:]]*$/ {
+/^[[:blank:]]*($|\\endrst)/ {
         if (intable == 1 && firstblank == 1) {
                 # table end, reset flags
                 intable = 0

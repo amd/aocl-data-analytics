@@ -34,7 +34,51 @@
 
 /**
  * \file
+ * Tree and forest handles require explicit classification selection before options,
+ * training data or fitting. All chapter operations on a correct but unselected
+ * handle return @ref da_status_invalid_input. A wrong chapter returns
+ * @ref da_status_invalid_handle_type. Generic result queries on unselected handles
+ * retain @ref da_status_handle_not_initialized.
  */
+
+/** @brief Model types shared by decision trees and decision forests. */
+enum da_df_model_ {
+    df_unset = 0, ///< No selected model; not a valid selector argument.
+    df_classifier ///< Classification model for a decision tree or decision forest.
+};
+typedef enum da_df_model_ da_df_model;
+
+/** \{
+ * @brief Select a decision tree model before setting options or training data.
+ *
+ * @param[inout] handle a handle initialized with @ref da_handle_decision_tree.
+ * @param[in] model a @ref da_df_model enum type to select the decision tree model.
+ * Must be @ref df_classifier.
+ * @return @ref da_status_success on success; @ref da_status_handle_not_initialized
+ * for a null handle; @ref da_status_wrong_type for a precision mismatch;
+ * @ref da_status_invalid_handle_type for a wrong chapter;
+ * @ref da_status_invalid_input for an invalid model or repeated selection;
+ * @ref da_status_memory_error if allocation fails.
+ */
+da_status da_tree_select_model_d(da_handle handle, da_df_model model);
+da_status da_tree_select_model_s(da_handle handle, da_df_model model);
+/** \} */
+
+/** \{
+ * @brief Select a decision forest model before setting options or training data.
+ *
+ * @param[inout] handle a handle initialized with @ref da_handle_decision_forest.
+ * @param[in] model a @ref da_df_model enum type to select the decision forest model.
+ * Must be @ref df_classifier.
+ * @return @ref da_status_success on success; @ref da_status_handle_not_initialized
+ * for a null handle; @ref da_status_wrong_type for a precision mismatch;
+ * @ref da_status_invalid_handle_type for a wrong chapter;
+ * @ref da_status_invalid_input for an invalid model or repeated selection;
+ * @ref da_status_memory_error if allocation fails.
+ */
+da_status da_forest_select_model_d(da_handle handle, da_df_model model);
+da_status da_forest_select_model_s(da_handle handle, da_df_model model);
+/** \} */
 
 /** \{
  * @brief Pass a data matrix and a label array to the \ref da_handle object

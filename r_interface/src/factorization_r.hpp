@@ -40,10 +40,9 @@ class PCADecomposition : public rda_handle {
   public:
     PCADecomposition(da_int n_components = 1, std::string bias = "unbiased",
                      std::string method = "covariance", std::string solver = "gesdd",
-                     bool store_U = false, bool whiten = false,
-                     da_int n_oversamples = 10, da_int power_iterations = -1,
-                     std::string power_normalization = "qr", da_int seed = -1,
-                     bool check_data = false) {
+                     bool store_U = false, bool whiten = false, da_int n_oversamples = 10,
+                     da_int power_iterations = -1, std::string power_normalization = "qr",
+                     da_int seed = -1, bool check_data = false) {
 
         da_status status = da_handle_init_d(&handle, da_handle_pca);
         exception_check(status);
@@ -324,9 +323,9 @@ class KernelPCADecomposition : public rda_handle {
 
         NumericMatrix X_transform(m_samples, n_components);
 
-        da_status status = da_kernel_pca_transform_d(
-            handle, m_samples, m_features, X.begin(), m_samples, X_transform.begin(),
-            m_samples);
+        da_status status =
+            da_kernel_pca_transform_d(handle, m_samples, m_features, X.begin(), m_samples,
+                                      X_transform.begin(), m_samples);
         exception_check(status);
 
         return X_transform;
@@ -352,9 +351,8 @@ class KernelPCADecomposition : public rda_handle {
     da_int get_n_components() {
         da_int dim = 1;
         da_int n_components;
-        da_status status =
-            da_handle_get_result_int(handle, da_kernel_pca_n_components, &dim,
-                                     &n_components);
+        da_status status = da_handle_get_result_int(handle, da_kernel_pca_n_components,
+                                                    &dim, &n_components);
         exception_check(status);
         return n_components;
     }
@@ -376,21 +374,13 @@ class KernelPCADecomposition : public rda_handle {
         return NumericVector(result_mat.begin(), result_mat.end());
     }
 
-    NumericMatrix get_eigenvectors() {
-        return get_result(da_kernel_pca_eigenvectors);
-    }
+    NumericMatrix get_eigenvectors() { return get_result(da_kernel_pca_eigenvectors); }
 
-    NumericMatrix get_scores() {
-        return get_result(da_kernel_pca_scores);
-    }
+    NumericMatrix get_scores() { return get_result(da_kernel_pca_scores); }
 
-    NumericMatrix get_dual_coef() {
-        return get_result(da_kernel_pca_dual_coef);
-    }
+    NumericMatrix get_dual_coef() { return get_result(da_kernel_pca_dual_coef); }
 
-    NumericMatrix get_X_fit() {
-        return get_result(da_kernel_pca_X_fit);
-    }
+    NumericMatrix get_X_fit() { return get_result(da_kernel_pca_X_fit); }
 
     double get_gamma() {
         NumericMatrix result_mat = get_result(da_kernel_pca_gamma);
@@ -554,9 +544,8 @@ class NMFDecomposition : public rda_handle {
         da_int n_features = get_n_features();
 
         NumericMatrix X(k_samples, n_features);
-        da_status status = da_nmf_inverse_transform_d(handle, k_samples, k_features,
-                                                      Xt.begin(), k_samples,
-                                                      X.begin(), k_samples);
+        da_status status = da_nmf_inverse_transform_d(
+            handle, k_samples, k_features, Xt.begin(), k_samples, X.begin(), k_samples);
         exception_check(status);
 
         return X;

@@ -26,6 +26,7 @@
  */
 
 #include "cubic_spline.hpp"
+#include "cubic_spline_options.hpp"
 #include "cubic_spline_types.hpp"
 #include "da_std.hpp"
 #include "da_utils.hpp"
@@ -44,9 +45,10 @@ namespace da_interpolation {
 using namespace da_cubic_spline;
 
 template <typename T>
-cubic_spline<T>::cubic_spline(da_errors::da_error_t &err,
-                              da_options::OptionRegistry &opts)
-    : interpolation_generic<T>(err, opts) {}
+cubic_spline<T>::cubic_spline(da_errors::da_error_t &err)
+    : interpolation_generic<T>(err) {
+    register_cubic_spline_options<T>(this->opts, *this->err);
+}
 
 template <typename T> void cubic_spline<T>::refresh() { this->model_trained = false; }
 
@@ -74,7 +76,7 @@ da_status cubic_spline<T>::set_boundary_conditions(da_int dim, da_int left_order
                         "left_values and right_values must not be null.");
 
     da_status status =
-        this->opts->set("cubic spline type", "custom", da_options::setby_t::solver);
+        this->opts.set("cubic spline type", "custom", da_options::setby_t::solver);
     if (status != da_status_success)
         return da_error(this->err, da_status_internal_error, // LCOV_EXCL_LINE
                         "Internal error in the option setter.");
@@ -373,7 +375,7 @@ template <typename T> da_status cubic_spline<T>::interpolate() {
 
     // Get the spline type from options
     std::string opt_type;
-    if (this->opts->get("cubic spline type", opt_type, spline_type) != da_status_success)
+    if (this->opts.get("cubic spline type", opt_type, spline_type) != da_status_success)
         return da_error(this->err, da_status_internal_error, // LCOV_EXCL_LINE
                         "Failed to read cubic spline type option.");
 

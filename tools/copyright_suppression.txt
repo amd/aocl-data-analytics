@@ -17,6 +17,7 @@ tags
 '.*.bib'
 '.*\.md'
 '.*.jinja'
+'.*\.json'
 tools/pr\.html
 doc/Doxyfile
 doc/404.md

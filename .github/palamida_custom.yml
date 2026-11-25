@@ -1,0 +1,11 @@
+configurations:
+  - disabled: false
+  # branchesToScan:
+  #  - main
+  # branchesToIgnore:
+  #  - "*test*"
+pathsToIgnore:
+  - README.md
+  - doc/CMakeLists.txt
+  - doc/doc_utilities/index.rst
+ 

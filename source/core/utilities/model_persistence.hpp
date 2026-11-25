@@ -131,9 +131,9 @@ class serialization_buffer {
     template <typename T> da_status insert_data_in_buffer(const T &data);
 
   public:
-    serialization_buffer(da_handle_type handle_type) : handle_type(handle_type){};
+    serialization_buffer(da_handle_type handle_type) : handle_type(handle_type) {};
 
-    ~serialization_buffer(){};
+    ~serialization_buffer() {};
 
     std::string get_saved_aoclda_version() { return this->saved_aoclda_version; }
 

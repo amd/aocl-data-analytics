@@ -49,6 +49,8 @@ class DecisionTree : public rda_handle {
 
         da_status status = da_handle_init_d(&handle, da_handle_decision_tree);
         exception_check(status);
+        status = da_tree_select_model_d(handle, df_classifier);
+        exception_check(status);
 
         status = da_options_set(handle, "seed", seed);
         exception_check(status);
@@ -216,6 +218,8 @@ class DecisionForest : public rda_handle {
                    da_int max_tree_threads = 0, bool check_data = false) {
 
         da_status status = da_handle_init_d(&handle, da_handle_decision_forest);
+        exception_check(status);
+        status = da_forest_select_model_d(handle, df_classifier);
         exception_check(status);
 
         status = da_options_set(handle, "seed", seed);

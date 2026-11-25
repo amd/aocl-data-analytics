@@ -71,7 +71,7 @@ template <typename T> struct PairwiseDistanceParamType {
     da_status expected_status = da_status_success;
     T tol = std::numeric_limits<T>::epsilon();
     // Set constructor to initialize data in test bodies as simply as possible.
-    PairwiseDistanceParamType(){};
+    PairwiseDistanceParamType() {};
     PairwiseDistanceParamType(da_int m, da_int n, da_int k, da_int ldx, da_int ldy,
                               da_int ldd, std::tuple<std::string, da_metric> metric)
         : m(m), n(n), k(k), ldx(ldx), ldy(ldy), ldd(ldd), metric(std::get<1>(metric)) {

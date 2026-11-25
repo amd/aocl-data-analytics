@@ -30,6 +30,7 @@
 #include "da_handle.hpp"
 #include "dynamic_dispatch.hpp"
 #include "macros.h"
+#include <memory>
 
 using namespace interpolation_public;
 
@@ -43,12 +44,31 @@ da_status da_interpolation_select_model(da_handle handle, da_interpolation_model
     if (status != da_status_success)
         return da_error_trace(handle->err, status, "Wrong precision type.");
 
-    da_interpolation_model model_cpp = static_cast<da_interpolation_model>(model);
+    if (handle->handle_type != da_handle_interpolation)
+        return da_error(handle->err, da_status_invalid_handle_type,
+                        "handle was not initialized with da_handle_interpolation.");
+    if (handle->get_alg_handle<T>() != nullptr)
+        return da_error(handle->err, da_status_invalid_input,
+                        "Cannot change the interpolation model once it has been set.");
+    if (model != interpolation_cubic_spline)
+        return da_error(handle->err, da_status_invalid_input,
+                        "The model selected is invalid.");
 
-    DISPATCHER(
-        handle->err,
-        return (interpolation_select_model<da_interpolation::interpolation_p<T>, T>(
-            handle, model_cpp)))
+    try {
+        std::unique_ptr<basic_handle<T>> candidate;
+        DISPATCHER(handle->err,
+                   candidate =
+                       std::make_unique<da_interpolation::cubic_spline<T>>(*handle->err))
+        status = handle->err->get_status();
+        if (status != da_status_success)
+            return status;
+        if constexpr (std::is_same_v<T, double>)
+            handle->alg_handle_d = candidate.release();
+        else
+            handle->alg_handle_s = candidate.release();
+    } catch (const std::bad_alloc &) {
+        return da_error(handle->err, da_status_memory_error, "Memory allocation error");
+    }
 
     return da_status_success;
 }
@@ -63,9 +83,10 @@ da_status da_interpolation_set_sites(da_handle handle, da_int n_sites, const T *
     if (status != da_status_success)
         return da_error_trace(handle->err, status, "Wrong precision type.");
 
-    DISPATCHER(handle->err,
-               return (interpolation_set_sites<da_interpolation::interpolation_p<T>, T>(
-                   handle, n_sites, x)))
+    DISPATCHER(
+        handle->err,
+        return (interpolation_set_sites<da_interpolation::interpolation_generic<T>, T>(
+            handle, n_sites, x)))
 
     return da_status_success;
 }
@@ -81,10 +102,9 @@ da_status da_interpolation_set_sites_uniform(da_handle handle, da_int n_sites, T
     if (status != da_status_success)
         return da_error_trace(handle->err, status, "Wrong precision type.");
 
-    DISPATCHER(
-        handle->err,
-        return (interpolation_set_sites_uniform<da_interpolation::interpolation_p<T>, T>(
-            handle, n_sites, x_start, x_end)))
+    DISPATCHER(handle->err, return (interpolation_set_sites_uniform<
+                                    da_interpolation::interpolation_generic<T>, T>(
+                                handle, n_sites, x_start, x_end)))
 
     return da_status_success;
 }
@@ -100,9 +120,10 @@ da_status da_interpolation_set_values(da_handle handle, da_int n, da_int dim,
     if (status != da_status_success)
         return da_error_trace(handle->err, status, "Wrong precision type.");
 
-    DISPATCHER(handle->err,
-               return (interpolation_set_values<da_interpolation::interpolation_p<T>, T>(
-                   handle, n, dim, y_data, ldy, order)))
+    DISPATCHER(
+        handle->err,
+        return (interpolation_set_values<da_interpolation::interpolation_generic<T>, T>(
+            handle, n, dim, y_data, ldy, order)))
 
     return da_status_success;
 }
@@ -120,7 +141,7 @@ da_status da_interpolation_search_cells(da_handle handle, da_int n_eval, const T
 
     DISPATCHER(
         handle->err,
-        return (interpolation_search_cells<da_interpolation::interpolation_p<T>, T>(
+        return (interpolation_search_cells<da_interpolation::interpolation_generic<T>, T>(
             handle, n_eval, x_eval, cells)))
 
     return da_status_success;
@@ -135,9 +156,10 @@ template <typename T> da_status da_interpolation_interpolate(da_handle handle) {
     if (status != da_status_success)
         return da_error_trace(handle->err, status, "Wrong precision type.");
 
-    DISPATCHER(handle->err,
-               return (interpolation_interpolate<da_interpolation::interpolation_p<T>, T>(
-                   handle)))
+    DISPATCHER(
+        handle->err,
+        return (interpolation_interpolate<da_interpolation::interpolation_generic<T>, T>(
+            handle)))
 
     return da_status_success;
 }
@@ -157,7 +179,7 @@ da_interpolation_set_boundary_conditions(da_handle handle, da_int dim, da_int le
 
     DISPATCHER(handle->err,
                return (interpolation_set_boundary_conditions<
-                       da_interpolation::interpolation_p<T>, T>(
+                       da_interpolation::interpolation_generic<T>, T>(
                    handle, dim, left_order, left_values, right_order, right_values)))
 
     return da_status_success;
@@ -174,9 +196,10 @@ da_status da_interpolation_evaluate(da_handle handle, da_int n_eval, const T *x_
     if (status != da_status_success)
         return da_error_trace(handle->err, status, "Wrong precision type.");
 
-    DISPATCHER(handle->err,
-               return (interpolation_evaluate<da_interpolation::interpolation_p<T>, T>(
-                   handle, n_eval, x_eval, y_eval, n_orders, orders)))
+    DISPATCHER(
+        handle->err,
+        return (interpolation_evaluate<da_interpolation::interpolation_generic<T>, T>(
+            handle, n_eval, x_eval, y_eval, n_orders, orders)))
 
     return da_status_success;
 }

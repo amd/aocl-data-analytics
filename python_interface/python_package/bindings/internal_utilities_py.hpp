@@ -91,8 +91,8 @@ class pyda_handle {
     da_precision precision = da_double;
     numpy_order order = undetermined;
 
-    virtual void save_data([[maybe_unused]] py::dict &state){};
-    virtual void load_data([[maybe_unused]] py::dict &state){};
+    virtual void save_data([[maybe_unused]] py::dict &state) {};
+    virtual void load_data([[maybe_unused]] py::dict &state) {};
 
   public:
     virtual ~pyda_handle() = default;

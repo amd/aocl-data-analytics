@@ -63,9 +63,9 @@ def test_metrics(precision, metric, numpy_order):
                   [2, 1, -3]], dtype=precision, order=numpy_order)
 
     if metric == 'cosine':
-        tol = 80 * np.finfo(precision).eps
+        tol = float(80 * np.finfo(precision).eps)
     else:
-        tol = np.finfo(precision).eps
+        tol = float(np.finfo(precision).eps)
 
     # patch and import scikit-learn
     skpatch()
@@ -159,6 +159,6 @@ def test_metrics_inner_product(precision, numpy_order):
         da_distance_XX = pairwise_distances(X, metric='inner_product')
     undo_skpatch()
 
-    tol = np.finfo(precision).eps
+    tol = float(np.finfo(precision).eps)
     assert da_distance_XY == pytest.approx(expected_XY, abs=tol)
     assert da_distance_XX == pytest.approx(expected_XX, abs=tol)

@@ -440,21 +440,21 @@ Linear model options
       .. csv-table:: Linear models options
          :header: "Option name", "Type", "Default", "Description", "Constraints", "Notes"
 
-         "optim method", "string", ":math:`s=` `auto`", "Select optimization method to use.", ":math:`s=` `auto`, `bfgs`, `cg`, `chol`, `cholesky`, `coord`, `lbfgs`, `lbfgsb`, `qr`, `sparse_cg`, or `svd`.", Foundational.
-         "scaling", "string", ":math:`s=` `auto`", "Scale or standardize feature matrix and response vector. Matrix is copied and then rescaled. Option key value auto indicates that rescaling type is chosen by the solver (this also includes no scaling).", ":math:`s=` `auto`, `centering`, `no`, `none`, `scale`, `scale only`, `standardise`, or `standardize`.", Foundational.
-         "optim progress factor", "real", ":math:`r=\frac{10}{\sqrt{2\,\varepsilon}}`", "Factor used to detect convergence of the iterative optimization step. See option in the corresponding optimization solver documentation.", ":math:`0 \le r`", Foundational.
-         "optim convergence tol", "real", ":math:`r=10^{-4}`", "Tolerance to declare convergence for the iterative optimization step. See option in the corresponding optimization solver documentation.", ":math:`0 < r < 1`", Foundational.
-         "print options", "string", ":math:`s=` `no`", "Print options.", ":math:`s=` `no`, or `yes`.", Foundational.
-         "lambda", "real", ":math:`r=0`", "Penalty coefficient for the regularization terms: lambda( (1-alpha)/2 L2 + alpha L1 ).", ":math:`0 \le r`", Foundational.
-         "alpha", "real", ":math:`r=0`", "Coefficient of alpha in the regularization terms: lambda( (1-alpha)/2 L2 + alpha L1 ).", ":math:`0 \le r \le 1`", Foundational.
-         "optim iteration limit", "integer", ":math:`i=10000`", "Maximum number of iterations to perform in the optimization phase. Valid only for iterative solvers, e.g. L-BFGS-B, Coordinate Descent, etc.", ":math:`1 \le i`", Foundational.
-         "intercept", "integer", ":math:`i=0`", "Add intercept variable to the model.", ":math:`0 \le i \le 1`", Foundational.
-         "print level", "integer", ":math:`i=0`", "Set level of verbosity for the solver.", ":math:`0 \le i \le 5`", Foundational.
-         "check data", "string", ":math:`s=` `no`", "Check input data for NaNs prior to performing computation.", ":math:`s=` `no`, or `yes`.", Foundational.
-         "storage order", "string", ":math:`s=` `column-major`", "Whether data is supplied and returned in row- or column-major order.", ":math:`s=` `c`, `column-major`, `f`, `fortran`, or `row-major`.", Foundational.
-         "mixed precision", "string", ":math:`s=` `no`", "Whether to use mixed precision iterative refinement, in which lower precision arithmetic is used before switching to the working precision for the final iterations.", ":math:`s=` `no`, or `yes`.", Foundational.
-         "low precision convergence tol", "real", ":math:`r=10^{-3}`", "If mixed precision iterative refinement is enabled, convergence tolerance for the low precision phase.", ":math:`0 \le r`", Foundational.
-         "low precision iteration limit", "integer", ":math:`i=5000`", "If mixed precision iterative refinement is enabled, maximum number of iterations for the low precision phase.", ":math:`1 \le i`", Foundational.
+         "optim method", "string", ":math:`s=` `auto`", "Select optimization method to use.", ":math:`s=` `auto`, `bfgs`, `cg`, `chol`, `cholesky`, `coord`, `lbfgs`, `lbfgsb`, `qr`, `sparse_cg`, or `svd`.", "Foundational."
+         "scaling", "string", ":math:`s=` `auto`", "Scale or standardize feature matrix and response vector. Matrix is copied and then rescaled. Option key value auto indicates that rescaling type is chosen by the solver (this also includes no scaling).", ":math:`s=` `auto`, `centering`, `no`, `none`, `scale`, `scale only`, `standardise`, or `standardize`.", "Foundational."
+         "optim progress factor", "real", ":math:`r=\frac{10}{\sqrt{2\,\varepsilon}}`", "Factor used to detect convergence of the iterative optimization step. See option in the corresponding optimization solver documentation.", ":math:`0 \le r`", "Foundational."
+         "optim convergence tol", "real", ":math:`r=10^{-4}`", "Tolerance to declare convergence for the iterative optimization step. See option in the corresponding optimization solver documentation.", ":math:`0 < r < 1`", "Foundational."
+         "print options", "string", ":math:`s=` `no`", "Print options.", ":math:`s=` `no`, or `yes`.", "Foundational."
+         "lambda", "real", ":math:`r=0`", "Penalty coefficient for the regularization terms: lambda( (1-alpha)/2 L2 + alpha L1 ).", ":math:`0 \le r`", "Foundational."
+         "alpha", "real", ":math:`r=0`", "Coefficient of alpha in the regularization terms: lambda( (1-alpha)/2 L2 + alpha L1 ).", ":math:`0 \le r \le 1`", "Foundational."
+         "optim iteration limit", "integer", ":math:`i=10000`", "Maximum number of iterations to perform in the optimization phase. Valid only for iterative solvers, e.g. L-BFGS-B, Coordinate Descent, etc.", ":math:`1 \le i`", "Foundational."
+         "intercept", "integer", ":math:`i=0`", "Add intercept variable to the model.", ":math:`0 \le i \le 1`", "Foundational."
+         "print level", "integer", ":math:`i=0`", "Set level of verbosity for the solver.", ":math:`0 \le i \le 5`", "Foundational."
+         "check data", "string", ":math:`s=` `no`", "Check input data for NaNs prior to performing computation.", ":math:`s=` `no`, or `yes`.", "Foundational."
+         "storage order", "string", ":math:`s=` `column-major`", "Whether data is supplied and returned in row- or column-major order.", ":math:`s=` `c`, `column-major`, `f`, `fortran`, or `row-major`.", "Foundational."
+         "mixed precision", "string", ":math:`s=` `no`", "Whether to use mixed precision iterative refinement, in which lower precision arithmetic is used before switching to the working precision for the final iterations.", ":math:`s=` `no`, or `yes`.", "Foundational."
+         "low precision convergence tol", "real", ":math:`r=10^{-3}`", "If mixed precision iterative refinement is enabled, convergence tolerance for the low precision phase.", ":math:`0 \le r`", "Foundational."
+         "low precision iteration limit", "integer", ":math:`i=5000`", "If mixed precision iterative refinement is enabled, maximum number of iterations for the low precision phase.", ":math:`1 \le i`", "Foundational."
 
 
       For the complete list of optional parameters see :ref:`linear model options <opts_linearmodels>`.

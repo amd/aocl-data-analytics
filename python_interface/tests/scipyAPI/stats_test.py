@@ -54,7 +54,7 @@ def test_gmean_hmean(precision, numpy_order, axis):
                   [7.0, 8.0, 9.0],
                   [2.0, 4.0, 6.0]], dtype=precision, order=numpy_order)
 
-    tol = 100 * np.finfo(precision).eps
+    tol = float(100 * np.finfo(precision).eps)
 
     # patch and import scipy
     sppatch(["gmean", "hmean"])
@@ -83,7 +83,7 @@ def test_skew_kurtosis(precision, axis, bias, fisher):
     rng = np.random.default_rng(42)
     X = rng.uniform(1.0, 10.0, size=(20, 5)).astype(precision)
 
-    tol = 100 * np.finfo(precision).eps
+    tol = float(100 * np.finfo(precision).eps)
 
     sppatch()
     from scipy import stats
@@ -109,7 +109,7 @@ def test_moment(precision, order, axis):
     rng = np.random.default_rng(7)
     X = rng.uniform(0.0, 5.0, size=(30, 4)).astype(precision)
 
-    tol = 100 * np.finfo(precision).eps
+    tol = float(100 * np.finfo(precision).eps)
 
     sppatch()
     from scipy import stats
@@ -132,7 +132,7 @@ def test_moment_array_order(precision, axis):
     X = rng.uniform(0.0, 5.0, size=(30, 4)).astype(precision)
     order = np.array([2, 3, 4])
 
-    tol = 100 * np.finfo(precision).eps
+    tol = float(100 * np.finfo(precision).eps)
 
     sppatch()
     from scipy import stats
@@ -158,7 +158,7 @@ def test_quantile(precision, q, axis, keepdims):
     rng = np.random.default_rng(13)
     X = rng.uniform(0.0, 100.0, size=(50, 3)).astype(precision)
 
-    tol = 100 * np.finfo(precision).eps
+    tol = float(100 * np.finfo(precision).eps)
 
     sppatch()
     from scipy import stats
@@ -189,7 +189,7 @@ def test_quantile_array_p(precision, axis, keepdims):
     else:
         p = np.array([0.2, 0.5, 0.9])
 
-    tol = 100 * np.finfo(precision).eps
+    tol = float(100 * np.finfo(precision).eps)
 
     sppatch()
     from scipy import stats
@@ -218,7 +218,7 @@ def test_quantile_p_grid(precision, axis, keepdims):
     p = np.array([[0.1], [0.5], [0.9]]) if axis == 0 \
         else np.array([[0.1, 0.5, 0.9]])
 
-    tol = 100 * np.finfo(precision).eps
+    tol = float(100 * np.finfo(precision).eps)
 
     sppatch()
     from scipy import stats
@@ -269,7 +269,7 @@ def test_describe(precision, axis):
     rng = np.random.default_rng(99)
     X = rng.uniform(1.0, 10.0, size=(40, 4)).astype(precision)
 
-    tol = 100 * np.finfo(precision).eps
+    tol = float(100 * np.finfo(precision).eps)
 
     sppatch()
     from scipy import stats

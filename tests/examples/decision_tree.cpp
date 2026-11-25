@@ -77,6 +77,7 @@ int main() {
     // Set up and train the decision tree
     da_handle tree_handle = nullptr;
     pass = da_handle_init_s(&tree_handle, da_handle_decision_tree) == da_status_success;
+    pass &= da_tree_select_model_s(tree_handle, df_classifier) == da_status_success;
     pass &=
         da_tree_set_training_data_s(tree_handle, n_samples, n_features, n_class, X.data(),
                                     n_samples, y.data(), nullptr) == da_status_success;

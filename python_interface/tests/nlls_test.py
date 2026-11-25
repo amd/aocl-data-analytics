@@ -52,6 +52,7 @@ def exp_r(x, r, data) -> int:
     r[:] = x1 * np.exp(x2 * t) - y
     return 0
 
+
 def exp_r_delay(x, r, data) -> int:
     t = data['t']
     y = data['y']
@@ -313,6 +314,24 @@ def test_iface_x(no_fortran):
     else:
         raise AssertionError(
             "Did not catch the expected exception")
+
+
+@pytest.mark.parametrize("numpy_precision", [np.float64, np.float32])
+def test_not_implemented(no_fortran, numpy_precision):
+    """
+    Without Fortran (e.g. Windows builds) the solver is not available, the
+    error from the handle initialization must be reported to the user
+    """
+    if not no_fortran:
+        pytest.skip("Only runs with the no_fortran flag")
+
+    data = {'t': np.array([1.0, 2.0, 4.0, 5.0, 8.0]),
+            'y': np.array([3.0, 4.0, 6.0, 11.0, 20.0])}
+    x = np.array([2.5, 0.25], dtype=numpy_precision)
+    ndf = nlls(2, 5)
+    with pytest.raises(RuntimeError,
+                       match="nonlinear least squares solver is not available"):
+        ndf.fit(x, exp_r, exp_J, data=data)
 
 
 def test_warning_time(no_fortran):

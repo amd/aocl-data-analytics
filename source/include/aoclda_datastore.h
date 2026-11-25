@@ -252,30 +252,33 @@ da_status da_data_load_row_str(da_datastore store, da_int n_rows, da_int n_cols,
  * Prior to calling this function, the following options can be set using calls to @ref da_options_set_int or @ref da_options_set_string.
  *
  \rst
- .. csv-table::
-   :header: "Option Name", "Type", "Default", "Description", "Constraints"
+ .. update options using table _opts_datastore
 
-   "integers as floats", "integer", ":math:`i=0`", "Whether or not to interpret integers as floating point numbers when using autodetection.", ":math:`0 \le i \le 1`"
-   "datastore precision", "string", ":math:`s=` `double`", "The precision used when reading floating point numbers using autodetection.", ":math:`s=` `double`, or `single`."
-   "use header row", "integer", ":math:`i=0`", "Whether or not to interpret the first row as a header.", ":math:`0 \le i \le 1`"
-   "warn for missing data", "integer", ":math:`i=0`", "If set to 0, return error if missing data is encountered; if set to 1, issue a warning and store missing data as either a NaN (for floating point data) or the maximum value of the integer type being used.", ":math:`0 \le i \le 1`"
-   "skip footer", "integer", ":math:`i=0`", "Whether or not to ignore the last line when reading a CSV file.", ":math:`0 \le i \le 1`"
-   "delimiter", "string", ":math:`s=` `,`", "The delimiter used when reading CSV files.", ""
-   "whitespace delimiter", "integer", ":math:`i=0`", "Whether or not to use whitespace as the delimiter when reading CSV files.", ":math:`0 \le i \le 1`"
-   "decimal", "string", ":math:`s=` `.`", "The character used to denote a decimal point in CSV files.", ""
-   "skip initial space", "integer", ":math:`i=0`", "Whether or not to ignore initial spaces in CSV file lines.", ":math:`0 \le i \le 1`"
-   "line terminator", "string", "empty", "The character used to denote line termination in CSV files (leave this empty to use the default).", ""
-   "row start", "integer", ":math:`i=0`", "Ignore the specified number of lines from the top of the file (note that line numbers in CSV files start at 1).", ":math:`0 \le i`"
-   "comment", "string", ":math:`s=` `#`", "The character used to denote comments in CSV files (note, if a line in a CSV file is to be interpreted as only containing a comment, the comment character should be the first character on the line).", ""
-   "quote character", "string", ":math:`s=''`", "The character used to denote quotations in CSV files.", ""
-   "scientific notation character", "string", ":math:`s=` `e`", "The character used to denote powers of 10 in floating point values in CSV files.", ""
-   "escape character", "string", ":math:`s=` `\\`", "The escape character in CSV files.", ""
-   "thousands", "string", "empty", "The character used to separate thousands when reading numeric values in CSV files.", ""
-   "skip rows", "string", "empty", "A comma- or space-separated list of rows to ignore in CSV files.", ""
-   "datatype", "string", ":math:`s=` `auto`", "If a CSV file is known to be of a single datatype, set this option to disable autodetection and make reading the file quicker.", ":math:`s=` `auto`, `boolean`, `double`, `float`, `integer`, or `string`."
-   "storage order", "string", ":math:`s=` `column-major`", "Whether to return data in row- or column-major format.", ":math:`s=` `column-major`, or `row-major`."
-   "skip empty lines", "integer", ":math:`i=0`", "Whether or not to ignore empty lines in CSV files (note that caution should be used when using this in conjunction with options such as CSV skip rows since line numbers may no longer correspond to the original line numbers in the CSV file).", ":math:`0 \le i \le 1`"
-   "double quote", "integer", ":math:`i=0`", "Whether or not to interpret two consecutive quotechar characters within a field as a single quotechar character.", ":math:`0 \le i \le 1`"
+ .. csv-table::
+   :escape: ~
+   :header: "Option Name", "Type", "Default", "Description", "Constraints", "Notes"
+
+   "integers as floats", "integer", ":math:`i=0`", "Whether or not to interpret integers as floating point numbers when using autodetection.", ":math:`0 \le i \le 1`", "Foundational."
+   "datastore precision", "string", ":math:`s=` `double`", "The precision used when reading floating point numbers using autodetection.", ":math:`s=` `double`, or `single`.", "Foundational."
+   "use header row", "integer", ":math:`i=0`", "Whether or not to interpret the first row as a header.", ":math:`0 \le i \le 1`", "Foundational."
+   "warn for missing data", "integer", ":math:`i=0`", "If set to 0, return error if missing data is encountered; if set to 1, issue a warning and store missing data as either a NaN (for floating point data) or the maximum value of the integer type being used.", ":math:`0 \le i \le 1`", "Foundational."
+   "skip footer", "integer", ":math:`i=0`", "Whether or not to ignore the last line when reading a CSV file.", ":math:`0 \le i \le 1`", "Foundational."
+   "delimiter", "string", ":math:`s=` `,`", "The delimiter used when reading CSV files.", "", "Foundational."
+   "whitespace delimiter", "integer", ":math:`i=0`", "Whether or not to use whitespace as the delimiter when reading CSV files.", ":math:`0 \le i \le 1`", "Foundational."
+   "decimal", "string", ":math:`s=` `.`", "The character used to denote a decimal point in CSV files.", "", "Foundational."
+   "skip initial space", "integer", ":math:`i=0`", "Whether or not to ignore initial spaces in CSV file lines.", ":math:`0 \le i \le 1`", "Foundational."
+   "line terminator", "string", "empty", "The character used to denote line termination in CSV files (leave this empty to use the default).", "", "Foundational."
+   "row start", "integer", ":math:`i=0`", "Ignore the specified number of lines from the top of the file (note that line numbers in CSV files start at 1).", ":math:`0 \le i`", "Foundational."
+   "comment", "string", ":math:`s=` `#`", "The character used to denote comments in CSV files (note, if a line in a CSV file is to be interpreted as only containing a comment, the comment character should be the first character on the line).", "", "Foundational."
+   "quote character", "string", ":math:`s=` `~"`", "The character used to denote quotations in CSV files.", "", "Foundational."
+   "scientific notation character", "string", ":math:`s=` `e`", "The character used to denote powers of 10 in floating point values in CSV files.", "", "Foundational."
+   "escape character", "string", ":math:`s=` `\\`", "The escape character in CSV files.", "", "Foundational."
+   "thousands", "string", "empty", "The character used to separate thousands when reading numeric values in CSV files.", "", "Foundational."
+   "skip rows", "string", "empty", "A comma- or space-separated list of rows to ignore in CSV files.", "", "Foundational."
+   "datatype", "string", ":math:`s=` `auto`", "If a CSV file is known to be of a single datatype, set this option to disable autodetection and make reading the file quicker.", ":math:`s=` `auto`, `boolean`, `double`, `float`, `integer`, or `string`.", "Foundational."
+   "storage order", "string", ":math:`s=` `column-major`", "Whether to return data in row- or column-major format.", ":math:`s=` `column-major`, or `row-major`.", "Foundational."
+   "skip empty lines", "integer", ":math:`i=0`", "Whether or not to ignore empty lines in CSV files (note that caution should be used when using this in conjunction with options such as CSV skip rows since line numbers may no longer correspond to the original line numbers in the CSV file).", ":math:`0 \le i \le 1`", "Foundational."
+   "double quote", "integer", ":math:`i=0`", "Whether or not to interpret two consecutive quotechar characters within a field as a single quotechar character.", ":math:`0 \le i \le 1`", "Foundational."
 \endrst
  *
  * @param[inout] store a @ref _da_datastore object, initialized using @ref da_datastore_init.

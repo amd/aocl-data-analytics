@@ -52,7 +52,7 @@ def test_decision_tree(numpy_precision):
     X_test = np.array(X_test, dtype=numpy_precision).transpose()
     y_test = np.array(y_test, dtype=numpy_precision)
 
-    tol = np.sqrt(np.finfo(numpy_precision).eps)
+    tol = float(np.sqrt(np.finfo(numpy_precision).eps))
 
     # patch and import scikit-learn
     skpatch()
@@ -160,7 +160,7 @@ def test_small_histograms(numpy_precision, numpy_order):
                        dtype=numpy_precision, order=numpy_order).transpose()
     y_test = np.array([0, 0, 0, 1, 1, 1, 2, 2, 2], dtype=np.int32)
     # autopep8: on
-    tol = np.sqrt(np.finfo(numpy_precision).eps)
+    tol = float(np.sqrt(np.finfo(numpy_precision).eps))
 
     # Solve first without binning
     skpatch()

@@ -35,8 +35,6 @@
 #include "model_persistence.hpp"
 #include "options.hpp"
 
-#include <iomanip>
-#include <iostream>
 #include <string>
 
 /*
@@ -98,6 +96,12 @@ template <typename T> class basic_handle {
      */
     virtual da_status save_model(da_model_persistence::serialization_buffer &buffer);
     virtual da_status load_model(da_model_persistence::serialization_buffer &buffer);
+
+    /*
+     * Helpers to reserve, save and load options from the registry of the model.
+     */
+    da_status serialize_registry(da_model_persistence::serialization_buffer &buffer);
+    da_status deserialize_registry(da_model_persistence::serialization_buffer &buffer);
 
     void set_serialization_version(da_int serialization_version) {
         this->serialization_version = serialization_version;

@@ -29,6 +29,7 @@
 #define DA_VECTOR_HPP
 
 #include "aoclda.h"
+#include <cstring>
 #include <stdexcept>
 #include <type_traits>
 #include <vector>

@@ -75,20 +75,20 @@ template <typename T> class cubic_spline : public interpolation_generic<T> {
     da_status compute_hermite_spline();
 
   public:
-    cubic_spline(da_errors::da_error_t &err, da_options::OptionRegistry &opts);
+    explicit cubic_spline(da_errors::da_error_t &err);
     ~cubic_spline() = default;
-    void refresh();
+    void refresh() override;
 
     // Set the boundary conditions
     da_status set_boundary_conditions(da_int dim, da_int left_order, const T *left_values,
-                                      da_int right_order, const T *right_values);
-    da_status interpolate();
+                                      da_int right_order, const T *right_values) override;
+    da_status interpolate() override;
     da_status evaluate(da_int n_eval, const T *x_eval, T *y_eval, da_int n_orders = 1,
-                       const da_int *order = 0);
+                       const da_int *order = 0) override;
 
     // Get results
-    da_status get_result(da_result query, da_int *dim, T *result);
-    da_status get_result(da_result query, da_int *dim, da_int *result);
+    da_status get_result(da_result query, da_int *dim, T *result) override;
+    da_status get_result(da_result query, da_int *dim, da_int *result) override;
 
     // Test getters
     const T *get_x_sites() const { return this->x_sites; }

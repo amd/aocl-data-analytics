@@ -27,7 +27,9 @@
 
 #include "../utest_utils.hpp"
 #include "aoclda.h"
+#include "da_handle.hpp"
 #include "da_omp.hpp"
+#include "forest/decision_forest.hpp"
 #include "gmock/gmock.h"
 #include "gtest/gtest.h"
 #include <algorithm>
@@ -94,6 +96,8 @@ TEST(decision_forest_internal, parallel_split) {
     // Train the forest with parallel splits (8 threads)
     da_handle forest_handle = nullptr;
     EXPECT_EQ(da_handle_init<double>(&forest_handle, da_handle_decision_forest),
+              da_status_success);
+    ASSERT_EQ(da_forest_select_model<double>(forest_handle, df_classifier),
               da_status_success);
     EXPECT_EQ(da_forest_set_training_data(forest_handle, nsamples, nfeat, 0, X.data(),
                                           nsamples, y.data()),
@@ -171,6 +175,8 @@ TEST(decision_forest_internal, inference_blocking) {
 
         da_handle forest_handle = nullptr;
         ASSERT_EQ(da_handle_init<double>(&forest_handle, da_handle_decision_forest),
+                  da_status_success);
+        ASSERT_EQ(da_forest_select_model<double>(forest_handle, df_classifier),
                   da_status_success);
         ASSERT_EQ(da_options_set_string(forest_handle, "storage order", order.c_str()),
                   da_status_success);

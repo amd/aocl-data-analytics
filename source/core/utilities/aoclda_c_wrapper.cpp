@@ -685,6 +685,13 @@ da_status da_dbscan_compute_s(da_handle handle) {
 
 /* ======================== Decision Tree (aoclda_decision_forest.h) ======================== */
 
+da_status da_tree_select_model_d(da_handle handle, da_df_model model) {
+    return da_tree_select_model<double>(handle, model);
+}
+da_status da_tree_select_model_s(da_handle handle, da_df_model model) {
+    return da_tree_select_model<float>(handle, model);
+}
+
 da_status da_tree_set_training_data_d(da_handle handle, da_int n_samples,
                                       da_int n_features, da_int n_class, const double *X,
                                       da_int ldx, const da_int *y,
@@ -756,6 +763,13 @@ da_status da_tree_score_s(da_handle handle, da_int n_samples, da_int n_features,
 }
 
 /* ======================== Decision Forest (aoclda_decision_forest.h) ======================== */
+
+da_status da_forest_select_model_d(da_handle handle, da_df_model model) {
+    return da_forest_select_model<double>(handle, model);
+}
+da_status da_forest_select_model_s(da_handle handle, da_df_model model) {
+    return da_forest_select_model<float>(handle, model);
+}
 
 da_status da_forest_set_training_data_d(da_handle handle, da_int n_samples,
                                         da_int n_features, da_int n_class,

@@ -1,32 +1,38 @@
 /* ************************************************************************
- * Copyright (c) 2024-2025 Advanced Micro Devices, Inc.
+ * Copyright (c) 2024-2025 Advanced Micro Devices, Inc. All rights reserved.
  *
- * Permission is hereby granted, free of charge, to any person obtaining a copy
- * of this software and associated documentation files (the "Software"), to deal
- * in the Software without restriction, including without limitation the rights
- * to use, copy, modify, merge, publish, distribute, sublicense, and/or sell
- * copies of the Software, and to permit persons to whom the Software is
- * furnished to do so, subject to the following conditions:
+ * Redistribution and use in source and binary forms, with or without modification,
+ * are permitted provided that the following conditions are met:
+ * 1. Redistributions of source code must retain the above copyright notice,
+ *    this list of conditions and the following disclaimer.
+ * 2. Redistributions in binary form must reproduce the above copyright notice,
+ *    this list of conditions and the following disclaimer in the documentation
+ *    and/or other materials provided with the distribution.
+ * 3. Neither the name of the copyright holder nor the names of its contributors
+ *    may be used to endorse or promote products derived from this software without
+ *    specific prior written permission.
  *
- * The above copyright notice and this permission notice shall be included in
- * all copies or substantial portions of the Software.
- *
- * THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
- * IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
- * FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
- * AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
- * LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
- * OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
- * THE SOFTWARE.
+ * THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS "AS IS" AND
+ * ANY EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED TO, THE IMPLIED
+ * WARRANTIES OF MERCHANTABILITY AND FITNESS FOR A PARTICULAR PURPOSE ARE DISCLAIMED.
+ * IN NO EVENT SHALL THE COPYRIGHT HOLDER OR CONTRIBUTORS BE LIABLE FOR ANY DIRECT,
+ * INDIRECT, INCIDENTAL, SPECIAL, EXEMPLARY, OR CONSEQUENTIAL DAMAGES (INCLUDING,
+ * BUT NOT LIMITED TO, PROCUREMENT OF SUBSTITUTE GOODS OR SERVICES; LOSS OF USE, DATA,
+ * OR PROFITS; OR BUSINESS INTERRUPTION) HOWEVER CAUSED AND ON ANY THEORY OF LIABILITY,
+ * WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE)
+ * ARISING IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE
+ * POSSIBILITY OF SUCH DAMAGE.
  *
  * ************************************************************************ */
 
 #include "aoclda.h"
-#include "convert_num.hpp"
 #include "da_cblas.hh"
 #include "linear_model.hpp"
 #include "macros.h"
 #include "sparse_overloads.hpp"
+#include <iomanip>
+#include <sstream>
+#include <string>
 #include <vector>
 
 namespace ARCH {
@@ -48,19 +54,18 @@ cg_data<T>::cg_data(da_int nsamples, da_int ncoef, T tol, da_int maxit)
         throw std::bad_alloc();
     }
     // Set handle options
-    // The following workaround with sprintf is due to the fact that std::to_string()
-    // truncates small numbers to 0.
-    char tol_str[16];
-    char maxit_str[16];
-    convert_num_to_char<T, 16>(tol, tol_str);
-    convert_num_to_char<da_int, 16>(maxit, maxit_str);
-    if (aoclsparse_itsol_option_set(handle, "CG abs tolerance", tol_str) !=
+    // Stream formatting avoids std::to_string() truncating small tolerances to 0.
+    std::ostringstream tol_stream;
+    tol_stream << std::scientific << std::setprecision(2) << tol;
+    const std::string tol_str = tol_stream.str();
+    const std::string maxit_str = std::to_string(maxit);
+    if (aoclsparse_itsol_option_set(handle, "CG abs tolerance", tol_str.c_str()) !=
             aoclsparse_status_success ||
-        aoclsparse_itsol_option_set(handle, "CG rel tolerance", tol_str) !=
+        aoclsparse_itsol_option_set(handle, "CG rel tolerance", tol_str.c_str()) !=
             aoclsparse_status_success ||
         aoclsparse_itsol_option_set(handle, "CG preconditioner", "none") !=
             aoclsparse_status_success ||
-        aoclsparse_itsol_option_set(handle, "CG iteration limit", maxit_str) !=
+        aoclsparse_itsol_option_set(handle, "CG iteration limit", maxit_str.c_str()) !=
             aoclsparse_status_success)
         throw std::runtime_error("Internal error with CG solver");
 };

@@ -1,42 +1,130 @@
 /* ************************************************************************
- * Copyright (c) 2024-2026 Advanced Micro Devices, Inc.
+ * Copyright (c) 2024-2026 Advanced Micro Devices, Inc. All rights reserved.
  *
- * Permission is hereby granted, free of charge, to any person obtaining a copy
- * of this software and associated documentation files (the "Software"), to deal
- * in the Software without restriction, including without limitation the rights
- * to use, copy, modify, merge, publish, distribute, sublicense, and/or sell
- * copies of the Software, and to permit persons to whom the Software is
- * furnished to do so, subject to the following conditions:
+ * Redistribution and use in source and binary forms, with or without modification,
+ * are permitted provided that the following conditions are met:
+ * 1. Redistributions of source code must retain the above copyright notice,
+ *    this list of conditions and the following disclaimer.
+ * 2. Redistributions in binary form must reproduce the above copyright notice,
+ *    this list of conditions and the following disclaimer in the documentation
+ *    and/or other materials provided with the distribution.
+ * 3. Neither the name of the copyright holder nor the names of its contributors
+ *    may be used to endorse or promote products derived from this software without
+ *    specific prior written permission.
  *
- * The above copyright notice and this permission notice shall be included in
- * all copies or substantial portions of the Software.
- *
- * THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
- * IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
- * FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
- * AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
- * LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
- * OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
- * THE SOFTWARE.
+ * THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS "AS IS" AND
+ * ANY EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED TO, THE IMPLIED
+ * WARRANTIES OF MERCHANTABILITY AND FITNESS FOR A PARTICULAR PURPOSE ARE DISCLAIMED.
+ * IN NO EVENT SHALL THE COPYRIGHT HOLDER OR CONTRIBUTORS BE LIABLE FOR ANY DIRECT,
+ * INDIRECT, INCIDENTAL, SPECIAL, EXEMPLARY, OR CONSEQUENTIAL DAMAGES (INCLUDING,
+ * BUT NOT LIMITED TO, PROCUREMENT OF SUBSTITUTE GOODS OR SERVICES; LOSS OF USE, DATA,
+ * OR PROFITS; OR BUSINESS INTERRUPTION) HOWEVER CAUSED AND ON ANY THEORY OF LIABILITY,
+ * WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE)
+ * ARISING IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE
+ * POSSIBILITY OF SUCH DAMAGE.
  *
  * ************************************************************************ */
 
 #include "../utest_utils.hpp"
 #include "aoclda.h"
+#include "context.hpp"
+#include "da_logger.hpp"
 #include "gmock/gmock.h"
 #include "gtest/gtest.h"
 #include <iomanip>
 #include <iostream>
 #include <limits>
 #include <list>
+#include <sstream>
 #include <string>
+#include <type_traits>
 
 namespace {
 
 using namespace std::string_literals;
+using logger = da_logger::logger;
+
+TEST(Logger, TypeTraits) {
+    static_assert(std::is_same_v<logger, da_logger::logger>);
+    static_assert(!std::is_copy_constructible_v<logger>);
+    static_assert(!std::is_copy_assignable_v<logger>);
+    static_assert(!std::is_move_constructible_v<logger>);
+    static_assert(!std::is_move_assignable_v<logger>);
+}
+
+TEST(Logger, DefaultStream) {
+    logger out;
+    EXPECT_EQ(&out.stream(), &std::cout);
+}
+
+TEST(Logger, ThrowingStream) {
+    std::ostringstream stream;
+    stream.exceptions(std::ios::badbit);
+
+    EXPECT_NO_THROW({ logger out(stream); });
+}
+
+TEST(Logger, Forwarding) {
+    std::ostringstream stream;
+    logger out(stream);
+
+    logger &result = out << "value=" << 42 << ' ' << std::boolalpha << true << std::endl;
+
+    EXPECT_EQ(&result, &out);
+    EXPECT_EQ(stream.str(), "value=42 true\n");
+}
+
+TEST(Logger, StreamAndReset) {
+    std::ostringstream stream;
+    stream << std::hex << std::setprecision(7);
+    const auto saved_flags = stream.flags();
+
+    logger out(stream);
+    out.stream() << std::dec << std::setprecision(2);
+    EXPECT_NE(stream.flags(), saved_flags);
+    EXPECT_EQ(stream.precision(), 2);
+
+    out.reset();
+    EXPECT_EQ(stream.flags(), saved_flags);
+    EXPECT_EQ(stream.precision(), 7);
+}
+
+TEST(Logger, StateRestoration) {
+    std::ostringstream stream;
+    std::ostringstream tied_stream;
+    stream << std::hex << std::showbase << std::setprecision(7) << std::setfill('#')
+           << std::setw(11);
+    stream.tie(&tied_stream);
+    stream.exceptions(std::ios::failbit);
+
+    const auto saved_flags = stream.flags();
+    const auto saved_precision = stream.precision();
+    const auto saved_width = stream.width();
+    const auto saved_fill = stream.fill();
+    const auto saved_exceptions = stream.exceptions();
+
+    {
+        logger out(stream);
+        out << std::dec << std::noshowbase << std::setprecision(2) << std::setfill('*')
+            << std::setw(6) << 42 << std::endl;
+        out.stream().tie(nullptr);
+        out.stream().exceptions(std::ios::badbit);
+    }
+
+    EXPECT_EQ(stream.flags(), saved_flags);
+    EXPECT_EQ(stream.precision(), saved_precision);
+    EXPECT_EQ(stream.width(), saved_width);
+    EXPECT_EQ(stream.fill(), saved_fill);
+    EXPECT_EQ(stream.tie(), &tied_stream);
+    EXPECT_EQ(stream.exceptions(), saved_exceptions);
+    EXPECT_EQ(stream.str(), "****42\n");
+}
 
 namespace dynamic_dispatch {
 TEST(UtilitiesTest, DynamicDispatchEnv) {
+
+    if (!context::get_context()->is_dynamic)
+        GTEST_SKIP() << "AOCL_DA_ARCH only applies to dynamic dispatch builds.";
 
     char arch[64]{""};
     char ns[64]{""};
@@ -148,41 +236,57 @@ TEST(UtilitiesTest, DynamicDispatchEnv) {
     }
 }
 
+TEST(UtilitiesTest, FixedDispatchIgnoresEnv) {
+    const auto *ctx = context::get_context();
+    if (ctx->is_dynamic)
+        GTEST_SKIP() << "Fixed dispatch behavior only applies to single-target builds.";
+
+    char arch[64]{""};
+    char ns[64]{""};
+    da_int len{64};
+
+    EXPECT_EQ(0, da_test::da_setenv("AOCL_DA_ARCH", "", 1));
+    EXPECT_EQ(da_status_success, da_get_arch_info(&len, arch, ns));
+    const std::string expected_arch{arch};
+    const std::string expected_ns{ns};
+    const char *requested_arch = expected_arch == "generic" ? "zen6" : "generic";
+
+    EXPECT_EQ(0, da_test::da_setenv("AOCL_DA_ARCH", requested_arch, 1));
+    EXPECT_EQ(da_status_success, da_get_arch_info(&len, arch, ns));
+    EXPECT_EQ(arch, expected_arch);
+    EXPECT_EQ(ns, expected_ns);
+    EXPECT_EQ(0, da_test::da_setenv("AOCL_DA_ARCH", "", 1));
+}
+
 // Try to set an architecture that is newer than the local cpu.
 // This test is only meaningful for dynamic dispatch builds where zen4
 // code was actually compiled into the library.
 TEST(UtilitiesTest, DynamicDispatchTryArch) {
 
-    // Check if this is a dynamic dispatch build by looking for multiple
-    // architecture entries in the version string (format: "... [arch1 arch2 ...]")
+    if (!context::get_context()->is_dynamic)
+        GTEST_SKIP() << "Architecture compatibility is checked only for dynamic builds.";
+
     const char *version = da_get_version();
     std::string version_str(version);
-    auto open = version_str.find('[');
-    auto close = version_str.find(']');
-    bool is_dynamic =
-        (open != std::string::npos && close != std::string::npos &&
-         version_str.substr(open + 1, close - open - 1).find(' ') != std::string::npos);
-    if (is_dynamic) {
 
-        char arch[64]{""};
-        char ns[64]{""};
-        da_int len{64};
+    char arch[64]{""};
+    char ns[64]{""};
+    da_int len{64};
 
-        // make sure its empty
-        EXPECT_EQ(0, da_test::da_setenv("AOCL_DA_ARCH", "", 1));
-        // get the architecture
-        EXPECT_EQ(da_status_success, da_get_arch_info(&len, arch, ns));
-        // save
-        std::string a{arch};
+    // make sure its empty
+    EXPECT_EQ(0, da_test::da_setenv("AOCL_DA_ARCH", "", 1));
+    // get the architecture
+    EXPECT_EQ(da_status_success, da_get_arch_info(&len, arch, ns));
+    // save
+    std::string a{arch};
 
-        if (a == "zen2"s || a == "zen3"s) {
-            // Only request zen4 if this build actually includes znver4 objects.
-            if (version_str.find("znver4") != std::string::npos) {
-                EXPECT_EQ(0, da_test::da_setenv("AOCL_DA_ARCH", "zen4", 1));
-                EXPECT_EQ(da_status_success, da_get_arch_info(&len, arch, ns));
-                // Local arch is older, so request should be ignored.
-                EXPECT_EQ(std::string(arch), a);
-            }
+    if (a == "zen2"s || a == "zen3"s) {
+        // Only request zen4 if this build actually includes znver4 objects.
+        if (version_str.find("znver4") != std::string::npos) {
+            EXPECT_EQ(0, da_test::da_setenv("AOCL_DA_ARCH", "zen4", 1));
+            EXPECT_EQ(da_status_success, da_get_arch_info(&len, arch, ns));
+            // Local arch is older, so request should be ignored.
+            EXPECT_EQ(std::string(arch), a);
         }
     }
 }

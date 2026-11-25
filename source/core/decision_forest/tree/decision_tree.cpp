@@ -40,95 +40,115 @@ namespace ARCH {
 
 namespace da_decision_forest {
 
-template class decision_tree<double>;
-template class decision_tree<float>;
+template class decision_tree_classification<double>;
+template class decision_tree_classification<float>;
 
 // Explicit instantiation of the inference member function.
 // for testing purposes
 // compact_traverse_BFS: y_pred overload
 template da_status
-decision_tree<double>::compact_traverse_BFS<row_major, false>(da_int, const double *,
-                                                              da_int, da_int *);
+decision_tree_classification<double>::compact_traverse_BFS<row_major, false>(
+    da_int, const double *, da_int, da_int *);
 template da_status
-decision_tree<double>::compact_traverse_BFS<row_major, true>(da_int, const double *,
-                                                             da_int, da_int *);
+decision_tree_classification<double>::compact_traverse_BFS<row_major, true>(
+    da_int, const double *, da_int, da_int *);
 template da_status
-decision_tree<double>::compact_traverse_BFS<column_major, false>(da_int, const double *,
-                                                                 da_int, da_int *);
+decision_tree_classification<double>::compact_traverse_BFS<column_major, false>(
+    da_int, const double *, da_int, da_int *);
 template da_status
-decision_tree<double>::compact_traverse_BFS<column_major, true>(da_int, const double *,
-                                                                da_int, da_int *);
+decision_tree_classification<double>::compact_traverse_BFS<column_major, true>(
+    da_int, const double *, da_int, da_int *);
 template da_status
-decision_tree<float>::compact_traverse_BFS<row_major, false>(da_int, const float *,
-                                                             da_int, da_int *);
+decision_tree_classification<float>::compact_traverse_BFS<row_major, false>(da_int,
+                                                                            const float *,
+                                                                            da_int,
+                                                                            da_int *);
 template da_status
-decision_tree<float>::compact_traverse_BFS<row_major, true>(da_int, const float *, da_int,
-                                                            da_int *);
+decision_tree_classification<float>::compact_traverse_BFS<row_major, true>(da_int,
+                                                                           const float *,
+                                                                           da_int,
+                                                                           da_int *);
 template da_status
-decision_tree<float>::compact_traverse_BFS<column_major, false>(da_int, const float *,
-                                                                da_int, da_int *);
+decision_tree_classification<float>::compact_traverse_BFS<column_major, false>(
+    da_int, const float *, da_int, da_int *);
 template da_status
-decision_tree<float>::compact_traverse_BFS<column_major, true>(da_int, const float *,
-                                                               da_int, da_int *);
+decision_tree_classification<float>::compact_traverse_BFS<column_major, true>(
+    da_int, const float *, da_int, da_int *);
 // compact_traverse_BFS: y_proba overload
-template da_status decision_tree<double>::compact_traverse_BFS<row_major, false>(
+template da_status
+decision_tree_classification<double>::compact_traverse_BFS<row_major, false>(
     da_int, const double *, da_int, double *, da_int, da_int);
-template da_status decision_tree<double>::compact_traverse_BFS<row_major, true>(
+template da_status
+decision_tree_classification<double>::compact_traverse_BFS<row_major, true>(
     da_int, const double *, da_int, double *, da_int, da_int);
-template da_status decision_tree<double>::compact_traverse_BFS<column_major, false>(
+template da_status
+decision_tree_classification<double>::compact_traverse_BFS<column_major, false>(
     da_int, const double *, da_int, double *, da_int, da_int);
-template da_status decision_tree<double>::compact_traverse_BFS<column_major, true>(
+template da_status
+decision_tree_classification<double>::compact_traverse_BFS<column_major, true>(
     da_int, const double *, da_int, double *, da_int, da_int);
-template da_status decision_tree<float>::compact_traverse_BFS<row_major, false>(
+template da_status
+decision_tree_classification<float>::compact_traverse_BFS<row_major, false>(
     da_int, const float *, da_int, float *, da_int, da_int);
 template da_status
-decision_tree<float>::compact_traverse_BFS<row_major, true>(da_int, const float *, da_int,
-                                                            float *, da_int, da_int);
-template da_status decision_tree<float>::compact_traverse_BFS<column_major, false>(
+decision_tree_classification<float>::compact_traverse_BFS<row_major, true>(
     da_int, const float *, da_int, float *, da_int, da_int);
-template da_status decision_tree<float>::compact_traverse_BFS<column_major, true>(
+template da_status
+decision_tree_classification<float>::compact_traverse_BFS<column_major, false>(
+    da_int, const float *, da_int, float *, da_int, da_int);
+template da_status
+decision_tree_classification<float>::compact_traverse_BFS<column_major, true>(
     da_int, const float *, da_int, float *, da_int, da_int);
 
 // compact_traverse_sequential: y_pred overload
-template da_status decision_tree<double>::compact_traverse_sequential<row_major, false>(
-    da_int, const double *, da_int, da_int *);
-template da_status decision_tree<double>::compact_traverse_sequential<row_major, true>(
-    da_int, const double *, da_int, da_int *);
 template da_status
-decision_tree<double>::compact_traverse_sequential<column_major, false>(da_int,
-                                                                        const double *,
-                                                                        da_int, da_int *);
-template da_status decision_tree<double>::compact_traverse_sequential<column_major, true>(
+decision_tree_classification<double>::compact_traverse_sequential<row_major, false>(
     da_int, const double *, da_int, da_int *);
 template da_status
-decision_tree<float>::compact_traverse_sequential<row_major, false>(da_int, const float *,
-                                                                    da_int, da_int *);
+decision_tree_classification<double>::compact_traverse_sequential<row_major, true>(
+    da_int, const double *, da_int, da_int *);
 template da_status
-decision_tree<float>::compact_traverse_sequential<row_major, true>(da_int, const float *,
-                                                                   da_int, da_int *);
-template da_status decision_tree<float>::compact_traverse_sequential<column_major, false>(
+decision_tree_classification<double>::compact_traverse_sequential<column_major, false>(
+    da_int, const double *, da_int, da_int *);
+template da_status
+decision_tree_classification<double>::compact_traverse_sequential<column_major, true>(
+    da_int, const double *, da_int, da_int *);
+template da_status
+decision_tree_classification<float>::compact_traverse_sequential<row_major, false>(
     da_int, const float *, da_int, da_int *);
-template da_status decision_tree<float>::compact_traverse_sequential<column_major, true>(
+template da_status
+decision_tree_classification<float>::compact_traverse_sequential<row_major, true>(
+    da_int, const float *, da_int, da_int *);
+template da_status
+decision_tree_classification<float>::compact_traverse_sequential<column_major, false>(
+    da_int, const float *, da_int, da_int *);
+template da_status
+decision_tree_classification<float>::compact_traverse_sequential<column_major, true>(
     da_int, const float *, da_int, da_int *);
 // compact_traverse_sequential: y_proba overload
-template da_status decision_tree<double>::compact_traverse_sequential<row_major, false>(
-    da_int, const double *, da_int, double *, da_int, da_int);
-template da_status decision_tree<double>::compact_traverse_sequential<row_major, true>(
+template da_status
+decision_tree_classification<double>::compact_traverse_sequential<row_major, false>(
     da_int, const double *, da_int, double *, da_int, da_int);
 template da_status
-decision_tree<double>::compact_traverse_sequential<column_major, false>(da_int,
-                                                                        const double *,
-                                                                        da_int, double *,
-                                                                        da_int, da_int);
-template da_status decision_tree<double>::compact_traverse_sequential<column_major, true>(
+decision_tree_classification<double>::compact_traverse_sequential<row_major, true>(
     da_int, const double *, da_int, double *, da_int, da_int);
-template da_status decision_tree<float>::compact_traverse_sequential<row_major, false>(
+template da_status
+decision_tree_classification<double>::compact_traverse_sequential<column_major, false>(
+    da_int, const double *, da_int, double *, da_int, da_int);
+template da_status
+decision_tree_classification<double>::compact_traverse_sequential<column_major, true>(
+    da_int, const double *, da_int, double *, da_int, da_int);
+template da_status
+decision_tree_classification<float>::compact_traverse_sequential<row_major, false>(
     da_int, const float *, da_int, float *, da_int, da_int);
-template da_status decision_tree<float>::compact_traverse_sequential<row_major, true>(
+template da_status
+decision_tree_classification<float>::compact_traverse_sequential<row_major, true>(
     da_int, const float *, da_int, float *, da_int, da_int);
-template da_status decision_tree<float>::compact_traverse_sequential<column_major, false>(
+template da_status
+decision_tree_classification<float>::compact_traverse_sequential<column_major, false>(
     da_int, const float *, da_int, float *, da_int, da_int);
-template da_status decision_tree<float>::compact_traverse_sequential<column_major, true>(
+template da_status
+decision_tree_classification<float>::compact_traverse_sequential<column_major, true>(
     da_int, const float *, da_int, float *, da_int, da_int);
 
 } // namespace da_decision_forest

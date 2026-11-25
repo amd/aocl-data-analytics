@@ -109,10 +109,17 @@ RCPP_MODULE(approx_nn_module) {
         .method("get_kmeans_iter", &ApproximateNeighbors::get_kmeans_iter,
                 "Get number of k-means iterations used")
         .method("print_model_versions",
-                static_cast<void (ApproximateNeighbors::*)()>(&rda_handle::print_model_versions),
+                static_cast<void (ApproximateNeighbors::*)()>(
+                    &rda_handle::print_model_versions),
                 "Print model version metadata")
-        .method("save_model", static_cast<Rcpp::List (ApproximateNeighbors::*)()>(&ApproximateNeighbors::save_model), "Save model state")
-        .method("load_model", static_cast<void (ApproximateNeighbors::*)(Rcpp::List)>(&ApproximateNeighbors::load_model), "Load model state");
+        .method("save_model",
+                static_cast<Rcpp::List (ApproximateNeighbors::*)()>(
+                    &ApproximateNeighbors::save_model),
+                "Save model state")
+        .method("load_model",
+                static_cast<void (ApproximateNeighbors::*)(Rcpp::List)>(
+                    &ApproximateNeighbors::load_model),
+                "Load model state");
 }
 
 // ---------------------------------------------------------------------------
@@ -134,8 +141,11 @@ RCPP_MODULE(dbscan_module) {
         .method("print_model_versions",
                 static_cast<void (DBSCAN::*)()>(&rda_handle::print_model_versions),
                 "Print model version metadata")
-        .method("save_model", static_cast<Rcpp::List (DBSCAN::*)()>(&DBSCAN::save_model), "Save model state")
-        .method("load_model", static_cast<void (DBSCAN::*)(Rcpp::List)>(&DBSCAN::load_model), "Load model state");
+        .method("save_model", static_cast<Rcpp::List (DBSCAN::*)()>(&DBSCAN::save_model),
+                "Save model state")
+        .method("load_model",
+                static_cast<void (DBSCAN::*)(Rcpp::List)>(&DBSCAN::load_model),
+                "Load model state");
 }
 
 // ---------------------------------------------------------------------------
@@ -163,11 +173,18 @@ RCPP_MODULE(decision_forest_module) {
                 "Get maximum features option")
         .method("get_features_selection_opt", &DecisionForest::get_features_selection_opt,
                 "Get features selection option")
-        .method("print_model_versions",
-                static_cast<void (DecisionForest::*)()>(&rda_handle::print_model_versions),
-                "Print model version metadata")
-        .method("save_model", static_cast<Rcpp::List (DecisionForest::*)()>(&DecisionForest::save_model), "Save model state")
-        .method("load_model", static_cast<void (DecisionForest::*)(Rcpp::List)>(&DecisionForest::load_model), "Load model state");
+        .method(
+            "print_model_versions",
+            static_cast<void (DecisionForest::*)()>(&rda_handle::print_model_versions),
+            "Print model version metadata")
+        .method(
+            "save_model",
+            static_cast<Rcpp::List (DecisionForest::*)()>(&DecisionForest::save_model),
+            "Save model state")
+        .method("load_model",
+                static_cast<void (DecisionForest::*)(Rcpp::List)>(
+                    &DecisionForest::load_model),
+                "Load model state");
 }
 
 // ---------------------------------------------------------------------------
@@ -176,9 +193,8 @@ RCPP_MODULE(decision_forest_module) {
 RCPP_MODULE(pca_module) {
     class_<PCADecomposition>("rccp_PCADecomposition")
         .constructor<>("Initialize PCA with defaults")
-        .constructor<da_int, std::string, std::string, std::string, bool, bool,
-                     da_int, da_int, std::string, da_int, bool>(
-            "Initialize PCA")
+        .constructor<da_int, std::string, std::string, std::string, bool, bool, da_int,
+                     da_int, std::string, da_int, bool>("Initialize PCA")
         .method("fit", &PCADecomposition::fit, "Fit PCA model")
         .method("transform", &PCADecomposition::transform,
                 "Transform data using fitted PCA")
@@ -205,11 +221,18 @@ RCPP_MODULE(pca_module) {
                 "Get number of features")
         .method("get_n_components", &PCADecomposition::get_n_components,
                 "Get number of components")
-        .method("print_model_versions",
-                static_cast<void (PCADecomposition::*)()>(&rda_handle::print_model_versions),
-                "Print model version metadata")
-        .method("save_model", static_cast<Rcpp::List (PCADecomposition::*)()>(&PCADecomposition::save_model), "Save model state")
-        .method("load_model", static_cast<void (PCADecomposition::*)(Rcpp::List)>(&PCADecomposition::load_model), "Load model state");
+        .method(
+            "print_model_versions",
+            static_cast<void (PCADecomposition::*)()>(&rda_handle::print_model_versions),
+            "Print model version metadata")
+        .method("save_model",
+                static_cast<Rcpp::List (PCADecomposition::*)()>(
+                    &PCADecomposition::save_model),
+                "Save model state")
+        .method("load_model",
+                static_cast<void (PCADecomposition::*)(Rcpp::List)>(
+                    &PCADecomposition::load_model),
+                "Load model state");
 }
 
 // ---------------------------------------------------------------------------
@@ -218,9 +241,8 @@ RCPP_MODULE(pca_module) {
 RCPP_MODULE(kernel_pca_module) {
     class_<KernelPCADecomposition>("rccp_KernelPCADecomposition")
         .constructor<>("Initialize Kernel PCA with defaults")
-        .constructor<da_int, std::string, std::string, da_int, bool, bool, bool,
-                     da_int, da_int, std::string, da_int, bool>(
-            "Initialize Kernel PCA")
+        .constructor<da_int, std::string, std::string, da_int, bool, bool, bool, da_int,
+                     da_int, std::string, da_int, bool>("Initialize Kernel PCA")
         .method("fit", &KernelPCADecomposition::fit, "Fit Kernel PCA model")
         .method("transform", &KernelPCADecomposition::transform,
                 "Transform data using fitted Kernel PCA")
@@ -230,14 +252,11 @@ RCPP_MODULE(kernel_pca_module) {
                 "Get eigenvalues")
         .method("get_eigenvectors", &KernelPCADecomposition::get_eigenvectors,
                 "Get eigenvectors")
-        .method("get_scores", &KernelPCADecomposition::get_scores,
-                "Get scores")
+        .method("get_scores", &KernelPCADecomposition::get_scores, "Get scores")
         .method("get_dual_coef", &KernelPCADecomposition::get_dual_coef,
                 "Get dual coefficients")
-        .method("get_X_fit", &KernelPCADecomposition::get_X_fit,
-                "Get training data")
-        .method("get_gamma", &KernelPCADecomposition::get_gamma,
-                "Get resolved gamma")
+        .method("get_X_fit", &KernelPCADecomposition::get_X_fit, "Get training data")
+        .method("get_gamma", &KernelPCADecomposition::get_gamma, "Get resolved gamma")
         .method("get_n_samples", &KernelPCADecomposition::get_n_samples,
                 "Get number of samples")
         .method("get_n_features", &KernelPCADecomposition::get_n_features,
@@ -245,10 +264,17 @@ RCPP_MODULE(kernel_pca_module) {
         .method("get_n_components", &KernelPCADecomposition::get_n_components,
                 "Get number of components")
         .method("print_model_versions",
-                static_cast<void (KernelPCADecomposition::*)()>(&rda_handle::print_model_versions),
+                static_cast<void (KernelPCADecomposition::*)()>(
+                    &rda_handle::print_model_versions),
                 "Print model version metadata")
-        .method("save_model", static_cast<Rcpp::List (KernelPCADecomposition::*)()>(&KernelPCADecomposition::save_model), "Save model state")
-        .method("load_model", static_cast<void (KernelPCADecomposition::*)(Rcpp::List)>(&KernelPCADecomposition::load_model), "Load model state");
+        .method("save_model",
+                static_cast<Rcpp::List (KernelPCADecomposition::*)()>(
+                    &KernelPCADecomposition::save_model),
+                "Save model state")
+        .method("load_model",
+                static_cast<void (KernelPCADecomposition::*)(Rcpp::List)>(
+                    &KernelPCADecomposition::load_model),
+                "Load model state");
 }
 
 // ---------------------------------------------------------------------------
@@ -272,8 +298,7 @@ RCPP_MODULE(nmf_module) {
                 "Get the components matrix H")
         .method("get_transform", &NMFDecomposition::get_transform,
                 "Get the transform matrix W")
-        .method("get_reconstruction_error",
-                &NMFDecomposition::get_reconstruction_error,
+        .method("get_reconstruction_error", &NMFDecomposition::get_reconstruction_error,
                 "Get the Frobenius reconstruction error")
         .method("get_n_iter", &NMFDecomposition::get_n_iter,
                 "Get the number of iterations performed")
@@ -283,11 +308,18 @@ RCPP_MODULE(nmf_module) {
                 "Get number of features")
         .method("get_n_components", &NMFDecomposition::get_n_components,
                 "Get number of components")
-        .method("print_model_versions",
-                static_cast<void (NMFDecomposition::*)()>(&rda_handle::print_model_versions),
-                "Print model version metadata")
-        .method("save_model", static_cast<Rcpp::List (NMFDecomposition::*)()>(&NMFDecomposition::save_model), "Save model state")
-        .method("load_model", static_cast<void (NMFDecomposition::*)(Rcpp::List)>(&NMFDecomposition::load_model), "Load model state");
+        .method(
+            "print_model_versions",
+            static_cast<void (NMFDecomposition::*)()>(&rda_handle::print_model_versions),
+            "Print model version metadata")
+        .method("save_model",
+                static_cast<Rcpp::List (NMFDecomposition::*)()>(
+                    &NMFDecomposition::save_model),
+                "Save model state")
+        .method("load_model",
+                static_cast<void (NMFDecomposition::*)(Rcpp::List)>(
+                    &NMFDecomposition::load_model),
+                "Load model state");
 }
 
 // ---------------------------------------------------------------------------
@@ -308,13 +340,14 @@ RCPP_MODULE(tsne_module) {
         .method("get_n_iter", &TSNE::get_n_iter, "Get number of iterations")
         .method("get_lp_n_iter", &TSNE::get_lp_n_iter,
                 "Get number of low precision iterations")
-        .method("get_kl_divergence", &TSNE::get_kl_divergence,
-                "Get final KL divergence")
+        .method("get_kl_divergence", &TSNE::get_kl_divergence, "Get final KL divergence")
         .method("print_model_versions",
                 static_cast<void (TSNE::*)()>(&rda_handle::print_model_versions),
                 "Print model version metadata")
-        .method("save_model", static_cast<Rcpp::List (TSNE::*)()>(&TSNE::save_model), "Save model state")
-        .method("load_model", static_cast<void (TSNE::*)(Rcpp::List)>(&TSNE::load_model), "Load model state");
+        .method("save_model", static_cast<Rcpp::List (TSNE::*)()>(&TSNE::save_model),
+                "Save model state")
+        .method("load_model", static_cast<void (TSNE::*)(Rcpp::List)>(&TSNE::load_model),
+                "Load model state");
 }
 
 // ---------------------------------------------------------------------------
@@ -347,7 +380,8 @@ RCPP_MODULE(kmeans_module) {
                 "Get cluster centers")
         .method("get_inertia", &KMeans::get_inertia, "Get within-cluster sum of squares")
         .method("get_n_iter", &KMeans::get_n_iter, "Get number of iterations")
-        .method("get_lp_n_iter", &KMeans::get_lp_n_iter, "Get number of low precision iterations")
+        .method("get_lp_n_iter", &KMeans::get_lp_n_iter,
+                "Get number of low precision iterations")
         .method("get_n_features", &KMeans::get_n_features, "Get number of features")
         .method("get_n_samples", &KMeans::get_n_samples, "Get number of samples")
         .method("get_labels", &KMeans::get_labels, "Get cluster labels")
@@ -355,8 +389,11 @@ RCPP_MODULE(kmeans_module) {
         .method("print_model_versions",
                 static_cast<void (KMeans::*)()>(&rda_handle::print_model_versions),
                 "Print model version metadata")
-        .method("save_model", static_cast<Rcpp::List (KMeans::*)()>(&KMeans::save_model), "Save model state")
-        .method("load_model", static_cast<void (KMeans::*)(Rcpp::List)>(&KMeans::load_model), "Load model state");
+        .method("save_model", static_cast<Rcpp::List (KMeans::*)()>(&KMeans::save_model),
+                "Save model state")
+        .method("load_model",
+                static_cast<void (KMeans::*)(Rcpp::List)>(&KMeans::load_model),
+                "Load model state");
 }
 
 // ---------------------------------------------------------------------------
@@ -374,8 +411,7 @@ RCPP_MODULE(interpolation_module) {
                 "Get piecewise polynomial coefficients")
         .method("get_n_sites", &CubicSpline::get_n_sites,
                 "Get number of interpolation sites")
-        .method("get_dim", &CubicSpline::get_dim,
-                "Get dimensionality of the values");
+        .method("get_dim", &CubicSpline::get_dim, "Get dimensionality of the values");
 }
 
 // ---------------------------------------------------------------------------
@@ -385,24 +421,29 @@ RCPP_MODULE(linmod_module) {
     class_<LinearModel>("rccp_LinearModel")
         .constructor<std::string, Nullable<da_int>, bool, std::string, std::string,
                      std::string, bool, bool, Nullable<da_int>, bool, Nullable<da_int>,
-                     Nullable<da_int>, Nullable<da_int>>(
-            "Initialize LinearModel")
+                     Nullable<da_int>, Nullable<da_int>>("Initialize LinearModel")
         .method("fit", &LinearModel::fit, "Fit the linear model")
         .method("predict", &LinearModel::predict, "Predict using the fitted model")
-        .method("get_model_trained", &LinearModel::get_model_trained, "Check if model is trained")
+        .method("get_model_trained", &LinearModel::get_model_trained,
+                "Check if model is trained")
         .method("get_coef", &LinearModel::get_coef, "Get model coefficients")
         .method("get_dual_coef", &LinearModel::get_dual_coef, "Get dual coefficients")
         .method("get_loss", &LinearModel::get_loss, "Get final loss value")
         .method("get_time", &LinearModel::get_time, "Get computation time")
         .method("get_n_iter", &LinearModel::get_n_iter, "Get number of iterations")
-        .method("get_lp_n_iter", &LinearModel::get_lp_n_iter, "Get number of low precision iterations")
+        .method("get_lp_n_iter", &LinearModel::get_lp_n_iter,
+                "Get number of low precision iterations")
         .method("get_norm_gradient_loss", &LinearModel::get_norm_gradient_loss,
                 "Get norm gradient loss")
         .method("print_model_versions",
                 static_cast<void (LinearModel::*)()>(&rda_handle::print_model_versions),
                 "Print model version metadata")
-        .method("save_model", static_cast<Rcpp::List (LinearModel::*)()>(&LinearModel::save_model), "Save model state")
-        .method("load_model", static_cast<void (LinearModel::*)(Rcpp::List)>(&LinearModel::load_model), "Load model state");
+        .method("save_model",
+                static_cast<Rcpp::List (LinearModel::*)()>(&LinearModel::save_model),
+                "Save model state")
+        .method("load_model",
+                static_cast<void (LinearModel::*)(Rcpp::List)>(&LinearModel::load_model),
+                "Load model state");
 }
 
 // ---------------------------------------------------------------------------
@@ -441,11 +482,18 @@ RCPP_MODULE(knn_module) {
                 "Find all neighbors within a given radius")
         .method("radius_neighbors_indices", &NearestNeighbors::radius_neighbors_indices,
                 "Find indices of all neighbors within a given radius")
-        .method("print_model_versions",
-                static_cast<void (NearestNeighbors::*)()>(&rda_handle::print_model_versions),
-                "Print model version metadata")
-        .method("save_model", static_cast<Rcpp::List (NearestNeighbors::*)()>(&NearestNeighbors::save_model), "Save model state")
-        .method("load_model", static_cast<void (NearestNeighbors::*)(Rcpp::List)>(&NearestNeighbors::load_model), "Load model state");
+        .method(
+            "print_model_versions",
+            static_cast<void (NearestNeighbors::*)()>(&rda_handle::print_model_versions),
+            "Print model version metadata")
+        .method("save_model",
+                static_cast<Rcpp::List (NearestNeighbors::*)()>(
+                    &NearestNeighbors::save_model),
+                "Save model state")
+        .method("load_model",
+                static_cast<void (NearestNeighbors::*)(Rcpp::List)>(
+                    &NearestNeighbors::load_model),
+                "Load model state");
 }
 
 // ---------------------------------------------------------------------------
@@ -529,8 +577,10 @@ RCPP_MODULE(svm_module) {
         .method("print_model_versions",
                 static_cast<void (SVC::*)()>(&rda_handle::print_model_versions),
                 "Print model version metadata")
-        .method("save_model", static_cast<Rcpp::List (SVC::*)()>(&SVC::save_model), "Save model state")
-        .method("load_model", static_cast<void (SVC::*)(Rcpp::List)>(&SVC::load_model), "Load model state");
+        .method("save_model", static_cast<Rcpp::List (SVC::*)()>(&SVC::save_model),
+                "Save model state")
+        .method("load_model", static_cast<void (SVC::*)(Rcpp::List)>(&SVC::load_model),
+                "Load model state");
 
     class_<SVR>("rccp_SVR")
         .constructor<>("Initialize SVR with defaults")
@@ -579,8 +629,10 @@ RCPP_MODULE(svm_module) {
         .method("print_model_versions",
                 static_cast<void (SVR::*)()>(&rda_handle::print_model_versions),
                 "Print model version metadata")
-        .method("save_model", static_cast<Rcpp::List (SVR::*)()>(&SVR::save_model), "Save model state")
-        .method("load_model", static_cast<void (SVR::*)(Rcpp::List)>(&SVR::load_model), "Load model state");
+        .method("save_model", static_cast<Rcpp::List (SVR::*)()>(&SVR::save_model),
+                "Save model state")
+        .method("load_model", static_cast<void (SVR::*)(Rcpp::List)>(&SVR::load_model),
+                "Load model state");
 
     class_<NuSVC>("rccp_NuSVC")
         .constructor<>("Initialize NuSVC with defaults")
@@ -644,8 +696,11 @@ RCPP_MODULE(svm_module) {
         .method("print_model_versions",
                 static_cast<void (NuSVC::*)()>(&rda_handle::print_model_versions),
                 "Print model version metadata")
-        .method("save_model", static_cast<Rcpp::List (NuSVC::*)()>(&NuSVC::save_model), "Save model state")
-        .method("load_model", static_cast<void (NuSVC::*)(Rcpp::List)>(&NuSVC::load_model), "Load model state");
+        .method("save_model", static_cast<Rcpp::List (NuSVC::*)()>(&NuSVC::save_model),
+                "Save model state")
+        .method("load_model",
+                static_cast<void (NuSVC::*)(Rcpp::List)>(&NuSVC::load_model),
+                "Load model state");
 
     class_<NuSVR>("rccp_NuSVR")
         .constructor<>("Initialize NuSVR with defaults")
@@ -697,8 +752,11 @@ RCPP_MODULE(svm_module) {
         .method("print_model_versions",
                 static_cast<void (NuSVR::*)()>(&rda_handle::print_model_versions),
                 "Print model version metadata")
-        .method("save_model", static_cast<Rcpp::List (NuSVR::*)()>(&NuSVR::save_model), "Save model state")
-        .method("load_model", static_cast<void (NuSVR::*)(Rcpp::List)>(&NuSVR::load_model), "Load model state");
+        .method("save_model", static_cast<Rcpp::List (NuSVR::*)()>(&NuSVR::save_model),
+                "Save model state")
+        .method("load_model",
+                static_cast<void (NuSVR::*)(Rcpp::List)>(&NuSVR::load_model),
+                "Load model state");
 }
 
 // ---------------------------------------------------------------------------
@@ -707,8 +765,8 @@ RCPP_MODULE(svm_module) {
 RCPP_MODULE(decision_tree_module) {
     class_<DecisionTree>("rccp_DecisionTree")
         .constructor<>("Initialize Decision Tree with defaults")
-        .constructor<int, int, int, std::string, int, std::string, bool, int,
-                     bool, bool>("Initialize Decision Tree")
+        .constructor<int, int, int, std::string, int, std::string, bool, int, bool, bool>(
+            "Initialize Decision Tree")
         .method("fit", &DecisionTree::fit, "Fit decision tree")
         .method("set_max_features_opt", &DecisionTree::set_max_features_opt,
                 "Set maximum features")
@@ -724,8 +782,13 @@ RCPP_MODULE(decision_tree_module) {
         .method("print_model_versions",
                 static_cast<void (DecisionTree::*)()>(&rda_handle::print_model_versions),
                 "Print model version metadata")
-        .method("save_model", static_cast<Rcpp::List (DecisionTree::*)()>(&DecisionTree::save_model), "Save model state")
-        .method("load_model", static_cast<void (DecisionTree::*)(Rcpp::List)>(&DecisionTree::load_model), "Load model state");
+        .method("save_model",
+                static_cast<Rcpp::List (DecisionTree::*)()>(&DecisionTree::save_model),
+                "Save model state")
+        .method(
+            "load_model",
+            static_cast<void (DecisionTree::*)(Rcpp::List)>(&DecisionTree::load_model),
+            "Load model state");
 }
 
 // ---------------------------------------------------------------------------

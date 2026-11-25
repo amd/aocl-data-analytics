@@ -109,8 +109,9 @@ da_status da_switch_order_in_place_s(da_order order_X_in, da_int n_rows, da_int 
  *
  * Returns or prints the architecture currently selected to be used by the library's API.
  *
- * Calling this function also refreshes the context for the dynamic dispatch querying the
- * value of the environmental variable \c AOCL_DA_ARCH.
+ * In a dynamic dispatch build, calling this function also refreshes the context by
+ * querying the value of the environmental variable \c AOCL_DA_ARCH. Fixed-architecture
+ * builds ignore \c AOCL_DA_ARCH and always report their compiled target.
  *
  * Note: This function is targeted to debugging the library.
  *

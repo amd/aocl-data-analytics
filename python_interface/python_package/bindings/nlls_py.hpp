@@ -291,30 +291,32 @@ class nlls : public pyda_handle {
 
         if (precision_nlls == da_double) {
             using T = double;
-            da_handle_init<T>(&handle, da_handle_nlls);
-            if (handle)
+            // On failure the handle holds the error from da_handle_init, e.g.
+            // da_status_not_implemented when built without Fortran (NO_FORTRAN)
+            status = da_handle_init<T>(&handle, da_handle_nlls);
+            if (!handle) {
+                status = da_status_handle_not_initialized;
+                mesg = "Handle could not be initialized.";
+            } else if (status == da_status_success)
                 // just store in the handle n_coef and n_res used for the bounds and weights
                 // will be correctly set up by an additional call)
                 status =
                     da_nlls_define_residuals_d(handle, n_coef, n_res, py_wrapper_resfun_d,
                                                py_wrapper_resgrd_d, nullptr, nullptr);
-            else {
-                status = da_status_handle_not_initialized;
-                mesg = "Handle could not be initialized.";
-            }
         } else if (precision_nlls == da_single) {
             using T = float;
-            da_handle_init<T>(&handle, da_handle_nlls);
-            if (handle)
+            // On failure the handle holds the error from da_handle_init, e.g.
+            // da_status_not_implemented when built without Fortran (NO_FORTRAN)
+            status = da_handle_init<T>(&handle, da_handle_nlls);
+            if (!handle) {
+                status = da_status_handle_not_initialized;
+                mesg = "Handle could not be initialized.";
+            } else if (status == da_status_success)
                 // just store in the handle n_coef and n_res used for the bounds and weights
                 // will be correctly set up by an additional call)
                 status =
                     da_nlls_define_residuals_s(handle, n_coef, n_res, py_wrapper_resfun_s,
                                                py_wrapper_resgrd_s, nullptr, nullptr);
-            else {
-                status = da_status_handle_not_initialized;
-                mesg = "Handle could not be initialized.";
-            }
         } else {
             status = da_status_wrong_type;
             mesg = "Invalid floating precision type argument ``prec``, try ''double'' "

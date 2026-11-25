@@ -28,19 +28,6 @@
 #ifndef AOCLDA_MISC
 #define AOCLDA_MISC
 
-#include "stdio.h"
-#include "string.h"
-
-#if !defined(DA_LOGGING) || defined(WIN32)
-#define DA_PRINTF_DEBUG(...)
-#else
-#define __DA_PRINTF_DEBUG_FILENAME__                                                     \
-    (strrchr(__FILE__, '/') ? strrchr(__FILE__, '/') + 1 : __FILE__)
-#define DA_PRINTF_DEBUG(FMT_STR, ...)                                                    \
-    printf("[%s %s:%d] " FMT_STR, __FUNCTION__, __DA_PRINTF_DEBUG_FILENAME__,            \
-           __LINE__ __VA_OPT__(, ) __VA_ARGS__)
-#endif
-
 da_status da_parallel_check(void);
 const char *da_get_version(void);
 const char *da_get_git_commit(void);

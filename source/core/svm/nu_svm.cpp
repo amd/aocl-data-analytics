@@ -491,7 +491,7 @@ da_status nusvm<T>::initialize_gradient(std::vector<T> &alpha_diff, da_int count
     if (threading_error == 1)
         return da_error(this->err, da_status_memory_error, "Memory allocation failed.");
 
-        // Merge thread-local contributions in fixed order
+    // Merge thread-local contributions in fixed order
 #pragma omp parallel for schedule(static) num_threads(n_threads) default(none)           \
     shared(gradient_local, gradient, n_threads, gradient_size)
     for (da_int i = 0; i < gradient_size; i++) {

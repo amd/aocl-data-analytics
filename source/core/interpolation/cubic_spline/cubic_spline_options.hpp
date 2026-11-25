@@ -23,63 +23,57 @@
  * ARISING IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE
  * POSSIBILITY OF SUCH DAMAGE.
  *
-*/
+ */
 
-#include "aoclda.h"
-#include "basic_handle.hpp"
+#ifndef CUBIC_SPLINE_OPTIONS_HPP
+#define CUBIC_SPLINE_OPTIONS_HPP
+
+#include "aoclda_types.h"
+#include "cubic_spline/cubic_spline_types.hpp"
 #include "da_error.hpp"
-#include "interpolation_generic.hpp"
-#include "interpolation_options.hpp"
 #include "macros.h"
-#include <vector>
-
-#ifndef INTERPOLATION_HPP
-#define INTERPOLATION_HPP
+#include "options.hpp"
 
 namespace ARCH {
 
 namespace da_interpolation {
 
-template <typename T> class interpolation_p : public basic_handle<T> {
+using namespace da_cubic_spline;
 
-  private:
-    std::unique_ptr<interpolation_generic<T>> interp = nullptr;
+template <class T>
+inline da_status register_cubic_spline_options(da_options::OptionRegistry &opts,
+                                               da_errors::da_error_t &err) {
+    using namespace da_options;
 
-  protected:
-    da_interpolation_model model = da_interpolation_model::interpolation_unset;
+    try {
+        std::shared_ptr<OptionString> os;
+        os = std::make_shared<OptionString>(OptionString(
+            "cubic spline type",
+            "Type of cubic spline to construct. Options: 'natural' (zero second "
+            "derivatives at endpoints), 'clamped zero' (zero first derivatives at "
+            "endpoints), "
+            "'custom' (user-specified first or second derivatives at endpoints), "
+            "'Hermite' (piecewise cubic Hermite interpolation).",
+            {{"natural", da_cubic_spline::natural},
+             {"clamped zero", da_cubic_spline::clamped},
+             {"custom", da_cubic_spline::custom},
+             {"hermite", da_cubic_spline::hermite}},
+            "natural"));
+        opts.register_opt(os);
 
-  public:
-    interpolation_p(da_errors::da_error_t *err = nullptr);
-    interpolation_p(da_errors::da_error_t &err);
-    void refresh();
+    } catch (std::bad_alloc &) {
+        return da_error(&err, da_status_memory_error, // LCOV_EXCL_LINE
+                        "Memory allocation failed.");
+    } catch (...) { // LCOV_EXCL_LINE
+        // Invalid use of the constructor, shouldn't happen (invalid_argument)
+        return da_error(&err, da_status_internal_error, // LCOV_EXCL_LINE
+                        "Unexpected error while registering options");
+    }
 
-    da_status select_model(da_interpolation_model model);
-
-    // Sites and values setters
-    da_status set_sites(da_int n, const T *x);
-    da_status set_sites_uniform(da_int n, T x_start, T x_end);
-    da_status set_values(da_int n, da_int dim, const T *y_data, da_int ldy, da_int order);
-
-    // Search for cells containing query points
-    da_status search_cells(da_int n_eval, const T *x_eval, da_int *cells);
-
-    // Set the boundary conditions
-    da_status set_boundary_conditions(da_int dim, da_int left_order, const T *left_values,
-                                      da_int right_order, const T *right_values);
-
-    // Interpolate using stored sites and values
-    da_status interpolate();
-
-    // Evaluate the piecewise polynomial at given points
-    da_status evaluate(da_int n_eval, const T *x_eval, T *y_eval, da_int n_orders = 1,
-                       const da_int *order = 0);
-
-    // Get results
-    da_status get_result(da_result query, da_int *dim, T *result);
-    da_status get_result(da_result query, da_int *dim, da_int *result);
-};
+    return da_status_success;
+}
 
 } // namespace da_interpolation
 } // namespace ARCH
 
-#endif // INTERPOLATION_HPP
+#endif // CUBIC_SPLINE_OPTIONS_HPP

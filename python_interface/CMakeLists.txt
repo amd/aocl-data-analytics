@@ -1,25 +1,26 @@
 # Copyright (C) 2024-2026 Advanced Micro Devices, Inc. All rights reserved.
 #
-# Redistribution and use in source and binary forms, with or without
-# modification, are permitted provided that the following conditions are met: 1.
-# Redistributions of source code must retain the above copyright notice, this
-# list of conditions and the following disclaimer. 2. Redistributions in binary
-# form must reproduce the above copyright notice, this list of conditions and
-# the following disclaimer in the documentation and/or other materials provided
-# with the distribution. 3. Neither the name of the copyright holder nor the
-# names of its contributors may be used to endorse or promote products derived
-# from this software without specific prior written permission.
+# Redistribution and use in source and binary forms, with or without modification,
+# are permitted provided that the following conditions are met:
+# 1. Redistributions of source code must retain the above copyright notice,
+#    this list of conditions and the following disclaimer.
+# 2. Redistributions in binary form must reproduce the above copyright notice,
+#    this list of conditions and the following disclaimer in the documentation
+#    and/or other materials provided with the distribution.
+# 3. Neither the name of the copyright holder nor the names of its contributors
+#    may be used to endorse or promote products derived from this software without
+#    specific prior written permission.
 #
-# THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS "AS IS"
-# AND ANY EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED TO, THE
-# IMPLIED WARRANTIES OF MERCHANTABILITY AND FITNESS FOR A PARTICULAR PURPOSE ARE
-# DISCLAIMED. IN NO EVENT SHALL THE COPYRIGHT HOLDER OR CONTRIBUTORS BE LIABLE
-# FOR ANY DIRECT, INDIRECT, INCIDENTAL, SPECIAL, EXEMPLARY, OR CONSEQUENTIAL
-# DAMAGES (INCLUDING, BUT NOT LIMITED TO, PROCUREMENT OF SUBSTITUTE GOODS OR
-# SERVICES; LOSS OF USE, DATA, OR PROFITS; OR BUSINESS INTERRUPTION) HOWEVER
-# CAUSED AND ON ANY THEORY OF LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY,
-# OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE
-# OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
+# THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS "AS IS" AND
+# ANY EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED TO, THE IMPLIED
+# WARRANTIES OF MERCHANTABILITY AND FITNESS FOR A PARTICULAR PURPOSE ARE DISCLAIMED.
+# IN NO EVENT SHALL THE COPYRIGHT HOLDER OR CONTRIBUTORS BE LIABLE FOR ANY DIRECT,
+# INDIRECT, INCIDENTAL, SPECIAL, EXEMPLARY, OR CONSEQUENTIAL DAMAGES (INCLUDING,
+# BUT NOT LIMITED TO, PROCUREMENT OF SUBSTITUTE GOODS OR SERVICES; LOSS OF USE, DATA,
+# OR PROFITS; OR BUSINESS INTERRUPTION) HOWEVER CAUSED AND ON ANY THEORY OF LIABILITY,
+# WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE)
+# ARISING IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE
+# POSSIBILITY OF SUCH DAMAGE.
 #
 
 # Build Python bindings using pybind11
@@ -33,6 +34,15 @@ if(NOT BUILD_SHARED_LIBS)
 endif()
 
 find_package(Python3 REQUIRED COMPONENTS Interpreter Development)
+
+set(WHEEL_POLICY
+  "auto"
+  CACHE STRING "Python wheel policy: none, local, auto, or a Linux auditwheel platform")
+set_property(CACHE WHEEL_POLICY PROPERTY STRINGS none local auto)
+if(WIN32 AND NOT WHEEL_POLICY MATCHES "^(none|local|auto)$")
+  message(FATAL_ERROR
+    "WHEEL_POLICY=${WHEEL_POLICY} is not supported on Windows. Use none, local, or auto.")
+endif()
 
 # Note on Windows we need something like: set
 # CMAKE_PREFIX_PATH=C:\path\to\python\site-packages\pybind11\share\cmake\pybind11;%CMAKE_PREFIX_PATH%
@@ -85,17 +95,29 @@ endif()
 # Build the Python bindings
 add_subdirectory(python_package)
 
-# Create the wheel after installation
-install(
-  CODE "execute_process(COMMAND ${Python3_EXECUTABLE} -m pip wheel ${CMAKE_INSTALL_PREFIX}/python_package/ --no-deps --wheel-dir ${CMAKE_INSTALL_PREFIX}/python_package/unrepaired-wheels)"
-)
+if(NOT WHEEL_POLICY STREQUAL "none")
+  # Create the wheel after installation
+  install(
+    CODE "
+      execute_process(
+        COMMAND \"${Python3_EXECUTABLE}\" -m pip wheel
+                \"${CMAKE_INSTALL_PREFIX}/python_package/\" --no-deps
+                --wheel-dir \"${CMAKE_INSTALL_PREFIX}/python_package/unrepaired-wheels\"
+        RESULT_VARIABLE wheel_result)
+      if(NOT wheel_result EQUAL 0)
+        message(FATAL_ERROR \"Failed to build the Python wheel with ${Python3_EXECUTABLE}.\")
+      endif()"
+  )
 
-install(CODE "set(BLAS \"${BLAS}\")")
-install(CODE "set(LAPACK \"${LAPACK}\")")
-install(CODE "set(SPARSE \"${SPARSE}\")")
-install(CODE "set(UTILS \"${UTILS}\")")
-if(NOT WIN32)
-  install(CODE "set(DLP \"${DLP}\")")
+  install(CODE "set(Python3_EXECUTABLE \"${Python3_EXECUTABLE}\")")
+  install(CODE "set(WHEEL_POLICY \"${WHEEL_POLICY}\")")
+  install(CODE "set(BLAS \"${BLAS}\")")
+  install(CODE "set(LAPACK \"${LAPACK}\")")
+  install(CODE "set(SPARSE \"${SPARSE}\")")
+  install(CODE "set(UTILS \"${UTILS}\")")
+  if(NOT WIN32)
+    install(CODE "set(DLP \"${DLP}\")")
+  endif()
+
+  install(CODE "include(\"${CMAKE_CURRENT_SOURCE_DIR}/repairwheel.cmake\")")
 endif()
-
-install(CODE "include(\"${CMAKE_CURRENT_SOURCE_DIR}/repairwheel.cmake\")")

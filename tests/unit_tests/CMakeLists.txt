@@ -1,25 +1,26 @@
 # Copyright (C) 2023-2026 Advanced Micro Devices, Inc. All rights reserved.
 #
-# Redistribution and use in source and binary forms, with or without
-# modification, are permitted provided that the following conditions are met: 1.
-# Redistributions of source code must retain the above copyright notice, this
-# list of conditions and the following disclaimer. 2. Redistributions in binary
-# form must reproduce the above copyright notice, this list of conditions and
-# the following disclaimer in the documentation and/or other materials provided
-# with the distribution. 3. Neither the name of the copyright holder nor the
-# names of its contributors may be used to endorse or promote products derived
-# from this software without specific prior written permission.
+# Redistribution and use in source and binary forms, with or without modification,
+# are permitted provided that the following conditions are met:
+# 1. Redistributions of source code must retain the above copyright notice,
+#    this list of conditions and the following disclaimer.
+# 2. Redistributions in binary form must reproduce the above copyright notice,
+#    this list of conditions and the following disclaimer in the documentation
+#    and/or other materials provided with the distribution.
+# 3. Neither the name of the copyright holder nor the names of its contributors
+#    may be used to endorse or promote products derived from this software without
+#    specific prior written permission.
 #
-# THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS "AS IS"
-# AND ANY EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED TO, THE
-# IMPLIED WARRANTIES OF MERCHANTABILITY AND FITNESS FOR A PARTICULAR PURPOSE ARE
-# DISCLAIMED. IN NO EVENT SHALL THE COPYRIGHT HOLDER OR CONTRIBUTORS BE LIABLE
-# FOR ANY DIRECT, INDIRECT, INCIDENTAL, SPECIAL, EXEMPLARY, OR CONSEQUENTIAL
-# DAMAGES (INCLUDING, BUT NOT LIMITED TO, PROCUREMENT OF SUBSTITUTE GOODS OR
-# SERVICES; LOSS OF USE, DATA, OR PROFITS; OR BUSINESS INTERRUPTION) HOWEVER
-# CAUSED AND ON ANY THEORY OF LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY,
-# OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE
-# OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
+# THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS "AS IS" AND
+# ANY EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED TO, THE IMPLIED
+# WARRANTIES OF MERCHANTABILITY AND FITNESS FOR A PARTICULAR PURPOSE ARE DISCLAIMED.
+# IN NO EVENT SHALL THE COPYRIGHT HOLDER OR CONTRIBUTORS BE LIABLE FOR ANY DIRECT,
+# INDIRECT, INCIDENTAL, SPECIAL, EXEMPLARY, OR CONSEQUENTIAL DAMAGES (INCLUDING,
+# BUT NOT LIMITED TO, PROCUREMENT OF SUBSTITUTE GOODS OR SERVICES; LOSS OF USE, DATA,
+# OR PROFITS; OR BUSINESS INTERRUPTION) HOWEVER CAUSED AND ON ANY THEORY OF LIABILITY,
+# WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE)
+# ARISING IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE
+# POSSIBILITY OF SUCH DAMAGE.
 #
 
 # Exclude gtest and gmock from installation
@@ -31,7 +32,7 @@ include(FetchContent)
 FetchContent_Declare(
   googletest
   GIT_REPOSITORY https://github.com/google/googletest.git
-  GIT_TAG v1.15.x)
+  GIT_TAG v1.18.x)
 
 # For Windows: Prevent overriding the parent project's compiler/linker settings
 set(gtest_force_shared_crt
@@ -205,9 +206,6 @@ add_executable(utilities_internal da_utilities/utilities_internal.cpp)
 target_compile_definitions(utilities_internal PRIVATE INT_LIB="${INT_LIB}")
 target_link_aocl_da(utilities_internal)
 
-add_executable(printf_debug_internal da_utilities/printf_debug_internal.cpp)
-target_link_aocl_da(printf_debug_internal)
-
 add_executable(da_vector_internal da_utilities/da_vector_internal.cpp)
 
 add_executable(da_cache_internal da_utilities/da_cache_internal.cpp)
@@ -232,6 +230,10 @@ target_link_aocl_da(c_compatibility_nog_public)
 
 add_executable(miscellaneous_internal da_utilities/miscellaneous_internal.cpp)
 target_compile_definitions(miscellaneous_internal PRIVATE ${AOCLDA_DEFS} ${AVAILABLE_ARCH_DEFS})
+
+add_executable(telemetry_internal da_utilities/telemetry_internal.cpp)
+target_compile_definitions(telemetry_internal PRIVATE
+  $<$<BOOL:${TELEMETRY}>:TELEMETRY>)
 
 # ##############################################################################
 # ############ kmeans ################
@@ -521,6 +523,7 @@ set(GTEST_INTERNAL
   ktl2
   ktl2_fallback
   miscellaneous_internal
+  telemetry_internal
   da_vector_internal
   quantization_internal
   da_cache_internal
@@ -532,8 +535,7 @@ set(GTEST_INTERNAL
   fp16_syrk_internal
   serialization_kernel_internal
   serialization_kernel_errors_internal)
-set(INDEP_INTERNAL printf_debug_internal lbfgsb_rc_internal
-  lbfgsb_fcomm_internal)
+set(INDEP_INTERNAL lbfgsb_rc_internal lbfgsb_fcomm_internal)
 set(INTERNAL_UTESTS ${GTEST_INTERNAL} ${INDEP_INTERNAL})
 
 set(GTEST_PUBLIC

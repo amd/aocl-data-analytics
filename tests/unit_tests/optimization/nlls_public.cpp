@@ -263,9 +263,7 @@ TEST(nlls, solverCheckX0Rubbish) {
     T t[]{1.0, 2.0, 4.0, 5.0, 8.0};
     T y[]{3.0, 4.0, 6.0, 11.0, 20.0};
 
-    struct params_type<T> params {
-        t, y, 0
-    };
+    struct params_type<T> params{t, y, 0};
     n = 2;
     m = 5;
     T x2[2]{0, 0};
@@ -286,9 +284,7 @@ TEST(nlls, solverCheckMaxIt) {
     const da_int n = 2;
     T t[]{1.0, 2.0, 4.0, 5.0, 8.0};
     T y[]{3.0, 4.0, 6.0, 11.0, 20.0};
-    struct params_type<T> params {
-        t, y
-    };
+    struct params_type<T> params{t, y};
 
     // Call fitting routine
     T x[n]{1.0, 1.0}; // Initial guess
@@ -314,9 +310,7 @@ TEST(nlls, solverCheckUsrStop) {
     const da_int n = 2;
     T t[]{1.0, 2.0, 4.0, 5.0, 8.0};
     T y[]{3.0, 4.0, 6.0, 11.0, 20.0};
-    struct params_type<T> params {
-        t, y, 2, 1
-    };
+    struct params_type<T> params{t, y, 2, 1};
 
     // Call fitting routine
     T x[n]{1.0, 1.0}; // Initial guess
@@ -355,9 +349,7 @@ TEST(nlls, solverCheckNumDifficulties) {
     const da_int n = 2;
     T t[]{1.0, 2.0, 4.0, 5.0, 8.0};
     T y[]{3.0, 4.0, 6.0, 11.0, 20.0};
-    struct params_type<T> params {
-        t, y
-    };
+    struct params_type<T> params{t, y};
 
     // Call fitting routine
     T x[n]{0.5, 0.0}; // Initial guess
@@ -386,9 +378,7 @@ TEST(nlls, solverCheckMaxTime) {
     const da_int n = 2;
     T t[]{1.0, 2.0, 4.0, 5.0, 8.0};
     T y[]{3.0, 4.0, 6.0, 11.0, 20.0};
-    struct params_type<T> params {
-        t, y, da_int(-2)
-    };
+    struct params_type<T> params{t, y, da_int(-2)};
 
     // Call fitting routine
     T x[n]{1.0, 1.0}; // Initial guess

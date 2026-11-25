@@ -50,9 +50,10 @@ template <typename T> void split<T>::copy(split const &sp) {
 
 /* Update_count_* functions: add to the left count all the values of samples_idx between start and end_idx */
 template <typename T>
-void decision_tree<T>::update_count_left(da_int start_idx, da_int end_idx,
-                                         da_int &ns_left, split_workspace<T> &ws,
-                                         std::vector<da_int> &samp) {
+void decision_tree_classification<T>::update_count_left(da_int start_idx, da_int end_idx,
+                                                        da_int &ns_left,
+                                                        split_workspace<T> &ws,
+                                                        std::vector<da_int> &samp) {
     for (da_int i = start_idx; i <= end_idx; i++) {
         da_int c = y[samp[i]];
         ws.count_left_classes[c]++;
@@ -60,10 +61,11 @@ void decision_tree<T>::update_count_left(da_int start_idx, da_int end_idx,
     }
 }
 template <typename T>
-void decision_tree<T>::update_count_left(da_int start_idx, da_int end_idx,
-                                         da_int &ns_left, std::vector<da_int> &weights,
-                                         split_workspace<T> &ws,
-                                         std::vector<da_int> &samp) {
+void decision_tree_classification<T>::update_count_left(da_int start_idx, da_int end_idx,
+                                                        da_int &ns_left,
+                                                        std::vector<da_int> &weights,
+                                                        split_workspace<T> &ws,
+                                                        std::vector<da_int> &samp) {
     for (da_int i = start_idx; i <= end_idx; i++) {
         da_int idx = samp[i];
         da_int c = y[idx];
@@ -73,9 +75,10 @@ void decision_tree<T>::update_count_left(da_int start_idx, da_int end_idx,
     }
 }
 template <typename T>
-void decision_tree<T>::update_count_right(da_int start_idx, da_int end_idx,
-                                          da_int &ns_right, split_workspace<T> &ws,
-                                          std::vector<da_int> &samp) {
+void decision_tree_classification<T>::update_count_right(da_int start_idx, da_int end_idx,
+                                                         da_int &ns_right,
+                                                         split_workspace<T> &ws,
+                                                         std::vector<da_int> &samp) {
     for (da_int i = end_idx; i > start_idx; i--) {
         da_int c = y[samp[i]];
         ws.count_right_classes[c]++;
@@ -83,10 +86,11 @@ void decision_tree<T>::update_count_right(da_int start_idx, da_int end_idx,
     }
 }
 template <typename T>
-void decision_tree<T>::update_count_right(da_int start_idx, da_int end_idx,
-                                          da_int &ns_right, std::vector<da_int> &weights,
-                                          split_workspace<T> &ws,
-                                          std::vector<da_int> &samp) {
+void decision_tree_classification<T>::update_count_right(da_int start_idx, da_int end_idx,
+                                                         da_int &ns_right,
+                                                         std::vector<da_int> &weights,
+                                                         split_workspace<T> &ws,
+                                                         std::vector<da_int> &samp) {
     for (da_int i = end_idx; i > start_idx; i--) {
         da_int idx = samp[i];
         da_int c = y[idx];
@@ -98,11 +102,10 @@ void decision_tree<T>::update_count_right(da_int start_idx, da_int end_idx,
 
 template <typename T>
 template <typename U>
-bool decision_tree<T>::update_split_sorted(da_int sidx, da_int &next_idx, da_int end_idx,
-                                           da_int ns, da_int &ns_left, da_int &ns_right,
-                                           T &left_score, T &right_score, T &split_score,
-                                           std::vector<U> &fv, split_workspace<T> &ws,
-                                           std::vector<da_int> &samp) {
+bool decision_tree_classification<T>::update_split_sorted(
+    da_int sidx, da_int &next_idx, da_int end_idx, da_int ns, da_int &ns_left,
+    da_int &ns_right, T &left_score, T &right_score, T &split_score, std::vector<U> &fv,
+    split_workspace<T> &ws, std::vector<da_int> &samp) {
     /* update the values of count_[left|right]_occurences up to the next split value for continuous
      * sorted feature values. */
     bool end_split_search = false;
@@ -146,8 +149,9 @@ bool decision_tree<T>::update_split_sorted(da_int sidx, da_int &next_idx, da_int
 
 /* Binned data */
 template <typename T>
-bool decision_tree<T>::update_node_histogram(const node<T> &nd, da_int feat_idx,
-                                             split_workspace<T> &ws) {
+bool decision_tree_classification<T>::update_node_histogram(const node<T> &nd,
+                                                            da_int feat_idx,
+                                                            split_workspace<T> &ws) {
     /* Auxialiary function for histogram based split computation.
      *
      * for a  given feature feat_idx and node nd, count the number of each response class
@@ -178,9 +182,10 @@ bool decision_tree<T>::update_node_histogram(const node<T> &nd, da_int feat_idx,
 }
 
 template <typename T>
-bool decision_tree<T>::update_node_histogram(const node<T> &nd, da_int feat_idx,
-                                             std::vector<da_int> &weights,
-                                             split_workspace<T> &ws) {
+bool decision_tree_classification<T>::update_node_histogram(const node<T> &nd,
+                                                            da_int feat_idx,
+                                                            std::vector<da_int> &weights,
+                                                            split_workspace<T> &ws) {
     /* Same as above, with weights for each sample index */
     size_t start_idx = (size_t)feat_idx * n_samples;
     memset(ws.node_hist.data(), 0, ws.node_hist.size() * sizeof(da_int));
@@ -206,9 +211,11 @@ bool decision_tree<T>::update_node_histogram(const node<T> &nd, da_int feat_idx,
 }
 
 template <typename T>
-void decision_tree<T>::split_hist_onevall(const node<T> &nd, da_int &ns_left,
-                                          da_int &ns_right, da_int cat_start_idx,
-                                          split_workspace<T> &ws) {
+void decision_tree_classification<T>::split_hist_onevall(const node<T> &nd,
+                                                         da_int &ns_left,
+                                                         da_int &ns_right,
+                                                         da_int cat_start_idx,
+                                                         split_workspace<T> &ws) {
     /* split strategy one vs all: all samples for the split bin value are set in the left child
      * while others are set in the right child.
      *
@@ -228,9 +235,11 @@ void decision_tree<T>::split_hist_onevall(const node<T> &nd, da_int &ns_left,
 }
 
 template <typename T>
-void decision_tree<T>::split_hist_ordered(const node<T> &nd, da_int &ns_left,
-                                          da_int &ns_right, da_int cat_start_idx,
-                                          split_workspace<T> &ws) {
+void decision_tree_classification<T>::split_hist_ordered(const node<T> &nd,
+                                                         da_int &ns_left,
+                                                         da_int &ns_right,
+                                                         da_int cat_start_idx,
+                                                         split_workspace<T> &ws) {
     /* split strategy ordered: samples with a split bin value smaller than the split threshold
      * are set in the left child while others are set in the right child.
      */
@@ -243,8 +252,10 @@ void decision_tree<T>::split_hist_ordered(const node<T> &nd, da_int &ns_left,
 }
 
 template <typename T>
-bool decision_tree<T>::compute_best_split_hist(const node<T> &nd, da_int feat_idx,
-                                               split<T> &sp, split_workspace<T> &ws) {
+bool decision_tree_classification<T>::compute_best_split_hist(const node<T> &nd,
+                                                              da_int feat_idx,
+                                                              split<T> &sp,
+                                                              split_workspace<T> &ws) {
     /* Main function for histograms based splits.
      * loop through all the bin values of feature feat_idx and update the split properties of sp
      * if a good split is found. */
@@ -303,9 +314,11 @@ bool decision_tree<T>::compute_best_split_hist(const node<T> &nd, da_int feat_id
 
 /* Raw data */
 template <typename T>
-void decision_tree<T>::update_feature_values(da_int start_idx, da_int end_idx,
-                                             da_int feat_idx, split_workspace<T> &ws,
-                                             std::vector<da_int> &samp) {
+void decision_tree_classification<T>::update_feature_values(da_int start_idx,
+                                                            da_int end_idx,
+                                                            da_int feat_idx,
+                                                            split_workspace<T> &ws,
+                                                            std::vector<da_int> &samp) {
     /* fill the ws.feature_values array with the values of X marked by the samples_idx and feat_idx */
     size_t col_idx = (size_t)ldx * feat_idx;
     for (da_int i = start_idx; i <= end_idx; i++)
@@ -313,9 +326,10 @@ void decision_tree<T>::update_feature_values(da_int start_idx, da_int end_idx,
 }
 
 template <typename T>
-void decision_tree<T>::split_raw_onevall(const node<T> &current_node, da_int feat_idx,
-                                         split<T> &sp, split_workspace<T> &ws,
-                                         std::vector<da_int> &samp) {
+void decision_tree_classification<T>::split_raw_onevall(const node<T> &current_node,
+                                                        da_int feat_idx, split<T> &sp,
+                                                        split_workspace<T> &ws,
+                                                        std::vector<da_int> &samp) {
     sp.score = current_node.score;
 
     // fill ws.cat_feat_table, counting for each possible category of feat_idx
@@ -362,9 +376,10 @@ void decision_tree<T>::split_raw_onevall(const node<T> &current_node, da_int fea
 }
 
 template <typename T>
-void decision_tree<T>::split_raw_continuous(const node<T> &current_node, split<T> &sp,
-                                            split_workspace<T> &ws,
-                                            std::vector<da_int> &samp) {
+void decision_tree_classification<T>::split_raw_continuous(const node<T> &current_node,
+                                                           split<T> &sp,
+                                                           split_workspace<T> &ws,
+                                                           std::vector<da_int> &samp) {
     // Initialize the split, all nodes to the right child.
     // count_class, ws.samples_idx_local and ws.feature_values are required to be up to date
     std::copy(count_classes.begin(), count_classes.end(), ws.count_right_classes.begin());
@@ -407,9 +422,11 @@ void decision_tree<T>::split_raw_continuous(const node<T> &current_node, split<T
 }
 
 template <typename T>
-bool decision_tree<T>::compute_best_split_raw(const node<T> &nd, da_int feat_idx,
-                                              split<T> &sp, split_workspace<T> &ws,
-                                              std::vector<da_int> &samp) {
+bool decision_tree_classification<T>::compute_best_split_raw(const node<T> &nd,
+                                                             da_int feat_idx,
+                                                             split<T> &sp,
+                                                             split_workspace<T> &ws,
+                                                             std::vector<da_int> &samp) {
     /* Main function for raw data splits. */
     update_feature_values(nd.start_idx, nd.end_idx, feat_idx, ws, samp);
 
@@ -440,9 +457,10 @@ bool decision_tree<T>::compute_best_split_raw(const node<T> &nd, da_int feat_idx
 }
 
 template <typename T>
-bool decision_tree<T>::compute_best_split(const node<T> &nd, da_int feat_idx,
-                                          split<T> &sp, split_workspace<T> &ws,
-                                          std::vector<da_int> &samp) {
+bool decision_tree_classification<T>::compute_best_split(const node<T> &nd,
+                                                         da_int feat_idx, split<T> &sp,
+                                                         split_workspace<T> &ws,
+                                                         std::vector<da_int> &samp) {
     /* Main entry point for the split computation, dispatches to the correct function based
      * on split properties and strategies */
     bool const_feat;

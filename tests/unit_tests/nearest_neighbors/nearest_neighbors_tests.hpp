@@ -83,7 +83,7 @@ template <typename T> struct NearestNeighborsParamType {
     std::vector<T> expected_targets_radius;
 
     // Set constructor to initialize data in test bodies as simply as possible.
-    NearestNeighborsParamType(){};
+    NearestNeighborsParamType() {};
     NearestNeighborsParamType(da_int n_neigh_knn, da_int n_neigh_kneighbors,
                               std::string metric, std::string algorithm,
                               std::string weights, T radius_constructor = 1.0,
@@ -91,7 +91,7 @@ template <typename T> struct NearestNeighborsParamType {
         : n_neigh_knn(n_neigh_knn), n_neigh_kneighbors(n_neigh_kneighbors),
           metric(metric), algorithm(algorithm), weights(weights),
           radius_constructor(radius_constructor), radius_neigh(radius_neigh),
-          leaf_size(leaf_size){};
+          leaf_size(leaf_size) {};
 };
 
 template <typename T> void get_expected_kind_k_dist(NearestNeighborsParamType<T> &param) {

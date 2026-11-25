@@ -52,7 +52,7 @@ def test_linear_regression(intercept, precision):
     X = np.array([[1, 1], [1, 2], [2, 2], [2, 3]], dtype=precision)
     y = np.dot(X, np.array([1, 2], dtype=precision)) + 3
 
-    tol = np.sqrt(np.finfo(precision).eps)
+    tol = float(np.sqrt(np.finfo(precision).eps))
 
     # patch and import scikit-learn
     skpatch()
@@ -166,7 +166,7 @@ def test_lasso(intercept, precision):
                  [0, 0], [1 / np.sqrt(2), 1 / np.sqrt(2)]], dtype=precision)
     y = np.array([-1, 0, 1], dtype=precision)
 
-    tol = np.sqrt(np.finfo(precision).eps)
+    tol = float(np.sqrt(np.finfo(precision).eps))
 
     skpatch()
     from sklearn.linear_model import Lasso

@@ -122,8 +122,7 @@ class LinearModel : public rda_handle {
         }
 
         if (print_level.isNotNull() && Rcpp::as<da_int>(print_level) > 0) {
-            status =
-                da_options_set(handle, "print level", Rcpp::as<da_int>(print_level));
+            status = da_options_set(handle, "print level", Rcpp::as<da_int>(print_level));
             exception_check(status);
             status = da_options_set(handle, "print options", "yes");
             exception_check(status);

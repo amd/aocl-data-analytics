@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2024-2025 Advanced Micro Devices, Inc. All rights reserved.
+ * Copyright (C) 2023-2026 Advanced Micro Devices, Inc. All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without modification,
  * are permitted provided that the following conditions are met:
@@ -25,29 +25,64 @@
  *
  */
 
-#include "aoclda.h"
-#include <type_traits>
+#ifndef DA_LOGGER_HPP
+#define DA_LOGGER_HPP
 
-#ifndef DA_CONVERT_NUM
-#define DA_CONVERT_NUM
+#include "aoclda_types.h"
 
-/* Convert number into char array, appropriately depending on its type */
-template <typename T, size_t U>
-constexpr da_status convert_num_to_char(T num, char character[U]) {
-    static_assert(std::is_arithmetic_v<T>,
-                  "Error in convert_num_to_char function. T must be numerical "
-                  "value");
-    if constexpr (std::is_same_v<T, float>)
-        sprintf(character, "%9.2e", num);
-    else if constexpr (std::is_same_v<T, double>)
-        sprintf(character, "%9.2e", num);
-    else if constexpr (std::is_same_v<T, int>)
-        sprintf(character, "%d", num);
-    else if constexpr (std::is_same_v<T, long int>)
-        sprintf(character, "%ld", num);
-    else if constexpr (std::is_same_v<T, long long int>)
-        sprintf(character, "%lld", num);
-    return da_status_success;
-}
+#include <ios>
+#include <iostream>
+#include <ostream>
 
-#endif
+namespace da_logger {
+
+class logger {
+  public:
+    explicit logger(std::ostream &stream = std::cout)
+        : stream_(stream), state_(stream.rdbuf()) {
+        state_.copyfmt(stream_);
+    }
+
+    ~logger() noexcept { reset(); }
+
+    logger(const logger &) = delete;
+    logger &operator=(const logger &) = delete;
+    logger(logger &&) = delete;
+    logger &operator=(logger &&) = delete;
+
+    template <typename T> logger &operator<<(const T &value) {
+        if constexpr (std::is_same_v<T, _Float16>) {
+            stream_ << static_cast<float>(value);
+        } else {
+            stream_ << value;
+        }
+        return *this;
+    }
+
+    logger &operator<<(std::ostream &(*manipulator)(std::ostream &)) {
+        stream_ << manipulator;
+        return *this;
+    }
+
+    logger &operator<<(std::ios_base &(*manipulator)(std::ios_base &)) {
+        stream_ << manipulator;
+        return *this;
+    }
+
+    std::ostream &stream() { return stream_; }
+
+    void reset() noexcept {
+        try {
+            stream_.copyfmt(state_);
+        } catch (...) {
+        }
+    }
+
+  private:
+    std::ostream &stream_;
+    std::ios state_;
+};
+
+} // namespace da_logger
+
+#endif // DA_LOGGER_HPP

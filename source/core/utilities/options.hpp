@@ -1,23 +1,27 @@
 /* ************************************************************************
- * Copyright (c) 2023-2026 Advanced Micro Devices, Inc.
+ * Copyright (c) 2023-2026 Advanced Micro Devices, Inc. All rights reserved.
  *
- * Permission is hereby granted, free of charge, to any person obtaining a copy
- * of this software and associated documentation files (the "Software"), to deal
- * in the Software without restriction, including without limitation the rights
- * to use, copy, modify, merge, publish, distribute, sublicense, and/or sell
- * copies of the Software, and to permit persons to whom the Software is
- * furnished to do so, subject to the following conditions:
+ * Redistribution and use in source and binary forms, with or without modification,
+ * are permitted provided that the following conditions are met:
+ * 1. Redistributions of source code must retain the above copyright notice,
+ *    this list of conditions and the following disclaimer.
+ * 2. Redistributions in binary form must reproduce the above copyright notice,
+ *    this list of conditions and the following disclaimer in the documentation
+ *    and/or other materials provided with the distribution.
+ * 3. Neither the name of the copyright holder nor the names of its contributors
+ *    may be used to endorse or promote products derived from this software without
+ *    specific prior written permission.
  *
- * The above copyright notice and this permission notice shall be included in
- * all copies or substantial portions of the Software.
- *
- * THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
- * IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
- * FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
- * AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
- * LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
- * OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
- * THE SOFTWARE.
+ * THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS "AS IS" AND
+ * ANY EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED TO, THE IMPLIED
+ * WARRANTIES OF MERCHANTABILITY AND FITNESS FOR A PARTICULAR PURPOSE ARE DISCLAIMED.
+ * IN NO EVENT SHALL THE COPYRIGHT HOLDER OR CONTRIBUTORS BE LIABLE FOR ANY DIRECT,
+ * INDIRECT, INCIDENTAL, SPECIAL, EXEMPLARY, OR CONSEQUENTIAL DAMAGES (INCLUDING,
+ * BUT NOT LIMITED TO, PROCUREMENT OF SUBSTITUTE GOODS OR SERVICES; LOSS OF USE, DATA,
+ * OR PROFITS; OR BUSINESS INTERRUPTION) HOWEVER CAUSED AND ON ANY THEORY OF LIABILITY,
+ * WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE)
+ * ARISING IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE
+ * POSSIBILITY OF SUCH DAMAGE.
  *
  * ************************************************************************ */
 
@@ -25,6 +29,7 @@
 #define AOCLDA_OPTIONS_HPP_
 
 #include "aoclda.h"
+#include "da_logger.hpp"
 #include "model_persistence.hpp"
 
 #include <cctype>
@@ -295,15 +300,6 @@ class OptionBase {
         return da_status_success;
     }
 
-    // Functions to save/load specific option type
-    virtual da_status
-    serialize_option(da_model_persistence::serialization_buffer &buffer) = 0;
-    virtual da_status
-    deserialize_option(da_model_persistence::serialization_buffer &buffer) = 0;
-
-    // Function used to get the size of an option type
-    virtual size_t serialized_size() = 0;
-
     // Generic getter for each option type to implement
     virtual option_variant_t get(void) const = 0;
 
@@ -494,7 +490,7 @@ template <typename T> class OptionNumeric : public OptionBase {
             }
             rec << ", ";
             if (destructive)
-                rec << "Foundational.";
+                rec << "\"Foundational.\"";
             rec << endl;
         } else { // Plain text
             rec << "Begin Option [" << tylab << "]" << endl;
@@ -547,19 +543,6 @@ template <typename T> class OptionNumeric : public OptionBase {
         OptionNumeric::setby = setby;
         return status; // Compose error with status+errmsg
     };
-
-    da_status
-    serialize_option(da_model_persistence::serialization_buffer &buffer) override {
-        return buffer.serialize_data(this->value);
-    }
-    da_status
-    deserialize_option(da_model_persistence::serialization_buffer &buffer) override {
-        return buffer.deserialize_data(this->value);
-    }
-
-    size_t serialized_size() override {
-        return da_model_persistence::get_type_size(this->value);
-    }
 };
 
 // Add OptionString class
@@ -721,7 +704,7 @@ class OptionString : public OptionBase {
             }
             rec << "\", ";
             if (destructive)
-                rec << "Foundational.";
+                rec << "\"Foundational.\"";
             rec << endl;
         } else { // Plain text
             rec << "Begin Option [string]" << endl;
@@ -812,19 +795,6 @@ class OptionString : public OptionBase {
         OptionString::setby = setby;
         return da_status_success;
     };
-
-    da_status
-    serialize_option(da_model_persistence::serialization_buffer &buffer) override {
-        return buffer.serialize_data(this->value);
-    }
-    da_status
-    deserialize_option(da_model_persistence::serialization_buffer &buffer) override {
-        return buffer.deserialize_data(this->value);
-    }
-
-    size_t serialized_size() override {
-        return da_model_persistence::get_type_size(this->value);
-    }
 };
 
 // R E G I S T R Y
@@ -1017,75 +987,6 @@ class OptionRegistry {
         return da_status_success;
     }
 
-    da_status save_registry(da_model_persistence::serialization_buffer &buffer) {
-        da_status status = da_status_success;
-
-        // Save registry size
-        da_int registry_size = (da_int)this->registry.size();
-        status = buffer.serialize_data(registry_size);
-        if (status != da_status_success)
-            return status;
-
-        for (const auto &[key, value] : this->registry) {
-            status = buffer.serialize_data(key);
-            if (status != da_status_success)
-                return status;
-
-            status = value->serialize_option(buffer);
-            if (status != da_status_success)
-                return status;
-        }
-        return status;
-    }
-
-    da_status load_registry(da_model_persistence::serialization_buffer &buffer) {
-        da_status status = da_status_success;
-
-        // Load saved registry size
-        da_int saved_registry_size;
-        status = buffer.deserialize_data(saved_registry_size);
-        if (status != da_status_success)
-            return status;
-
-        if (saved_registry_size > (da_int)this->registry.size() ||
-            saved_registry_size < 0)
-            return da_status_invalid_file_data;
-
-        for (da_int i = 0; i < saved_registry_size; ++i) {
-            std::string key;
-            status = buffer.deserialize_data(key);
-            if (status != da_status_success)
-                return status;
-
-            auto search = this->registry.find(key);
-
-            if (search != this->registry.end()) {
-                std::shared_ptr<OptionBase> &opt = search->second;
-                status = opt->deserialize_option(buffer);
-
-                if (status != da_status_success)
-                    return status;
-            } else {
-                return da_status_invalid_file_data;
-            }
-        }
-        return status;
-    }
-
-    // Returns the size required to serialize the register data.
-    size_t compute_serialized_size() {
-        size_t size = 0;
-
-        // registry.size() is saved first
-        size += da_model_persistence::get_type_size(da_int{});
-
-        for (const auto &[key, value] : this->registry) {
-            size += da_model_persistence::get_type_size(key);
-            size += value->serialized_size();
-        }
-        return size;
-    }
-
     // Auxiliary function to query the id and categorical values of a string option
     da_status query_map(string name, string &value, da_int &id,
                         bool find_by_value = false) {
@@ -1127,58 +1028,60 @@ class OptionRegistry {
 
     // Auxiliary
     void print_options(void) const {
-        std::cout << "Begin Options" << std::endl;
+        da_logger::logger out;
+        out << "Begin Options" << std::endl;
         for (auto const &o : registry) {
             // LCOV_EXCL_START
             if (o.second->get_option_t() == option_t::opt_undefined) {
-                std::cout << "Internal ERROR: unexpected option " << o.first
-                          << " with option_t::opt_undefined!" << std::endl;
+                out << "Internal ERROR: unexpected option " << o.first
+                    << " with option_t::opt_undefined!" << std::endl;
                 continue;
             }
             // LCOV_EXCL_STOP
-            std::cout << o.second->print_option();
+            out << o.second->print_option();
         }
-        std::cout << "End Options" << std::endl;
+        out << "End Options" << std::endl;
     }
 
     void print_details(bool screen = true, bool doxygen = false,
                        const std::string caption = "Options table") const {
+        da_logger::logger out;
         bool sep = false;
         if (!screen && doxygen) {
-            std::cout << " *" << std::endl;
-            std::cout << " * The following options are supported." << std::endl;
-            std::cout << " *" << std::endl;
-            std::cout << " * | **Option name** |  Type  | Default value|" << std::endl;
-            std::cout << " * |:----------------|:------:|-------------:|" << std::endl;
+            out << " *" << std::endl;
+            out << " * The following options are supported." << std::endl;
+            out << " *" << std::endl;
+            out << " * | **Option name** |  Type  | Default value|" << std::endl;
+            out << " * |:----------------|:------:|-------------:|" << std::endl;
         } else if (!screen) { // Restructured text
-            std::cout << "The following options are supported." << std::endl;
-            std::cout << "\n.. csv-table:: " << caption << "\n   :escape: ~\n";
-            std::cout << "   :header: \"Option name\", \"Type\", \"Default\", "
-                         "\"Description\", \"Constraints\", \"Notes\""
-                      << std::endl;
-            std::cout << "   " << std::endl;
+            out << "The following options are supported." << std::endl;
+            out << "\n.. csv-table:: " << caption << "\n   :escape: ~\n";
+            out << "   :header: \"Option name\", \"Type\", \"Default\", "
+                   "\"Description\", \"Constraints\", \"Notes\""
+                << std::endl;
+            out << "   " << std::endl;
         } else { // Plain text
-            std::cout << "Begin (detailed print of options)" << std::endl;
+            out << "Begin (detailed print of options)" << std::endl;
         }
         for (auto const &o : registry) {
             // LCOV_EXCL_START
             if (o.second->get_option_t() == option_t::opt_undefined) {
-                std::cout << "Internal ERROR: unexpected option " << o.first
-                          << " with option_t::opt_undefined!" << std::endl;
+                out << "Internal ERROR: unexpected option " << o.first
+                    << " with option_t::opt_undefined!" << std::endl;
                 continue;
             }
             // LCOV_EXCL_STOP
             if (sep && doxygen)
-                std::cout << " * | |||" << std::endl;
+                out << " * | |||" << std::endl;
 
-            std::cout << o.second->print_details(screen, doxygen);
+            out << o.second->print_details(screen, doxygen);
             sep = true;
         }
         // Restructured text does not require any termination
         if (!screen && doxygen) {
-            std::cout << " *" << std::endl;
+            out << " *" << std::endl;
         } else if (screen) {
-            std::cout << "End" << std::endl;
+            out << "End" << std::endl;
         }
     };
 

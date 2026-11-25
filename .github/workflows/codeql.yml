@@ -1,0 +1,83 @@
+name: "CodeQL Advanced"
+
+on:
+  workflow_dispatch:
+  schedule:
+    - cron: '0 0 * * 0'
+
+jobs:
+  analyze:
+    name: Analyze (${{ matrix.compiler || matrix.language }})
+    runs-on: amd_linux
+    permissions:
+      # required for all workflows
+      security-events: write
+      # required to fetch internal or private CodeQL packs
+      packages: read
+      # only required for workflows in private repositories
+      actions: read
+      contents: read
+
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+        - language: c-cpp
+          build-mode: manual
+          compiler: gcc
+        - language: c-cpp
+          build-mode: manual
+          compiler: aocc
+        - language: python
+          build-mode: none
+          compiler: ""
+
+    steps:
+    - name: Checkout repository
+      uses: actions/checkout@v4
+
+    # Initializes the CodeQL tools for scanning.
+    - name: Initialize CodeQL
+      uses: github/codeql-action/init@v3
+      with:
+        languages: ${{ matrix.language }}
+        build-mode: ${{ matrix['build-mode'] }}
+        queries: security-and-quality
+
+    # Build
+    - name: Build
+      if: matrix['build-mode'] == 'manual'
+      shell: bash
+      run: |
+        # Remove broken Python cmake wrapper from PATH; ensure real cmake is used
+        export PATH=/usr/bin:$(echo $PATH | tr ':' '\n' | grep -v '/home/amd/.local/bin' | tr '\n' ':')
+        # Allow config files to reference unbound variables
+        set +u
+
+        if [ "${{ matrix.compiler }}" = "gcc" ]; then
+          source /home/amd/AOCL_5.3/5.3.0/gcc/MT/amd-libs.cfg
+          INSTALL_PREFIX=gcc_ilp_stat_install
+        else
+          source /home/amd/setenv_AOCC.sh
+          source /home/amd/AOCL_5.3/5.3.0/aocc/MT/amd-libs.cfg
+          INSTALL_PREFIX=aocc_ilp_stat_install
+        fi
+
+        cmake -S . -B build \
+          -DCMAKE_INSTALL_PREFIX=${INSTALL_PREFIX} \
+          -DBUILD_EXAMPLES=ON \
+          -DBUILD_GTEST=ON \
+          -DCMAKE_BUILD_TYPE=Debug \
+          -DBUILD_ILP64=OFF \
+          -DCOVERAGE=ON \
+          -DCHECK_MEM=OFF
+        cmake --build build --target all --parallel "$(nproc)"
+
+    - name: Perform CodeQL Analysis
+      uses: github/codeql-action/analyze@v3
+      with:
+        category: "/language:${{ matrix.language }}/compiler:${{ matrix.compiler }}"
+
+    - name: Cleanup workspace
+      if: always()
+      run: find "$GITHUB_WORKSPACE" -mindepth 1 -delete

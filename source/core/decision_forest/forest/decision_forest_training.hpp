@@ -38,7 +38,7 @@ namespace ARCH {
 namespace da_decision_forest {
 
 template <typename T>
-void decision_forest<T>::compute_thread_distribution(
+void decision_forest_classification<T>::compute_thread_distribution(
     da_int n_tree, da_int &n_forest_threads, std::vector<da_int> &n_tree_threads) {
 
     da_int total_threads = (da_int)omp_get_max_threads();
@@ -62,7 +62,7 @@ void decision_forest<T>::compute_thread_distribution(
     }
 }
 
-template <typename T> da_status decision_forest<T>::fit() {
+template <typename T> da_status decision_forest_classification<T>::fit() {
 
     if (!this->init_done)
         return da_error_bypass(this->err, da_status_no_data,
@@ -188,10 +188,12 @@ template <typename T> da_status decision_forest<T>::fit() {
     for (da_int i = 0; i < n_tree; i++) {
         // Set tree optional parameters
         try {
-            forest[i] = std::make_unique<decision_tree<T>>(decision_tree(
-                X_binned, max_depth, min_node_sample, method, nfeat_split, seed_tree[i],
-                min_split_score, feat_thresh, min_improvement, bootstrap, use_hist,
-                usr_max_bins, cat_split_strat, tree_threads[i], column_major));
+            forest[i] = std::make_unique<decision_tree_classification<T>>(
+                decision_tree_classification(X_binned, max_depth, min_node_sample, method,
+                                             nfeat_split, seed_tree[i], min_split_score,
+                                             feat_thresh, min_improvement, bootstrap,
+                                             use_hist, usr_max_bins, cat_split_strat,
+                                             tree_threads[i], column_major));
         } catch (std::bad_alloc &) {
 #pragma omp atomic
             n_failed_tree++;

@@ -139,18 +139,19 @@ API Reference
       any data. The metadata size is added when the buffer is initialized (``add_metadata_size()`` in
       ``set_buffer_data()``). Then the model's ``serialize()`` method is called in reserve mode — each
       ``dispatch_buffer_io()`` call accumulates the byte size of its argument via ``get_type_size()``.
-      Finally, the options registry size is added via ``compute_serialized_size()``.
+      The options registry is sized the same way: ``serialize_registry()`` is called in reserve mode,
+      accumulating the size of the option count plus each option's key string and value.
       After all three contributions are summed, ``buffer.reserve()`` pre-allocates the output vector
       to the exact total size, avoiding reallocations during the write phase.
 
    2. **Serialize** (``buffer_mode::serialize``): The buffer mode is switched to serialize and the
       sections are written in order: metadata first (``serialize_metadata()``), then the options registry
-      (``save_registry()``), then ``serialize()`` is called, this time each ``dispatch_buffer_io()``
+      (``serialize_registry()``), then ``serialize()`` is called, this time each ``dispatch_buffer_io()``
       call appends the binary representation of its argument to the output buffer.
 
    3. **Deserialize** (``buffer_mode::deserialize``): On load, the buffer is initialized with the raw
       file bytes and an offset counter. The sections are read in the same order: metadata first
-      (``deserialize_metadata()``) to validate compatibility, then ``load_registry()`` to restore option
+      (``deserialize_metadata()``) to validate compatibility, then ``deserialize_registry()`` to restore option
       values, and finally ``serialize()`` is called. Now each ``dispatch_buffer_io()`` reads bytes from
       the buffer at the current offset and reconstructs the field.
 

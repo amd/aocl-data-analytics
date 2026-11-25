@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2023-2025 Advanced Micro Devices, Inc. All rights reserved.
+ * Copyright (C) 2023-2026 Advanced Micro Devices, Inc. All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without modification,
  * are permitted provided that the following conditions are met:
@@ -29,6 +29,7 @@
 #define DA_ERROR_HPP
 
 #include "aoclda_error.h"
+#include "da_logger.hpp"
 #include <cstdint>
 #include <iomanip>
 #include <iostream>
@@ -88,7 +89,7 @@
  * Methods for printing the error message
  * --------------------------------------
  *
- * 1.- print() composes the message and prints to std::cout
+ * 1.- print() composes the message and prints to the logger
  * 2.- print(str) composes the message and returns it in std::string str
  * 3.- print(ss) composes the message and pipes it to std::stringstream ss
  *
@@ -97,8 +98,6 @@
  *
  * The public API to print the error is always
  *     da_handle_print_error_message(handle) which simply calles e->print();
- *
- * Note: this API prints to std out and not std err.
  *
  * More details
  * ------------
@@ -222,7 +221,7 @@ class da_error_t {
     };
 
     // da_error_t(enum action_t action) = action_t::DA_RECORD) : action(action){};
-    ~da_error_t(){};
+    ~da_error_t() {};
     // Build banner
     void print(stringstream &ss) {
         string tab = "";
@@ -259,9 +258,10 @@ class da_error_t {
     }
     // Push banner to std error
     void print(void) {
+        da_logger::logger out(std::cerr);
         stringstream ss;
         print(ss);
-        std::cerr << ss.str();
+        out << ss.str();
     }
     da_status rec(da_status status, string msg, string det = "",
                   string tel = "<no telemetry provided>", size_t ln = 0,

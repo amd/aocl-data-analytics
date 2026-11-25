@@ -193,23 +193,23 @@ SVM options
       .. csv-table:: SVM options
          :header: "Option name", "Type", "Default", "Description", "Constraints", "Notes"
 
-         "kernel", "string", ":math:`s=` `rbf`", "Kernel function to use for the calculations.", ":math:`s=` `linear`, `poly`, `polynomial`, `rbf`, or `sigmoid`.", Foundational.
-         "coef0", "real", ":math:`r=0`", "Constant in 'polynomial' and 'sigmoid' kernels.", "There are no constraints on :math:`r`.", Foundational.
-         "cache size", "real", ":math:`r=-1`", "Size of the kernel cache in MB. The default value is -1.0 which automatically sets it to a value which will enable storage of the sampled kernel matrix. Increasing value of this option will result in faster training time.", ":math:`-1 \le r`", Foundational.
-         "gamma", "real", ":math:`r=-1`", "Parameter for 'rbf', 'polynomial', and 'sigmoid' kernels. If the value is less than 0, it is set to 1/(n_features * Var(X)).", ":math:`-1 \le r`", Foundational.
-         "epsilon", "real", ":math:`r=0.1`", "Defines the tolerance for errors in predictions by creating an acceptable margin (tube) within which errors are not penalized. Applies to SVR", ":math:`0 \le r`", Foundational.
-         "max_ws_size", "integer", ":math:`i=-1`", "Specifies the maximum working set size. A value divisible by 64 is recommended for optimal performance. Setting -1 automatically selects the optimal size based on the input data.", ":math:`-1 \le i`", Foundational.
-         "tau", "real", ":math:`r=\varepsilon`", "Numerical stability parameter used in working set selection when kernel is not positive semi definite.", ":math:`0 \le r`", Foundational.
-         "tolerance", "real", ":math:`r=10^{-3}`", "Convergence tolerance.", ":math:`0 < r`", Foundational.
-         "nu", "real", ":math:`r=0.5`", "An upper bound on the fraction of margin errors and a lower bound of the fraction of support vectors. Applies to NuSVC and NuSVR.", ":math:`0 < r \le 1`", Foundational.
-         "max_iter", "integer", ":math:`i=100000`", "Sets the maximum number of iterations. Use 0 to specify no limit.", ":math:`0 \le i`", Foundational.
-         "c", "real", ":math:`r=1`", "Regularization parameter. Controls the trade-off between maximizing the margin between classes and minimizing classification errors. A larger value means higher penalty to the loss function on misclassified observations. Applies to SVC, SVR and NuSVR.", ":math:`0 < r`", Foundational.
-         "degree", "integer", ":math:`i=3`", "Parameter for 'polynomial' kernel.", ":math:`1 \le i`", Foundational.
-         "mixed precision", "string", ":math:`s=` `no`", "Whether to use mixed precision iterative refinement, in which lower precision arithmetic is used before switching to the working precision for the final iterations.", ":math:`s=` `no`, or `yes`.", Foundational.
-         "low precision convergence tolerance", "real", ":math:`r=10^{-2}`", "If mixed precision iterative refinement is enabled, convergence tolerance for the low precision phase.", ":math:`0 \le r`", Foundational.
-         "low precision max_iter", "integer", ":math:`i=80000`", "If mixed precision iterative refinement is enabled, maximum number of iterations for the low precision phase.", ":math:`0 \le i`", Foundational.
-         "check data", "string", ":math:`s=` `no`", "Check input data for NaNs prior to performing computation.", ":math:`s=` `no`, or `yes`.", Foundational.
-         "storage order", "string", ":math:`s=` `column-major`", "Whether data is supplied and returned in row- or column-major order.", ":math:`s=` `c`, `column-major`, `f`, `fortran`, or `row-major`.", Foundational.
+         "kernel", "string", ":math:`s=` `rbf`", "Kernel function to use for the calculations.", ":math:`s=` `linear`, `poly`, `polynomial`, `rbf`, or `sigmoid`.", "Foundational."
+         "coef0", "real", ":math:`r=0`", "Constant in 'polynomial' and 'sigmoid' kernels.", "There are no constraints on :math:`r`.", "Foundational."
+         "cache size", "real", ":math:`r=-1`", "Size of the kernel cache in MB. The default value is -1.0 which automatically sets it to a value which will enable storage of the sampled kernel matrix. Increasing value of this option will result in faster training time.", ":math:`-1 \le r`", "Foundational."
+         "gamma", "real", ":math:`r=-1`", "Parameter for 'rbf', 'polynomial', and 'sigmoid' kernels. If the value is less than 0, it is set to 1/(n_features * Var(X)).", ":math:`-1 \le r`", "Foundational."
+         "epsilon", "real", ":math:`r=0.1`", "Defines the tolerance for errors in predictions by creating an acceptable margin (tube) within which errors are not penalized. Applies to SVR", ":math:`0 \le r`", "Foundational."
+         "max_ws_size", "integer", ":math:`i=-1`", "Specifies the maximum working set size. A value divisible by 64 is recommended for optimal performance. Setting -1 automatically selects the optimal size based on the input data.", ":math:`-1 \le i`", "Foundational."
+         "tau", "real", ":math:`r=\varepsilon`", "Numerical stability parameter used in working set selection when kernel is not positive semi definite.", ":math:`0 \le r`", "Foundational."
+         "tolerance", "real", ":math:`r=10^{-3}`", "Convergence tolerance.", ":math:`0 < r`", "Foundational."
+         "nu", "real", ":math:`r=0.5`", "An upper bound on the fraction of margin errors and a lower bound of the fraction of support vectors. Applies to NuSVC and NuSVR.", ":math:`0 < r \le 1`", "Foundational."
+         "max_iter", "integer", ":math:`i=100000`", "Sets the maximum number of iterations. Use 0 to specify no limit.", ":math:`0 \le i`", "Foundational."
+         "c", "real", ":math:`r=1`", "Regularization parameter. Controls the trade-off between maximizing the margin between classes and minimizing classification errors. A larger value means higher penalty to the loss function on misclassified observations. Applies to SVC, SVR and NuSVR.", ":math:`0 < r`", "Foundational."
+         "degree", "integer", ":math:`i=3`", "Parameter for 'polynomial' kernel.", ":math:`1 \le i`", "Foundational."
+         "mixed precision", "string", ":math:`s=` `no`", "Whether to use mixed precision iterative refinement, in which lower precision arithmetic is used before switching to the working precision for the final iterations.", ":math:`s=` `no`, or `yes`.", "Foundational."
+         "low precision convergence tolerance", "real", ":math:`r=10^{-2}`", "If mixed precision iterative refinement is enabled, convergence tolerance for the low precision phase.", ":math:`0 \le r`", "Foundational."
+         "low precision max_iter", "integer", ":math:`i=80000`", "If mixed precision iterative refinement is enabled, maximum number of iterations for the low precision phase.", ":math:`0 \le i`", "Foundational."
+         "check data", "string", ":math:`s=` `no`", "Check input data for NaNs prior to performing computation.", ":math:`s=` `no`, or `yes`.", "Foundational."
+         "storage order", "string", ":math:`s=` `column-major`", "Whether data is supplied and returned in row- or column-major order.", ":math:`s=` `c`, `column-major`, `f`, `fortran`, or `row-major`.", "Foundational."
 
       The option ``mixed precision`` switches on an experimental mode in which initial iterations are performed in lower precision before refining the result in the working precision.
       The option ``low precision max_iter`` sets the maximum number of iterations for the low-precision phase, and ``low precision convergence tolerance`` sets the convergence tolerance for the low-precision phase.

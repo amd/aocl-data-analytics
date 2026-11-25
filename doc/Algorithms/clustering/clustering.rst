@@ -120,22 +120,22 @@ Options
       .. csv-table:: k-means options
          :header: "Option name", "Type", "Default", "Description", "Constraints", "Notes"
 
-         "convergence tolerance", "real", ":math:`r=10^{-4}`", "Convergence tolerance.", ":math:`0 \le r`", Foundational.
-         "algorithm", "string", ":math:`s=` `lloyd`", "Choice of underlying k-means algorithm.", ":math:`s=` `elkan`, `hartigan-wong`, `lloyd`, or `macqueen`.", Foundational.
-         "distance", "string", ":math:`s=` `euclidean`", "Distance metric used for clustering. Use 'euclidean' for standard k-means or 'cosine' for spherical k-means (not compatible with Hartigan-Wong).", ":math:`s=` `cosine`, or `euclidean`.", Foundational.
-         "normalize data", "string", ":math:`s=` `yes`", "Whether to normalize the input data before clustering. This option is only used if distance is set to cosine.", ":math:`s=` `no`, or `yes`.", Foundational.
-         "initialization method", "string", ":math:`s=` `k-means++`", "How to determine the initial cluster centres.", ":math:`s=` `afk-mc2`, `k-means++`, `random`, `random partitions`, or `supplied`.", Foundational.
-         "seed", "integer", ":math:`i=0`", "Seed for random number generation; set to -1 for non-deterministic results.", ":math:`-1 \le i`", Foundational.
-         "max_iter", "integer", ":math:`i=300`", "Maximum number of iterations.", ":math:`1 \le i`", Foundational.
-         "n_init", "integer", ":math:`i=10`", "Number of runs with different random seeds (ignored if you have specified initial cluster centres).", ":math:`1 \le i`", Foundational.
-         "n_clusters", "integer", ":math:`i=1`", "Number of clusters required.", ":math:`1 \le i`", Foundational.
-         "empty clusters", "string", ":math:`s=` `ignore`", "How to deal with empty clusters at the end of a k-means iteration.", ":math:`s=` `error`, `ignore`, or `split`.", Foundational.
-         "afk-mc2 samples", "integer", ":math:`i=50`", "Number of samples to take for the AFK-MC2 initialization method.", ":math:`1 \le i`", Foundational.
-         "check data", "string", ":math:`s=` `no`", "Check input data for NaNs prior to performing computation.", ":math:`s=` `no`, or `yes`.", Foundational.
-         "storage order", "string", ":math:`s=` `column-major`", "Whether data is supplied and returned in row- or column-major order.", ":math:`s=` `c`, `column-major`, `f`, `fortran`, or `row-major`.", Foundational.
-         "mixed precision", "string", ":math:`s=` `no`", "Whether to use mixed precision iterative refinement, in which lower precision arithmetic is used before switching to the working precision for the final iterations.", ":math:`s=` `no`, or `yes`.", Foundational.
-         "low precision convergence tolerance", "real", ":math:`r=10^{-2}`", "If mixed precision iterative refinement is enabled, convergence tolerance for the low precision phase.", ":math:`0 \le r`", Foundational.
-         "low precision max_iter", "integer", ":math:`i=200`", "If mixed precision iterative refinement is enabled, maximum number of iterations for the low precision phase.", ":math:`1 \le i`", Foundational.
+         "convergence tolerance", "real", ":math:`r=10^{-4}`", "Convergence tolerance.", ":math:`0 \le r`", "Foundational."
+         "algorithm", "string", ":math:`s=` `lloyd`", "Choice of underlying k-means algorithm.", ":math:`s=` `elkan`, `hartigan-wong`, `lloyd`, or `macqueen`.", "Foundational."
+         "distance", "string", ":math:`s=` `euclidean`", "Distance metric used for clustering. Use 'euclidean' for standard k-means or 'cosine' for spherical k-means (not compatible with Hartigan-Wong).", ":math:`s=` `cosine`, or `euclidean`.", "Foundational."
+         "normalize data", "string", ":math:`s=` `yes`", "Whether to normalize the input data before clustering. This option is only used if distance is set to cosine.", ":math:`s=` `no`, or `yes`.", "Foundational."
+         "initialization method", "string", ":math:`s=` `k-means++`", "How to determine the initial cluster centres.", ":math:`s=` `afk-mc2`, `k-means++`, `random`, `random partitions`, or `supplied`.", "Foundational."
+         "seed", "integer", ":math:`i=0`", "Seed for random number generation; set to -1 for non-deterministic results.", ":math:`-1 \le i`", "Foundational."
+         "max_iter", "integer", ":math:`i=300`", "Maximum number of iterations.", ":math:`1 \le i`", "Foundational."
+         "n_init", "integer", ":math:`i=10`", "Number of runs with different random seeds (ignored if you have specified initial cluster centres).", ":math:`1 \le i`", "Foundational."
+         "n_clusters", "integer", ":math:`i=1`", "Number of clusters required.", ":math:`1 \le i`", "Foundational."
+         "empty clusters", "string", ":math:`s=` `ignore`", "How to deal with empty clusters at the end of a k-means iteration.", ":math:`s=` `error`, `ignore`, or `split`.", "Foundational."
+         "afk-mc2 samples", "integer", ":math:`i=50`", "Number of samples to take for the AFK-MC2 initialization method.", ":math:`1 \le i`", "Foundational."
+         "check data", "string", ":math:`s=` `no`", "Check input data for NaNs prior to performing computation.", ":math:`s=` `no`, or `yes`.", "Foundational."
+         "storage order", "string", ":math:`s=` `column-major`", "Whether data is supplied and returned in row- or column-major order.", ":math:`s=` `c`, `column-major`, `f`, `fortran`, or `row-major`.", "Foundational."
+         "mixed precision", "string", ":math:`s=` `no`", "Whether to use mixed precision iterative refinement, in which lower precision arithmetic is used before switching to the working precision for the final iterations.", ":math:`s=` `no`, or `yes`.", "Foundational."
+         "low precision convergence tolerance", "real", ":math:`r=10^{-2}`", "If mixed precision iterative refinement is enabled, convergence tolerance for the low precision phase.", ":math:`0 \le r`", "Foundational."
+         "low precision max_iter", "integer", ":math:`i=200`", "If mixed precision iterative refinement is enabled, maximum number of iterations for the low precision phase.", ":math:`1 \le i`", "Foundational."
 
       Note that if the initialization method is set to ``random`` then the initial cluster centres are chosen randomly from the sample points.
       If it is set to ``random partitions`` then the sample points are assigned to a random cluster and the corresponding cluster centres are computed and used as the starting point.
@@ -229,14 +229,14 @@ Options
       .. csv-table:: DBSCAN options
          :header: "Option name", "Type", "Default", "Description", "Constraints", "Notes"
 
-         "power", "real", ":math:`r=2.0`", "The power of the Minkowski metric used.", ":math:`0 \le r`", Foundational.
-         "metric", "string", ":math:`s=` `euclidean`", "Choice of metric used to compute pairwise distances.", ":math:`s=` `cityblock`, `cosine`, `euclidean`, `l1`, `l2`, `manhattan`, `minkowski`, or `sqeuclidean`.", Foundational.
-         "algorithm", "string", ":math:`s=` `auto`", "Choice of algorithm.", ":math:`s=` `auto`, `ball tree`, `brute`, or `kd tree`.", Foundational.
-         "leaf size", "integer", ":math:`i=30`", "Leaf size for k-d tree or ball tree.", ":math:`1 \le i`", Foundational.
-         "eps", "real", ":math:`r=10^{-4}`", "Maximum distance for two samples to be considered in each other's neighborhood.", ":math:`0 \le r`", Foundational.
-         "min samples", "integer", ":math:`i=5`", "Minimum number of neighborhood samples for a core point.", ":math:`1 \le i`", Foundational.
-         "check data", "string", ":math:`s=` `no`", "Check input data for NaNs prior to performing computation.", ":math:`s=` `no`, or `yes`.", Foundational.
-         "storage order", "string", ":math:`s=` `column-major`", "Whether data is supplied and returned in row- or column-major order.", ":math:`s=` `c`, `column-major`, `f`, `fortran`, or `row-major`.", Foundational.
+         "power", "real", ":math:`r=2.0`", "The power of the Minkowski metric used.", ":math:`0 \le r`", "Foundational."
+         "metric", "string", ":math:`s=` `euclidean`", "Choice of metric used to compute pairwise distances.", ":math:`s=` `cityblock`, `cosine`, `euclidean`, `l1`, `l2`, `manhattan`, `minkowski`, or `sqeuclidean`.", "Foundational."
+         "algorithm", "string", ":math:`s=` `auto`", "Choice of algorithm.", ":math:`s=` `auto`, `ball tree`, `brute`, or `kd tree`.", "Foundational."
+         "leaf size", "integer", ":math:`i=30`", "Leaf size for k-d tree or ball tree.", ":math:`1 \le i`", "Foundational."
+         "eps", "real", ":math:`r=10^{-4}`", "Maximum distance for two samples to be considered in each other's neighborhood.", ":math:`0 \le r`", "Foundational."
+         "min samples", "integer", ":math:`i=5`", "Minimum number of neighborhood samples for a core point.", ":math:`1 \le i`", "Foundational."
+         "check data", "string", ":math:`s=` `no`", "Check input data for NaNs prior to performing computation.", ":math:`s=` `no`, or `yes`.", "Foundational."
+         "storage order", "string", ":math:`s=` `column-major`", "Whether data is supplied and returned in row- or column-major order.", ":math:`s=` `c`, `column-major`, `f`, `fortran`, or `row-major`.", "Foundational."
 
 Note that k-d trees are likely to be fastest for lower dimensional datasets, and ball trees may be preferred when data is not aligned along the coordinate axes, but trees cannot be used with the cosine distance, the squared Euclidean distance, or the Minkowski distance with power less than 1.0.
 

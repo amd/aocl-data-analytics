@@ -1,6 +1,6 @@
 #!/bin/bash
-# Copyright (C) 2023-2024 Advanced Micro Devices, Inc. All rights reserved.
-# 
+# Copyright (C) 2023-2026 Advanced Micro Devices, Inc. All rights reserved.
+#
 # Redistribution and use in source and binary forms, with or without modification,
 # are permitted provided that the following conditions are met:
 # 1. Redistributions of source code must retain the above copyright notice,
@@ -11,7 +11,7 @@
 # 3. Neither the name of the copyright holder nor the names of its contributors
 #    may be used to endorse or promote products derived from this software without
 #    specific prior written permission.
-# 
+#
 # THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS "AS IS" AND
 # ANY EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED TO, THE IMPLIED
 # WARRANTIES OF MERCHANTABILITY AND FITNESS FOR A PARTICULAR PURPOSE ARE DISCLAIMED.
@@ -22,7 +22,7 @@
 # WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE)
 # ARISING IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE
 # POSSIBILITY OF SUCH DAMAGE.
-# 
+#
 
 STYLE=$(git config --get hooks.clangformat.style)
 if [ -n "${STYLE}" ] ; then
@@ -32,37 +32,71 @@ else
 fi
 
 FILES_POLISHED=0
+COPYRIGHT=0
+OK=0
 
 check_format_file() {
-  file="${1}"
-  if [ -f $file ]; then
-    # clang-format -i ${STYLEARG} ${1}
-    TEMP=`mktemp`
-    clang-format ${STYLEARG} ${1} > $TEMP
-    diff -q ${1} ${TEMP} &> /dev/null
-    ret=$?
-    rm ${TEMP}
-    if [ "$ret" -ne 0 ] ; then
-      echo clang-format: File "${1}" is NOT polished
+  local file="$STAGE_DIR/files/$1"
+  if [ -f "$file" ] && [ ! -L "$file" ]; then
+    # Keep repository style discovery while formatting only the staged bytes.
+    if ! clang-format ${STYLEARG:+"$STYLEARG"} --assume-filename="$ROOT/$1" \
+        < "$file" > "$STAGE_DIR/formatted"; then
+      echo "ERROR: clang-format: Failed to format $1" >&2
+      FILES_POLISHED=1
+    elif ! diff -q -- "$file" "$STAGE_DIR/formatted" > /dev/null; then
+      echo ERROR: clang-format: File "${1}" is NOT polished
       FILES_POLISHED=1
     fi
-    # git add ${1}
   fi
 }
 
 case "${1}" in
-  --about )
-    echo "Runs clang-format on source files; does not modify committed sources."
-    ;;
-  * )
-    for file in `git diff-index --cached --name-only HEAD | grep -iE '\.(cpp|cc|h|hpp)$' ` ; do
-      check_format_file "${file}"
-    done
-    if [ "$FILES_POLISHED" -ne 0 ] ; then
-      echo "Try polishing files using clang-format prior to git commit"
-      echo -e "\nCOMMIT ABORTED: file(s) require(s) polishing\n"
-    fi
+  --about|-h|--help)
+    echo "pre-commit hook: Run clang-format, copyright checks on staged files."
+    echo "Checks use temporary copies from the index; working files are not modified."
+    exit 0
     ;;
 esac
 
-exit $FILES_POLISHED
+ROOT=$(git rev-parse --show-toplevel) || exit 1
+cd "$ROOT" || exit 1
+STAGE_DIR=$(mktemp -d) || exit 1
+trap 'rm -rf -- "$STAGE_DIR"' EXIT
+trap 'exit 1' HUP INT TERM
+
+# NUL-delimited paths preserve spaces and newlines; deleted files have no content.
+git diff --cached --name-only --diff-filter=d -z > "$STAGE_DIR/paths" || exit 1
+mapfile -d '' -t STAGE_FILES < "$STAGE_DIR/paths"
+if [ "${#STAGE_FILES[@]}" -eq 0 ]; then
+    echo "No staged files to check."
+    exit 0
+fi
+mkdir "$STAGE_DIR/files" || exit 1
+git checkout-index --prefix="$STAGE_DIR/files/" -- "${STAGE_FILES[@]}" || exit 1
+mkdir -p "$STAGE_DIR/files/tools" || exit 1
+git show :tools/copyright_suppression.txt > "$STAGE_DIR/files/tools/copyright_suppression.txt" || exit 1
+
+for file in "${STAGE_FILES[@]}"; do
+    case "${file,,}" in
+    *.cpp|*.cc|*.h|*.hpp) check_format_file "$file" ;;
+    esac
+done
+
+# Check all the files for correct copyright headers
+(cd "$STAGE_DIR/files" && bash "$ROOT/tools/check_copyright.sh" "${STAGE_FILES[@]/#/./}")
+COPYRIGHT=$?
+
+if [ "$FILES_POLISHED" -ne 0 ] ; then
+    echo "Files not polished by clang-format:"
+    clang-format --version
+    echo "Polish files prior to committing."
+fi
+if [ "$COPYRIGHT" -ne 0 ] ; then
+    echo "Check copyright text."
+fi
+OK=$((FILES_POLISHED + COPYRIGHT))
+if [ "$OK" -ne 0 ] ; then
+    echo -e "\nCOMMIT ABORTED: file(s) have issues.\n"
+fi
+
+exit $OK

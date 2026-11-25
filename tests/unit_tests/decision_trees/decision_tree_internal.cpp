@@ -170,7 +170,7 @@ TYPED_TEST(decision_tree_internal_test, individual_splits) {
     set_test_data_8x2_nonunique(data);
 
     da_errors::da_error_t err(da_errors::DA_RECORD);
-    decision_tree<TypeParam> tree(err);
+    decision_tree_classification<TypeParam> tree(err);
     tree.set_training_data(data.n_samples_train, data.n_feat, data.X_train.data(),
                            data.n_samples_train, data.y_train.data());
     TypeParam tol = 1.0e-05;
@@ -218,7 +218,7 @@ TYPED_TEST(decision_tree_internal_test, small_multiclass) {
 
     da_int nsamples = 20, nfeat = 2;
     da_errors::da_error_t err(da_errors::DA_RECORD);
-    decision_tree<TypeParam> dec_tree(err);
+    decision_tree_classification<TypeParam> dec_tree(err);
     EXPECT_EQ(dec_tree.set_training_data(nsamples, nfeat, X.data(), nsamples, y.data()),
               da_status_success);
     EXPECT_EQ(dec_tree.fit(), da_status_success);
@@ -258,7 +258,7 @@ TYPED_TEST(decision_tree_internal_test, multiple_solve) {
 
     // Solve a first time
     da_errors::da_error_t err(da_errors::DA_RECORD);
-    decision_tree<TypeParam> tree(err);
+    decision_tree_classification<TypeParam> tree(err);
     EXPECT_EQ(tree.set_training_data(data.n_samples_train, data.n_feat,
                                      data.X_train.data(), data.n_samples_train,
                                      data.y_train.data()),
@@ -373,7 +373,7 @@ TYPED_TEST(decision_tree_internal_test, bootstrap) {
     std::vector<da_int> samples_subset = {2, 1, 1, 1, 0, 4, 18, 19, 15, 15,
                                           3, 3, 9, 9, 7, 8, 6,  4,  8,  11};
     da_errors::da_error_t err(da_errors::DA_RECORD);
-    decision_tree<TypeParam> dec_tree(err);
+    decision_tree_classification<TypeParam> dec_tree(err);
     EXPECT_EQ(dec_tree.set_training_data(n_samples, n_features, X.data(), n_samples,
                                          y.data(), n_class, (da_int)samples_subset.size(),
                                          samples_subset.data()),
@@ -463,7 +463,7 @@ TYPED_TEST(decision_tree_internal_test, parallel_splits) {
 
     // Train the tree with parallel splits
     da_errors::da_error_t err(da_errors::DA_RECORD);
-    decision_tree<TypeParam> tree(err);
+    decision_tree_classification<TypeParam> tree(err);
     EXPECT_EQ(tree.set_training_data(nsamples, nfeat, X.data(), nsamples, y.data()),
               da_status_success);
     EXPECT_EQ(tree.fit(), da_status_success);
@@ -508,7 +508,7 @@ template <typename T, da_order order> void test_inference_fixed_path() {
 
     // Initialize and train the tree
     da_errors::da_error_t err(da_errors::DA_RECORD);
-    decision_tree<T> tree(err);
+    decision_tree_classification<T> tree(err);
     ASSERT_EQ(tree.opts.set("storage order", order_str), da_status_success);
     ASSERT_EQ(tree.set_training_data(nrows, ncols, X.data(), ldx_train, y.data()),
               da_status_success);
@@ -590,7 +590,7 @@ TEST(decision_tree_internal_test, inference_vectorized) {
     set_test_data_8x2_unique<float>(data);
 
     da_errors::da_error_t err(da_errors::DA_RECORD);
-    decision_tree<float> tree(err);
+    decision_tree_classification<float> tree(err);
     EXPECT_EQ(tree.set_training_data(data.n_samples_train, data.n_feat,
                                      data.X_train.data(), data.n_samples_train,
                                      data.y_train.data()),
@@ -599,7 +599,7 @@ TEST(decision_tree_internal_test, inference_vectorized) {
 
     da_int nsamp_test = 16;
     // clang-format off
-    std::vector<float> X_test = {(float)0.25, (float)0.25, 
+    std::vector<float> X_test = {(float)0.25, (float)0.25,
                                  (float)0.75, (float)0.75,
                                  (float)0.25, (float)0.75,
                                  (float)0.25, (float)0.75,
@@ -607,12 +607,12 @@ TEST(decision_tree_internal_test, inference_vectorized) {
                                  (float)0.88, (float)0.88,
                                  (float)0.25, (float)0.88,
                                  (float)0.25, (float)0.88,
-                                     
+
                                  (float)0.32, (float)0.32,
                                  (float)0.75, (float)0.75,
                                  (float)0.32, (float)0.75,
                                  (float)0.32, (float)0.75,
-                                                                 
+
                                  (float)0.25, (float)0.25,
                                  (float)0.75, (float)0.75,
                                  (float)0.25, (float)0.75,
@@ -673,6 +673,8 @@ TEST(decision_tree_internal_test, row_major) {
     da_handle forest_handle = nullptr;
     EXPECT_EQ(da_handle_init<float>(&forest_handle, da_handle_decision_tree),
               da_status_success);
+    ASSERT_EQ(da_tree_select_model<float>(forest_handle, df_classifier),
+              da_status_success);
     EXPECT_EQ(da_options_set_int(forest_handle, "maximum depth", 5), da_status_success);
     EXPECT_EQ(da_options_set_int(forest_handle, "seed", 77), da_status_success);
     EXPECT_EQ(da_options_set_string(forest_handle, "scoring function", "gini"),
@@ -707,6 +709,8 @@ TEST(decision_tree_internal_test, row_major) {
     datest_blas::imatcopy('T', n_samples, n_features, 1.0, X_test.data(), n_samples,
                           n_features);
     EXPECT_EQ(da_handle_init<float>(&forest_handle, da_handle_decision_tree),
+              da_status_success);
+    ASSERT_EQ(da_tree_select_model<float>(forest_handle, df_classifier),
               da_status_success);
     EXPECT_EQ(da_options_set_int(forest_handle, "maximum depth", 5), da_status_success);
     EXPECT_EQ(da_options_set_int(forest_handle, "seed", 77), da_status_success);

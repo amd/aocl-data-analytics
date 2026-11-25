@@ -1,4 +1,4 @@
-# Copyright (C) 2025 Advanced Micro Devices, Inc. All rights reserved.
+# Copyright (C) 2025-2026 Advanced Micro Devices, Inc. All rights reserved.
 #
 # Redistribution and use in source and binary forms, with or without modification,
 # are permitted provided that the following conditions are met:
@@ -123,7 +123,7 @@ def test_array_slicing(numpy_precision, numpy_order):
     standardized_slice = standardize(a_slice)
 
     # Check we get the same results
-    tol = np.finfo(numpy_precision).eps * 100
+    tol = float(np.finfo(numpy_precision).eps * 100)
 
     assert means_slice == pytest.approx(means, tol)
     assert harmonic_means_slice == pytest.approx(harmonic_means, tol)

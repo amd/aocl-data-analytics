@@ -29,6 +29,7 @@
 #include "aoclda.h"
 #include "aoclsparse.h"
 #include "basic_statistics.hpp"
+#include "context.hpp"
 #include "da_cblas.hh"
 #include "da_error.hpp"
 #include "da_omp.hpp"
@@ -43,11 +44,13 @@
 #include "model_persistence.hpp"
 #include "optimization.hpp"
 #include "options.hpp"
+#include "telemetry.hpp"
 #include <chrono>
 #include <cstdlib>
 #include <cstring>
 #include <iostream>
 #include <memory>
+#include <typeinfo>
 #include <utility>
 #include <vector>
 
@@ -815,6 +818,8 @@ template <typename T> da_status linear_model<T>::fit(da_int usr_ncoefs, const T 
 
     da_status status;
 
+    SCOPED_TIMER;
+
     if (read_public_options) {
         status = read_options();
         if (status != da_status_success)
@@ -967,7 +972,6 @@ da_status linear_model<T>::fit_impl(da_int usr_ncoefs, const T *coefs, bool do_p
                         "LBFGSB is not available in this implementation");
     }
 #endif
-
     switch (mod) {
     case linmod_model_mse:
         ncoef = nfeat;
@@ -1254,7 +1258,7 @@ da_status linear_model<T>::fit_impl(da_int usr_ncoefs, const T *coefs, bool do_p
             status = fit_logreg_lbfgs();
             if (status != da_status_success)
                 return status; // Error message already loaded
-        }                      // end if constexpr !_Float16
+        } // end if constexpr !_Float16
         break;
 
     default:
@@ -2092,6 +2096,7 @@ da_status linear_model<T>::prep_matrix_x(da_int &nrow, da_int &ncol, da_axis &ax
  */
 template <typename T>
 da_status linear_model<T>::preprocess_data(linmod_method method_id) {
+    SCOPED_TIMER;
     // For SVD and QR we still will want to copy X and y, even for scaling == none
     if (scaling == scaling_t::none && method_id != linmod_method::svd &&
         method_id != linmod_method::qr && method_id != linmod_method::coord) {
@@ -2397,6 +2402,7 @@ void linear_model<T>::setup_xtx_xty(std::vector<T> &A, std::vector<T> &b) {
     enum CBLAS_ORDER storage = rowmajor ? CblasRowMajor : CblasColMajor;
     da_uplo uplo = rowmajor ? da_lower : da_upper;
     if (is_well_determined) {
+        SCOPED_TIMER_BLOCK("LinMod/Syrk<" + std::string(typeid(T).name()) + ">");
         // Compute A=X'X and b=X'y
         da_syrk(this->Xorder, uplo, da_trans, nfeat, nsamples, (T)1.0, X, ldX, (T)0.0,
                 A.data(), ncoef);
